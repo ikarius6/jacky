@@ -65,19 +65,19 @@ class PetWindow(QWidget):
         self._apply_dpi_scale()
         self.scheduler = Scheduler()
 
-        # Interaction components
-        self._click_handler = ClickHandler(self)
-        self._context_menu = PetContextMenu(self)
-        self._window_awareness = WindowAwareness(self)
-        self._bubble = SpeechBubble()
-
-        # LLM
+        # LLM (must be initialized before context menu)
         self._llm = OllamaProvider(
             base_url=self._config.get("ollama_url", "http://localhost:11434"),
             model=self._config.get("ollama_model", "llama3"),
         )
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._llm_text_ready.connect(self._say)
+
+        # Interaction components
+        self._click_handler = ClickHandler(self)
+        self._context_menu = PetContextMenu(self)
+        self._window_awareness = WindowAwareness(self)
+        self._bubble = SpeechBubble()
 
         # State tracking
         self._temp_state_timer = QTimer(self)
@@ -249,6 +249,14 @@ class PetWindow(QWidget):
         else:
             self.pet.set_state(PetState.INTERACTING)
         self._temp_state_timer.start(2000)
+
+    def on_ask(self, question: str):
+        """User asked a direct question via the Preguntar dialog."""
+        if not self._llm_enabled:
+            return
+        context = self._build_llm_context(f"The user asks you directly: \"{question}\"")
+        self._say("Hmm, déjame pensar...")
+        self._llm.generate(context, self._on_llm_response)
 
     def on_drag_start(self):
         """User started dragging."""
@@ -642,6 +650,7 @@ class PetWindow(QWidget):
         self._llm._model = self._config.get("ollama_model", "llama3")
         self._window_awareness.set_enabled(self._config.get("window_interaction_enabled", True))
         self._window_awareness.set_push_enabled(self._config.get("window_push_enabled", True))
+        self._context_menu.refresh_llm_state()
 
         # Hot-swap character if changed
         new_char = self._config.get("character", "placeholder")

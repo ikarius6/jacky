@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QMenu, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QSpinBox, QLineEdit, QPushButton, QGroupBox, QFormLayout, QComboBox
+from PyQt6.QtWidgets import QMenu, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QSpinBox, QLineEdit, QPushButton, QGroupBox, QFormLayout, QComboBox, QPlainTextEdit
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QAction, QFont
 
@@ -55,6 +55,13 @@ class PetContextMenu(QMenu):
 
         self.addSeparator()
 
+        self._ask_action = QAction("💬 Preguntar", self)
+        self._ask_action.triggered.connect(self._open_ask_dialog)
+        self._ask_action.setEnabled(self._pet_window._llm_enabled)
+        self.addAction(self._ask_action)
+
+        self.addSeparator()
+
         settings_action = QAction("⚙️ Ajustes", self)
         settings_action.triggered.connect(self._open_settings)
         self.addAction(settings_action)
@@ -65,12 +72,81 @@ class PetContextMenu(QMenu):
         quit_action.triggered.connect(self._pet_window.on_quit)
         self.addAction(quit_action)
 
+    def _open_ask_dialog(self):
+        dlg = AskDialog(self._pet_window)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            question = dlg.get_text().strip()
+            if question:
+                self._pet_window.on_ask(question)
+
     def _open_settings(self):
         dlg = SettingsDialog(self._pet_window)
         dlg.exec()
 
+    def refresh_llm_state(self):
+        """Update the Preguntar action enabled state after config reload."""
+        self._ask_action.setEnabled(self._pet_window._llm_enabled)
+
     def show_at(self, pos: QPoint):
         self.popup(pos)
+
+
+class AskDialog(QDialog):
+    """Small dialog with a text field to ask Jacky a question via LLM."""
+
+    def __init__(self, pet_window, parent=None):
+        super().__init__(parent)
+        self._pet_window = pet_window
+        self.setWindowTitle("Preguntarle a Jacky")
+        self.setFixedWidth(360)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #FFF8F0;
+                font-family: 'Segoe UI';
+            }
+            QPlainTextEdit {
+                border: 1px solid #DDB892;
+                border-radius: 6px;
+                padding: 6px;
+                font-size: 11pt;
+                background-color: #FFFFFF;
+            }
+            QPushButton {
+                background-color: #FFDDB5;
+                border: 1px solid #DDB892;
+                border-radius: 4px;
+                padding: 6px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FFD0A0;
+            }
+        """)
+        self._build_ui()
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        label = QLabel("Escribe tu pregunta:")
+        label.setStyleSheet("font-size: 11pt; color: #5A3E2B;")
+        layout.addWidget(label)
+
+        self._text_edit = QPlainTextEdit()
+        self._text_edit.setPlaceholderText("Ej: ¿Qué opinas de mi escritorio?")
+        self._text_edit.setFixedHeight(80)
+        layout.addWidget(self._text_edit)
+
+        btn_layout = QHBoxLayout()
+        send_btn = QPushButton("Enviar")
+        send_btn.clicked.connect(self.accept)
+        cancel_btn = QPushButton("Cancelar")
+        cancel_btn.clicked.connect(self.reject)
+        btn_layout.addStretch()
+        btn_layout.addWidget(send_btn)
+        btn_layout.addWidget(cancel_btn)
+        layout.addLayout(btn_layout)
+
+    def get_text(self) -> str:
+        return self._text_edit.toPlainText()
 
 
 class SettingsDialog(QDialog):
