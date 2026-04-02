@@ -84,6 +84,9 @@ class PetWindow(QWidget):
         self._temp_state_timer.setSingleShot(True)
         self._temp_state_timer.timeout.connect(self._end_temp_state)
 
+        # Window drag tracking
+        self._dragging_window_hwnd = None
+
         # Animation timer
         self._anim_timer = QTimer(self)
         self._anim_timer.timeout.connect(self._on_anim_tick)
@@ -300,8 +303,18 @@ class PetWindow(QWidget):
                 still_moving = self.movement.tick()
                 self.move(self.movement.x, self.movement.y)
                 self.pet.direction = self.movement.direction
+
+                # Drag window along while walking
+                if self._dragging_window_hwnd is not None:
+                    self._window_awareness.drag_window_tick(
+                        self._dragging_window_hwnd,
+                        self.movement.x, self.movement.y,
+                        self._sprite_size,
+                    )
+
                 if not still_moving:
                     self.movement.speed_multiplier = 1.0
+                    self._dragging_window_hwnd = None
                     self.pet.set_state(PetState.IDLE)
             else:
                 self.movement.apply_gravity()
@@ -349,8 +362,10 @@ class PetWindow(QWidget):
             return
 
         action = random.choices(
-            ["comment", "push", "peek"],
-            weights=[0.5, 0.25, 0.25],
+            ["comment", "push", "peek", "shake", "minimize",
+             "sit", "resize", "knock", "drag", "tidy", "topple"],
+            weights=[0.25, 0.10, 0.10, 0.10, 0.05,
+                     0.10, 0.08, 0.07, 0.05, 0.05, 0.05],
             k=1
         )[0]
 
@@ -360,6 +375,22 @@ class PetWindow(QWidget):
             self._try_push()
         elif action == "peek":
             self._try_peek()
+        elif action == "shake":
+            self._try_shake()
+        elif action == "minimize":
+            self._try_minimize()
+        elif action == "sit":
+            self._try_sit_on_window()
+        elif action == "resize":
+            self._try_resize()
+        elif action == "knock":
+            self._try_knock()
+        elif action == "drag":
+            self._try_drag()
+        elif action == "tidy":
+            self._try_tidy()
+        elif action == "topple":
+            self._try_topple()
 
     # --- Window awareness callbacks ---
 
@@ -432,6 +463,111 @@ class PetWindow(QWidget):
         self.move(result["x"], result["y"])
         self._say(get_line("peeking", self.pet.name))
         self._temp_state_timer.start(3000)
+
+    def _try_shake(self):
+        if not self._config.get("window_push_enabled", True):
+            return
+        target = self._window_awareness.try_shake_window(
+            self.movement.x, self.movement.y
+        )
+        if not target:
+            return
+        self.pet.set_state(PetState.INTERACTING)
+        self._say(get_line("window_shake", self.pet.name))
+        self._shake_hwnd = target.hwnd
+        self._shake_step = 0
+        self._shake_timer = QTimer(self)
+        self._shake_timer.timeout.connect(self._on_shake_tick)
+        self._shake_timer.start(50)
+
+    def _on_shake_tick(self):
+        if not self._window_awareness.do_shake_step(self._shake_hwnd, self._shake_step):
+            self._shake_timer.stop()
+            self._shake_timer.deleteLater()
+            self._temp_state_timer.start(1000)
+            return
+        self._shake_step += 1
+
+    def _try_minimize(self):
+        if not self._config.get("window_push_enabled", True):
+            return
+        target = self._window_awareness.try_minimize_window(
+            self.movement.x, self.movement.y
+        )
+        if target:
+            if "shooting" in self.animation.available_states:
+                self.pet.set_state(PetState.SHOOTING)
+            elif "slashing" in self.animation.available_states:
+                self.pet.set_state(PetState.SLASHING)
+            else:
+                self.pet.set_state(PetState.INTERACTING)
+            self._say(get_line("window_minimize", self.pet.name))
+            self._temp_state_timer.start(2000)
+
+    def _try_sit_on_window(self):
+        result = self._window_awareness.get_titlebar_position(self._sprite_size)
+        if not result:
+            return
+        self.pet.set_state(PetState.IDLE)
+        self.movement.set_position(result["x"], result["y"])
+        self.move(result["x"], result["y"])
+        self._say(get_line("window_sit", self.pet.name))
+        self._temp_state_timer.start(5000)
+
+    def _try_resize(self):
+        if not self._config.get("window_push_enabled", True):
+            return
+        target = self._window_awareness.try_resize_window(
+            self.movement.x, self.movement.y
+        )
+        if target:
+            self.pet.set_state(PetState.INTERACTING)
+            self._say(get_line("window_resize", self.pet.name))
+            self._temp_state_timer.start(2000)
+
+    def _try_knock(self):
+        target = self._window_awareness.try_knock_window()
+        if target:
+            self.pet.set_state(PetState.INTERACTING)
+            self._say(get_line("window_knock", self.pet.name))
+            self._temp_state_timer.start(2000)
+
+    def _try_drag(self):
+        if not self._config.get("window_push_enabled", True):
+            return
+        target = self._window_awareness.start_drag_window(
+            self.movement.x, self.movement.y
+        )
+        if not target:
+            return
+        self._dragging_window_hwnd = target.hwnd
+        self.pet.set_state(PetState.WALKING)
+        self.movement.pick_random_target()
+        self._say(get_line("window_drag", self.pet.name))
+        # Drag ends when the walk finishes (handled in _on_move_tick)
+
+    def _try_tidy(self):
+        if not self._config.get("window_push_enabled", True):
+            return
+        success = self._window_awareness.try_tidy_windows()
+        if success:
+            self.pet.set_state(PetState.INTERACTING)
+            self._say(get_line("window_tidy", self.pet.name))
+            self._temp_state_timer.start(3000)
+
+    def _try_topple(self):
+        if not self._config.get("window_push_enabled", True):
+            return
+        toppled = self._window_awareness.try_topple_windows(
+            self.movement.x, self.movement.y, self.pet.direction
+        )
+        if toppled:
+            if "shooting" in self.animation.available_states:
+                self.pet.set_state(PetState.SHOOTING)
+            else:
+                self.pet.set_state(PetState.INTERACTING)
+            self._say(get_line("window_topple", self.pet.name))
+            self._temp_state_timer.start(2500)
 
     # --- Speech ---
 

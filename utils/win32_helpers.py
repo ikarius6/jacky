@@ -176,6 +176,116 @@ def move_window(hwnd: int, dx: int, dy: int) -> bool:
         return False
 
 
+def set_window_pos(hwnd: int, x: int, y: int) -> bool:
+    """Move a window to an absolute position. Returns True on success."""
+    try:
+        rect = win32gui.GetWindowRect(hwnd)
+        w = rect[2] - rect[0]
+        h = rect[3] - rect[1]
+        win32gui.SetWindowPos(
+            hwnd, None, x, y, w, h,
+            win32con.SWP_NOZORDER | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE
+        )
+        return True
+    except Exception:
+        return False
+
+
+def resize_window(hwnd: int, dw: int, dh: int) -> bool:
+    """Resize a window by (dw, dh) pixels. Returns True on success."""
+    try:
+        rect = win32gui.GetWindowRect(hwnd)
+        x = rect[0]
+        y = rect[1]
+        new_w = max(200, (rect[2] - rect[0]) + dw)
+        new_h = max(150, (rect[3] - rect[1]) + dh)
+        win32gui.SetWindowPos(
+            hwnd, None, x, y, new_w, new_h,
+            win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+        )
+        return True
+    except Exception:
+        return False
+
+
+def minimize_window(hwnd: int) -> bool:
+    """Minimize a window to the taskbar. Returns True on success."""
+    try:
+        win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+        return True
+    except Exception:
+        return False
+
+
+def flash_window(hwnd: int, count: int = 3) -> bool:
+    """Flash a window's taskbar button to get attention. Returns True on success."""
+    try:
+        import ctypes
+
+        class FLASHWINFO(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", ctypes.c_uint),
+                ("hwnd", ctypes.c_void_p),
+                ("dwFlags", ctypes.c_uint),
+                ("uCount", ctypes.c_uint),
+                ("dwTimeout", ctypes.c_uint),
+            ]
+
+        FLASHW_ALL = 0x00000003
+        fi = FLASHWINFO()
+        fi.cbSize = ctypes.sizeof(FLASHWINFO)
+        fi.hwnd = hwnd
+        fi.dwFlags = FLASHW_ALL
+        fi.uCount = count
+        fi.dwTimeout = 0
+        ctypes.windll.user32.FlashWindowEx(ctypes.byref(fi))
+        return True
+    except Exception:
+        return False
+
+
+def set_foreground_window(hwnd: int) -> bool:
+    """Bring a window to the foreground. Returns True on success."""
+    try:
+        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        win32gui.SetForegroundWindow(hwnd)
+        return True
+    except Exception:
+        return False
+
+
+def tile_windows(hwnds: List[int]) -> bool:
+    """Tile a list of windows in a grid across the work area. Returns True on success."""
+    if not hwnds:
+        return False
+    try:
+        work = get_work_area()
+        wa_x, wa_y, wa_right, wa_bottom = work
+        wa_w = wa_right - wa_x
+        wa_h = wa_bottom - wa_y
+
+        n = len(hwnds)
+        cols = int(n ** 0.5)
+        if cols < 1:
+            cols = 1
+        rows = (n + cols - 1) // cols
+        cell_w = wa_w // cols
+        cell_h = wa_h // rows
+
+        for i, hwnd in enumerate(hwnds):
+            col = i % cols
+            row = i // cols
+            x = wa_x + col * cell_w
+            y = wa_y + row * cell_h
+            win32gui.SetWindowPos(
+                hwnd, None, x, y, cell_w, cell_h,
+                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+            )
+        return True
+    except Exception:
+        return False
+
+
 # --- WinEvent hook for window create/destroy ---
 
 _user32 = ctypes.windll.user32

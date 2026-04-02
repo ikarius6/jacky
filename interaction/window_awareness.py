@@ -1,10 +1,13 @@
 import random
 from typing import List, Optional, Callable, Set
 
+import win32gui
 from PyQt6.QtCore import QTimer
 
 from utils.win32_helpers import (
     get_visible_windows, get_foreground_window, move_window,
+    set_window_pos, resize_window, minimize_window,
+    flash_window, set_foreground_window, tile_windows,
     get_taskbar_rect, WindowInfo,
     register_window_event_hook, unregister_all_hooks,
     EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY, EVENT_OBJECT_SHOW,
@@ -193,6 +196,183 @@ class WindowAwareness:
             x = w.right - pet_size // 2  # half hidden behind right edge
             y = w.top
         return {"x": x, "y": y, "side": side, "window": w}
+
+    def try_shake_window(self, pet_x: int, pet_y: int) -> Optional[WindowInfo]:
+        """
+        Shake a nearby window back and forth rapidly.
+        Returns the shaken window or None.
+        """
+        if not self._push_enabled or not self._enabled:
+            return None
+
+        nearby = self.get_nearby_windows(pet_x, pet_y, radius=150)
+        candidates = [w for w in nearby if not w.is_maximized and not w.is_minimized]
+        if not candidates:
+            return None
+
+        target = random.choice(candidates)
+        return target
+
+    def do_shake_step(self, hwnd: int, step: int) -> bool:
+        """Perform one step of the shake animation. Returns False when done."""
+        offsets = [8, -16, 16, -16, 12, -8, 4, 0]
+        if step >= len(offsets):
+            return False
+        move_window(hwnd, offsets[step], 0)
+        return True
+
+    def try_minimize_window(self, pet_x: int, pet_y: int) -> Optional[WindowInfo]:
+        """
+        Minimize a nearby non-maximized window.
+        Returns the minimized window or None.
+        """
+        if not self._push_enabled or not self._enabled:
+            return None
+
+        nearby = self.get_nearby_windows(pet_x, pet_y, radius=150)
+        candidates = [w for w in nearby if not w.is_maximized and not w.is_minimized]
+        if not candidates:
+            return None
+
+        target = random.choice(candidates)
+        success = minimize_window(target.hwnd)
+        return target if success else None
+
+    def get_titlebar_position(self, pet_size: int) -> Optional[dict]:
+        """
+        Find a window title bar for the pet to sit on.
+        Returns dict with x, y, window or None.
+        """
+        if not self._enabled or not self._windows:
+            return None
+
+        candidates = [w for w in self._windows
+                      if not w.is_minimized and w.width > pet_size]
+        if not candidates:
+            return None
+
+        w = random.choice(candidates)
+        x = w.left + random.randint(pet_size // 2, max(pet_size // 2, w.width - pet_size))
+        y = w.top - pet_size  # sit on top of the title bar
+        return {"x": x, "y": y, "window": w}
+
+    def try_resize_window(self, pet_x: int, pet_y: int) -> Optional[WindowInfo]:
+        """
+        Resize a nearby non-maximized window (shrink or grow randomly).
+        Returns the resized window or None.
+        """
+        if not self._push_enabled or not self._enabled:
+            return None
+
+        nearby = self.get_nearby_windows(pet_x, pet_y, radius=150)
+        candidates = [w for w in nearby if not w.is_maximized and not w.is_minimized]
+        if not candidates:
+            return None
+
+        target = random.choice(candidates)
+        action = random.choice(["shrink", "grow"])
+        if action == "shrink":
+            dw = random.randint(-100, -30)
+            dh = random.randint(-80, -20)
+        else:
+            dw = random.randint(30, 100)
+            dh = random.randint(20, 80)
+        success = resize_window(target.hwnd, dw, dh)
+        return target if success else None
+
+    def try_knock_window(self) -> Optional[WindowInfo]:
+        """
+        Knock on a background window to bring it to attention.
+        Returns the knocked window or None.
+        """
+        if not self._enabled or not self._windows:
+            return None
+
+        # Pick a non-foreground window
+        fg = get_foreground_window()
+        candidates = [w for w in self._windows
+                      if not w.is_minimized
+                      and (fg is None or w.hwnd != fg.hwnd)
+                      and not _is_junk_window(w.title, w.process_name)]
+        if not candidates:
+            return None
+
+        target = random.choice(candidates)
+        flash_window(target.hwnd, count=3)
+        set_foreground_window(target.hwnd)
+        return target
+
+    def start_drag_window(self, pet_x: int, pet_y: int) -> Optional[WindowInfo]:
+        """
+        Pick a nearby window to drag along with the pet.
+        Returns the target window or None.
+        """
+        if not self._push_enabled or not self._enabled:
+            return None
+
+        nearby = self.get_nearby_windows(pet_x, pet_y, radius=100)
+        candidates = [w for w in nearby if not w.is_maximized and not w.is_minimized]
+        if not candidates:
+            return None
+
+        return random.choice(candidates)
+
+    def drag_window_tick(self, hwnd: int, pet_x: int, pet_y: int, pet_size: int):
+        """Move the dragged window so its top-center follows the pet."""
+        try:
+            rect = win32gui.GetWindowRect(hwnd)
+            w_width = rect[2] - rect[0]
+            target_x = pet_x + pet_size // 2 - w_width // 2
+            target_y = pet_y + pet_size  # window hangs below the pet
+            set_window_pos(hwnd, target_x, target_y)
+        except Exception:
+            pass
+
+    def try_tidy_windows(self) -> bool:
+        """
+        Tile all non-maximized, non-minimized windows into a neat grid.
+        Returns True if windows were tidied.
+        """
+        if not self._push_enabled or not self._enabled:
+            return False
+
+        candidates = [w for w in self._windows
+                      if not w.is_maximized and not w.is_minimized
+                      and not _is_junk_window(w.title, w.process_name)]
+        if len(candidates) < 2:
+            return False
+
+        hwnds = [w.hwnd for w in candidates]
+        return tile_windows(hwnds)
+
+    def try_topple_windows(self, pet_x: int, pet_y: int, direction: int) -> List[WindowInfo]:
+        """
+        Chain-push windows like dominoes in the pet's facing direction.
+        Returns the list of toppled windows.
+        """
+        if not self._push_enabled or not self._enabled:
+            return []
+
+        candidates = [w for w in self._windows
+                      if not w.is_maximized and not w.is_minimized
+                      and not _is_junk_window(w.title, w.process_name)]
+        if not candidates:
+            return []
+
+        # Sort by horizontal position in the push direction
+        if direction > 0:
+            candidates.sort(key=lambda w: w.left)
+        else:
+            candidates.sort(key=lambda w: -w.right)
+
+        # Push each window, increasing the offset
+        toppled = []
+        dx_base = 30 * direction
+        for i, w in enumerate(candidates[:5]):  # max 5 windows
+            dx = dx_base * (i + 1)
+            if move_window(w.hwnd, dx, 0):
+                toppled.append(w)
+        return toppled
 
     def get_window_comment_context(self) -> str:
         """Build a context string describing visible windows, for LLM prompts."""
