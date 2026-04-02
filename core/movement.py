@@ -130,8 +130,15 @@ class MovementEngine:
         max_x = bounds[2] - self._sprite_size
 
         # Occasionally pick a platform to walk onto
-        # Filter to platforms with enough room above for the pet sprite
-        walkable = [p for p in self._platforms if p[1] >= self._sprite_size]
+        # Filter to platforms with enough room above AND near the pet's current Y
+        # (avoid flying diagonally through the air to distant platforms)
+        pet_feet_y = self._y + self._sprite_size
+        max_climb = self._sprite_size  # only target platforms within one sprite-height
+        walkable = [
+            p for p in self._platforms
+            if p[1] >= self._sprite_size
+            and abs(pet_feet_y - p[1]) <= max_climb
+        ]
         if walkable and random.random() < 0.3:
             plat = random.choice(walkable)
             # Walk to a random X on the platform

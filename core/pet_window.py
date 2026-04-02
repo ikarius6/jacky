@@ -489,12 +489,26 @@ class PetWindow(QWidget):
         result = self._window_awareness.get_peek_position(self._sprite_size)
         if not result:
             return
+        # Save position so we can return after the peek
+        self._pre_peek_pos = (self.movement.x, self.movement.y)
         log.info("WIN_ACT peek from=(%d,%d) to=(%d,%d)", self.x(), self.y(), result["x"], result["y"])
         self.pet.set_state(PetState.PEEKING)
         self.movement.set_position(result["x"], result["y"])
         self.move(self.movement.x, self.movement.y)
         self._say(get_line("peeking", self.pet.name))
-        self._temp_state_timer.start(3000)
+        QTimer.singleShot(3000, self._return_from_peek)
+
+    def _return_from_peek(self):
+        """Restore pet to its pre-peek position so it doesn't get stranded."""
+        if not getattr(self, '_pre_peek_pos', None):
+            return
+        x, y = self._pre_peek_pos
+        self._pre_peek_pos = None
+        log.info("PEEK_RETURN to=(%d,%d) from pos=(%d,%d)", x, y, self.x(), self.y())
+        self.movement.set_position(x, y)
+        self.move(self.movement.x, self.movement.y)
+        if self.pet.state not in (PetState.DRAGGED, PetState.WALKING, PetState.RUNNING):
+            self.pet.set_state(PetState.IDLE)
 
     def _try_shake(self):
         if not self._config.get("window_push_enabled", True):
