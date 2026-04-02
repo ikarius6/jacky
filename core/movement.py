@@ -25,6 +25,7 @@ class MovementEngine:
         self._bounds: Optional[Tuple[int, int, int, int]] = None  # (left, top, right, bottom)
         self._dpi_scale: float = 1.0
         self._just_dropped: bool = False
+        self._speed_multiplier: float = 1.0
         self._refresh_ground()
 
     def update_bounds(self, left: int, top: int, right: int, bottom: int):
@@ -57,6 +58,14 @@ class MovementEngine:
     @property
     def direction(self) -> int:
         return self._direction
+
+    @property
+    def speed_multiplier(self) -> float:
+        return self._speed_multiplier
+
+    @speed_multiplier.setter
+    def speed_multiplier(self, value: float):
+        self._speed_multiplier = max(value, 1.0)
 
     @property
     def is_walking(self) -> bool:
@@ -140,20 +149,22 @@ class MovementEngine:
         if self._target_x is None:
             return False
 
+        effective_speed = int(self._speed * self._speed_multiplier)
+
         dx = self._target_x - self._x
         dy = (self._target_y if self._target_y is not None else self._ground_y) - self._y
 
         # Move X
-        if abs(dx) <= self._speed:
+        if abs(dx) <= effective_speed:
             self._x = self._target_x
         else:
-            self._x += self._speed if dx > 0 else -self._speed
+            self._x += effective_speed if dx > 0 else -effective_speed
 
         # Move Y (vertical transitions between platforms/ground)
-        if abs(dy) <= self._speed:
+        if abs(dy) <= effective_speed:
             self._y = self._target_y if self._target_y is not None else self._ground_y
         else:
-            self._y += self._speed if dy > 0 else -self._speed
+            self._y += effective_speed if dy > 0 else -effective_speed
 
         self._clamp_to_screen()
 

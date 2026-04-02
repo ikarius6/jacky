@@ -295,11 +295,13 @@ class PetWindow(QWidget):
             # Keep screen bounds fresh (handles resolution/scaling changes)
             self._refresh_screen_bounds()
 
-            if self.pet.state == PetState.WALKING:
+            if self.pet.state in (PetState.WALKING, PetState.RUNNING):
+                self.movement.speed_multiplier = 2.0 if self.pet.state == PetState.RUNNING else 1.0
                 still_moving = self.movement.tick()
                 self.move(self.movement.x, self.movement.y)
                 self.pet.direction = self.movement.direction
                 if not still_moving:
+                    self.movement.speed_multiplier = 1.0
                     self.pet.set_state(PetState.IDLE)
             else:
                 self.movement.apply_gravity()
@@ -317,7 +319,11 @@ class PetWindow(QWidget):
         if self.pet.state not in (PetState.IDLE,):
             return
         self.movement.pick_random_target()
-        self.pet.set_state(PetState.WALKING)
+        # 30% chance to run instead of walk (if character supports it)
+        if random.random() < 0.3 and "run_right" in self.animation.available_states:
+            self.pet.set_state(PetState.RUNNING)
+        else:
+            self.pet.set_state(PetState.WALKING)
 
     def _scheduled_chat(self):
         if self.pet.state in (PetState.DRAGGED, PetState.TALKING):
