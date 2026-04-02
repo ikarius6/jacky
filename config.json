@@ -1,0 +1,26 @@
+{
+    "pet_name": "Jacky",
+    "sprite_set": "placeholder",
+    "character": "Forest Ranger 3",
+    "sprite_size": 128,
+    "movement_speed": 6,
+    "idle_interval": [
+        5,
+        15
+    ],
+    "chat_interval": [
+        20,
+        60
+    ],
+    "window_check_interval": [
+        10,
+        30
+    ],
+    "llm_enabled": true,
+    "ollama_url": "http://localhost:11434",
+    "ollama_model": "artifish/llama3.2-uncensored:latest",
+    "window_interaction_enabled": true,
+    "window_push_enabled": true,
+    "always_on_top": true,
+    "bubble_timeout": 5
+}
