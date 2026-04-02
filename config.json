@@ -18,7 +18,7 @@
     ],
     "llm_enabled": true,
     "ollama_url": "http://localhost:11434",
-    "ollama_model": "artifish/llama3.2-uncensored:latest",
+    "ollama_model": "qwen3.5:0.8b",
     "window_interaction_enabled": true,
     "window_push_enabled": true,
     "always_on_top": true,

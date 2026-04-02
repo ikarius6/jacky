@@ -4,6 +4,7 @@ from PyQt6.QtGui import QAction, QFont
 
 from utils.config_manager import load_config, save_config
 from core.character import get_character_names
+from speech.llm_provider import fetch_ollama_models
 
 
 class PetContextMenu(QMenu):
@@ -233,8 +234,17 @@ class SettingsDialog(QDialog):
         llm_form.addRow(self._llm_enabled)
         self._ollama_url = QLineEdit(self._config.get("ollama_url", "http://localhost:11434"))
         llm_form.addRow("URL:", self._ollama_url)
-        self._ollama_model = QLineEdit(self._config.get("ollama_model", "llama3"))
-        llm_form.addRow("Modelo:", self._ollama_model)
+        model_layout = QHBoxLayout()
+        self._ollama_model = QComboBox()
+        self._ollama_model.setEditable(True)
+        self._refresh_models_btn = QPushButton("🔄")
+        self._refresh_models_btn.setFixedWidth(50)
+        self._refresh_models_btn.setToolTip("Actualizar lista de modelos")
+        self._refresh_models_btn.clicked.connect(self._refresh_models)
+        model_layout.addWidget(self._ollama_model)
+        model_layout.addWidget(self._refresh_models_btn)
+        llm_form.addRow("Modelo:", model_layout)
+        self._refresh_models()
         llm_group.setLayout(llm_form)
         layout.addWidget(llm_group)
 
@@ -249,6 +259,22 @@ class SettingsDialog(QDialog):
         btn_layout.addWidget(cancel_btn)
         layout.addLayout(btn_layout)
 
+    def _refresh_models(self):
+        """Fetch available models from the Ollama instance and populate the combo."""
+        url = self._ollama_url.text().strip()
+        current = self._config.get("ollama_model", "llama3")
+        models = fetch_ollama_models(url)
+        self._ollama_model.clear()
+        if models:
+            self._ollama_model.addItems(models)
+            idx = self._ollama_model.findText(current)
+            if idx >= 0:
+                self._ollama_model.setCurrentIndex(idx)
+            else:
+                self._ollama_model.setCurrentText(current)
+        else:
+            self._ollama_model.setCurrentText(current)
+
     def _save(self):
         self._config["character"] = self._char_combo.currentText()
         self._config["movement_speed"] = self._speed_spin.value()
@@ -256,7 +282,7 @@ class SettingsDialog(QDialog):
         self._config["window_push_enabled"] = self._win_push.isChecked()
         self._config["llm_enabled"] = self._llm_enabled.isChecked()
         self._config["ollama_url"] = self._ollama_url.text().strip()
-        self._config["ollama_model"] = self._ollama_model.text().strip()
+        self._config["ollama_model"] = self._ollama_model.currentText().strip()
         save_config(self._config)
         self._pet_window.reload_config()
         self.accept()

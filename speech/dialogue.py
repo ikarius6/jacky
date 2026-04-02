@@ -30,7 +30,7 @@ DIALOGUE_POOLS = {
     "petted": [
         "¡Jeje, me hace cosquillas!",
         "¡Aww, gracias!",
-        "*ronronea feliz*",
+        "*sonrie*",
         "¡Tú también me caes bien!",
         "¡Más caricias por favor!",
         "Qué bonito se siente~",
