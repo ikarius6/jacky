@@ -1,7 +1,10 @@
+import logging
 import random
 from typing import Callable, Optional
 
 from PyQt6.QtCore import QTimer
+
+log = logging.getLogger("scheduler")
 
 
 class Scheduler:
@@ -29,10 +32,12 @@ class Scheduler:
         if timer is None:
             return
         delay_ms = random.randint(interval_range[0], interval_range[1]) * 1000
+        log.debug("SCHEDULE '%s' in %ds", name, delay_ms // 1000)
         timer.start(delay_ms)
 
     def _fire(self, name: str, interval_range: tuple[int, int]):
         """Fire the callback and reschedule."""
+        log.info("FIRE '%s'", name)
         cb = self._callbacks.get(name)
         if cb:
             cb()

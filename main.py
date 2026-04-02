@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 
 # Ensure the project root is on the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -18,6 +19,19 @@ def ensure_sprites():
 
 
 def main():
+    # Configure logging — file + console
+    log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jacky_debug.log")
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+        handlers=[
+            logging.FileHandler(log_path, mode="w", encoding="utf-8"),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+    logging.getLogger().info("=== Jacky debug session started ===")
+
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)  # Keep running via system tray
 

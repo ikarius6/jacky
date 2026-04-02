@@ -1,7 +1,10 @@
+import logging
 import random
 from typing import Optional, Tuple, List
 
 from utils.win32_helpers import get_work_area, get_taskbar_rect, WindowInfo
+
+log = logging.getLogger("movement")
 
 # Default fallback bounds
 _DEFAULT_BOUNDS = (0, 0, 1920, 1080)
@@ -78,8 +81,12 @@ class MovementEngine:
         min_y = bounds[1]
         max_x = bounds[2] - self._sprite_size
         max_y = bounds[3] - self._sprite_size
+        old_x, old_y = self._x, self._y
         self._x = max(min_x, min(self._x, max_x))
         self._y = max(min_y, min(self._y, max_y))
+        if old_x != self._x or old_y != self._y:
+            log.warning("CLAMP (%d,%d)->(%d,%d) bounds=(%d,%d,%d,%d)",
+                        old_x, old_y, self._x, self._y, min_x, min_y, max_x, max_y)
 
     def set_dpi_scale(self, scale: float):
         """Set the DPI scale factor for converting win32 coords to Qt coords."""
@@ -87,9 +94,11 @@ class MovementEngine:
 
     def set_position(self, x: int, y: int):
         """Set Jacky's position directly (e.g., after drag)."""
+        old_x, old_y = self._x, self._y
         self._x = x
         self._y = y
         self._clamp_to_screen()
+        log.info("SET_POS (%d,%d) -> (%d,%d) [clamped: (%d,%d)]", old_x, old_y, x, y, self._x, self._y)
 
     def set_position_after_drop(self, x: int, y: int):
         """Set position after a drag-drop — enables window landing detection."""
@@ -97,6 +106,7 @@ class MovementEngine:
         self._y = y
         self._clamp_to_screen()
         self._just_dropped = True
+        log.info("DROP_POS (%d,%d) clamped=(%d,%d) ground_y=%d airborne=%s", x, y, self._x, self._y, self._ground_y, self.is_airborne)
 
     def update_platforms(self, windows: List[WindowInfo]):
         """Update the list of platforms Jacky can walk on (window top edges)."""
@@ -120,8 +130,10 @@ class MovementEngine:
         max_x = bounds[2] - self._sprite_size
 
         # Occasionally pick a platform to walk onto
-        if self._platforms and random.random() < 0.3:
-            plat = random.choice(self._platforms)
+        # Filter to platforms with enough room above for the pet sprite
+        walkable = [p for p in self._platforms if p[1] >= self._sprite_size]
+        if walkable and random.random() < 0.3:
+            plat = random.choice(walkable)
             # Walk to a random X on the platform
             plat_min_x = max(plat[0], min_x)
             plat_max_x = min(plat[2] - self._sprite_size, max_x)
@@ -129,12 +141,16 @@ class MovementEngine:
                 self._target_x = random.randint(plat_min_x, plat_max_x)
                 self._target_y = plat[1] - self._sprite_size
                 self._direction = 1 if self._target_x > self._x else -1
+                log.info("TARGET platform (%d,%d)->(%d,%d) bounds=%s plat=%s",
+                         self._x, self._y, self._target_x, self._target_y, bounds, plat)
                 return
 
         # Walk on ground
         self._target_x = random.randint(min_x, max_x)
         self._target_y = self._ground_y
         self._direction = 1 if self._target_x > self._x else -1
+        log.info("TARGET ground (%d,%d)->(%d,%d) bounds=%s",
+                 self._x, self._y, self._target_x, self._target_y, bounds)
 
     def stop(self):
         """Stop walking."""
@@ -185,6 +201,8 @@ class MovementEngine:
         pet_bottom = self._y + self._sprite_size
         pet_center_x = self._x + self._sprite_size // 2
         for plat in self._platforms:
+            if plat[1] < self._sprite_size:
+                continue  # platform too close to screen top
             if plat[0] <= pet_center_x <= plat[2]:
                 if abs(pet_bottom - plat[1]) < 15:
                     return False
@@ -201,6 +219,8 @@ class MovementEngine:
 
         # 1. Check if already resting on a platform surface
         for plat in self._platforms:
+            if plat[1] < self._sprite_size:
+                continue  # platform too close to screen top
             if plat[0] <= pet_center_x <= plat[2]:
                 plat_top = plat[1]
                 if abs(pet_bottom - plat_top) < 15:
@@ -213,6 +233,8 @@ class MovementEngine:
         if self._just_dropped:
             for plat in self._platforms:
                 plat_left, plat_top, plat_right, plat_bottom = plat
+                if plat_top < self._sprite_size:
+                    continue  # platform too close to screen top
                 if plat_left <= pet_center_x <= plat_right:
                     # Only slide up if feet are near the window top (within sprite_size)
                     overlap = pet_bottom - plat_top
@@ -235,6 +257,8 @@ class MovementEngine:
 
             best_land_y = None
             for plat in self._platforms:
+                if plat[1] < self._sprite_size:
+                    continue  # platform too close to screen top
                 if plat[0] <= pet_center_x <= plat[2]:
                     plat_top = plat[1]
                     if pet_bottom <= plat_top <= next_bottom:

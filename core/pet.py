@@ -1,5 +1,8 @@
+import logging
 from enum import Enum, auto
 from typing import Optional, Callable, List
+
+log = logging.getLogger("pet")
 
 
 class PetState(Enum):
@@ -66,7 +69,10 @@ class Pet:
 
     @direction.setter
     def direction(self, value: int):
+        old = self._direction
         self._direction = 1 if value >= 0 else -1
+        if old != self._direction:
+            log.debug("DIRECTION %s -> %s", 'R' if old > 0 else 'L', 'R' if self._direction > 0 else 'L')
 
     def on_state_change(self, callback: Callable[[PetState, PetState], None]):
         """Register a callback for state changes: callback(old_state, new_state)."""
@@ -79,6 +85,7 @@ class Pet:
         old = self._state
         self._previous_state = old
         self._state = new_state
+        log.info("STATE %s -> %s", old.name, new_state.name)
         for cb in self._on_state_change:
             cb(old, new_state)
 

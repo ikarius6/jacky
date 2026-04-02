@@ -71,7 +71,16 @@ class WindowAwareness:
 
     def start(self, poll_interval_ms: int = 3000):
         """Start monitoring windows."""
-        self._poll_windows()  # initial poll
+        # Seed known windows without firing open/close callbacks so existing
+        # windows at launch don't each trigger an LLM request.
+        try:
+            initial = get_visible_windows()
+        except Exception:
+            initial = []
+        self._windows = initial
+        self._known_hwnds = {w.hwnd for w in initial}
+        self._pet_window.movement.update_platforms(initial)
+
         self._poll_timer.start(poll_interval_ms)
         try:
             register_window_event_hook(self._on_win_event)
@@ -247,7 +256,9 @@ class WindowAwareness:
             return None
 
         candidates = [w for w in self._windows
-                      if not w.is_minimized and w.width > pet_size]
+                      if not w.is_minimized and not w.is_maximized
+                      and w.width > pet_size
+                      and w.top >= pet_size]
         if not candidates:
             return None
 

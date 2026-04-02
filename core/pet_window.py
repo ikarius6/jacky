@@ -1,4 +1,5 @@
 import os
+import logging
 import random
 import datetime
 import ctypes
@@ -21,6 +22,8 @@ from speech.dialogue import get_line, get_app_comment
 from speech.llm_provider import OllamaProvider
 from utils.config_manager import load_config, save_config
 from utils.win32_helpers import WindowInfo, get_foreground_window
+
+log = logging.getLogger("pet_window")
 
 
 class PetWindow(QWidget):
@@ -132,6 +135,7 @@ class PetWindow(QWidget):
         y = geo.y() + geo.height() - self._sprite_size
         self.move(x, y)
         self.movement.set_position(x, y)
+        log.info("INIT_POS (%d,%d) screen=%s", x, y, (geo.x(), geo.y(), geo.width(), geo.height()))
 
     def _screen_geo(self):
         """Return the available screen geometry from Qt (logical pixels)."""
@@ -210,6 +214,8 @@ class PetWindow(QWidget):
     def paintEvent(self, event):
         frame = self.animation.current_frame()
         if frame is None:
+            log.warning("PAINT frame=None anim_state='%s' pos=(%d,%d) visible=%s",
+                        self.animation.current_state, self.x(), self.y(), self.isVisible())
             return
         painter = QPainter(self)
         painter.drawPixmap(0, 0, frame)
@@ -230,18 +236,21 @@ class PetWindow(QWidget):
 
     def on_pet_clicked(self):
         """Left-click: pet reaction."""
+        log.info("ACTION on_pet_clicked pos=(%d,%d)", self.x(), self.y())
         self.pet.set_state(PetState.HAPPY)
         self._say(get_line("petted", self.pet.name))
         self._temp_state_timer.start(2000)
 
     def on_feed(self):
         """Feed from context menu."""
+        log.info("ACTION on_feed pos=(%d,%d)", self.x(), self.y())
         self.pet.set_state(PetState.EATING)
         self._say(get_line("fed", self.pet.name))
         self._temp_state_timer.start(3000)
 
     def on_attack(self):
         """Attack from context menu: shooting if available, else slashing."""
+        log.info("ACTION on_attack pos=(%d,%d)", self.x(), self.y())
         if "shooting" in self.animation.available_states:
             self.pet.set_state(PetState.SHOOTING)
         elif "slashing" in self.animation.available_states:
@@ -260,6 +269,7 @@ class PetWindow(QWidget):
 
     def on_drag_start(self):
         """User started dragging."""
+        log.info("ACTION on_drag_start pos=(%d,%d)", self.x(), self.y())
         self.pet.set_state(PetState.DRAGGED)
         self.scheduler.pause_all()
         self.movement.stop()
@@ -268,6 +278,7 @@ class PetWindow(QWidget):
     def on_drag_end(self):
         """User stopped dragging."""
         pos = self.pos()
+        log.info("ACTION on_drag_end pos=(%d,%d)", pos.x(), pos.y())
         self.movement.set_position_after_drop(pos.x(), pos.y())
         if self.movement.is_airborne:
             self.pet.set_state(PetState.FALLING)
@@ -295,6 +306,9 @@ class PetWindow(QWidget):
 
     def _on_anim_tick(self):
         anim_name = self.pet.get_animation_name()
+        if anim_name not in self.animation.available_states:
+            log.warning("ANIM_MISS state='%s' not in available=%s pos=(%d,%d)",
+                        anim_name, self.animation.available_states, self.x(), self.y())
         self.animation.set_state(anim_name)
         self.animation.tick()
         self.update()
@@ -323,15 +337,18 @@ class PetWindow(QWidget):
                 if not still_moving:
                     self.movement.speed_multiplier = 1.0
                     self._dragging_window_hwnd = None
+                    log.debug("WALK_DONE pos=(%d,%d)", self.x(), self.y())
                     self.pet.set_state(PetState.IDLE)
             else:
                 self.movement.apply_gravity()
                 self.move(self.movement.x, self.movement.y)
                 # Switch to falling animation if airborne but not already falling
                 if self.movement.is_airborne and self.pet.state == PetState.IDLE:
+                    log.info("GRAVITY airborne detected pos=(%d,%d)", self.x(), self.y())
                     self.pet.set_state(PetState.FALLING)
                 # Land after falling
                 if self.pet.state == PetState.FALLING and not self.movement.is_airborne:
+                    log.info("GRAVITY landed pos=(%d,%d)", self.x(), self.y())
                     self.pet.set_state(PetState.IDLE)
 
         # Always keep bubble following the pet
@@ -342,6 +359,7 @@ class PetWindow(QWidget):
     def _scheduled_walk(self):
         if self.pet.state not in (PetState.IDLE,):
             return
+        log.info("SCHED walk from pos=(%d,%d)", self.x(), self.y())
         self.movement.pick_random_target()
         # 30% chance to run instead of walk (if character supports it)
         if random.random() < 0.3 and "run_right" in self.animation.available_states:
@@ -350,6 +368,7 @@ class PetWindow(QWidget):
             self.pet.set_state(PetState.WALKING)
 
     def _scheduled_chat(self):
+        log.info("SCHED chat state=%s pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
         if self.pet.state in (PetState.DRAGGED, PetState.TALKING):
             return
 
@@ -366,7 +385,7 @@ class PetWindow(QWidget):
             self._say(get_line("idle", self.pet.name))
 
     def _scheduled_window_interact(self):
-        if self.pet.state in (PetState.DRAGGED,):
+        if self.pet.state in (PetState.DRAGGED, PetState.FALLING, PetState.PEEKING):
             return
 
         action = random.choices(
@@ -376,6 +395,7 @@ class PetWindow(QWidget):
                      0.10, 0.08, 0.07, 0.05, 0.05, 0.05],
             k=1
         )[0]
+        log.info("SCHED window_interact action=%s state=%s pos=(%d,%d)", action, self.pet.state.name, self.x(), self.y())
 
         if action == "comment":
             self._comment_on_window()
@@ -458,17 +478,21 @@ class PetWindow(QWidget):
             self.movement.x, self.movement.y
         )
         if pushed:
+            log.info("WIN_ACT push pos=(%d,%d)", self.x(), self.y())
             self.pet.set_state(PetState.INTERACTING)
             self._say(get_line("window_push", self.pet.name))
             self._temp_state_timer.start(2000)
 
     def _try_peek(self):
+        if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
+            return
         result = self._window_awareness.get_peek_position(self._sprite_size)
         if not result:
             return
+        log.info("WIN_ACT peek from=(%d,%d) to=(%d,%d)", self.x(), self.y(), result["x"], result["y"])
         self.pet.set_state(PetState.PEEKING)
         self.movement.set_position(result["x"], result["y"])
-        self.move(result["x"], result["y"])
+        self.move(self.movement.x, self.movement.y)
         self._say(get_line("peeking", self.pet.name))
         self._temp_state_timer.start(3000)
 
@@ -480,6 +504,7 @@ class PetWindow(QWidget):
         )
         if not target:
             return
+        log.info("WIN_ACT shake target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
         self.pet.set_state(PetState.INTERACTING)
         self._say(get_line("window_shake", self.pet.name))
         self._shake_hwnd = target.hwnd
@@ -503,6 +528,7 @@ class PetWindow(QWidget):
             self.movement.x, self.movement.y
         )
         if target:
+            log.info("WIN_ACT minimize target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
             if "shooting" in self.animation.available_states:
                 self.pet.set_state(PetState.SHOOTING)
             elif "slashing" in self.animation.available_states:
@@ -513,12 +539,15 @@ class PetWindow(QWidget):
             self._temp_state_timer.start(2000)
 
     def _try_sit_on_window(self):
+        if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
+            return
         result = self._window_awareness.get_titlebar_position(self._sprite_size)
         if not result:
             return
+        log.info("WIN_ACT sit from=(%d,%d) to=(%d,%d)", self.x(), self.y(), result["x"], result["y"])
         self.pet.set_state(PetState.IDLE)
         self.movement.set_position(result["x"], result["y"])
-        self.move(result["x"], result["y"])
+        self.move(self.movement.x, self.movement.y)
         self._say(get_line("window_sit", self.pet.name))
         self._temp_state_timer.start(5000)
 
@@ -529,6 +558,7 @@ class PetWindow(QWidget):
             self.movement.x, self.movement.y
         )
         if target:
+            log.info("WIN_ACT resize target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
             self.pet.set_state(PetState.INTERACTING)
             self._say(get_line("window_resize", self.pet.name))
             self._temp_state_timer.start(2000)
@@ -536,11 +566,14 @@ class PetWindow(QWidget):
     def _try_knock(self):
         target = self._window_awareness.try_knock_window()
         if target:
+            log.info("WIN_ACT knock target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
             self.pet.set_state(PetState.INTERACTING)
             self._say(get_line("window_knock", self.pet.name))
             self._temp_state_timer.start(2000)
 
     def _try_drag(self):
+        if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
+            return
         if not self._config.get("window_push_enabled", True):
             return
         target = self._window_awareness.start_drag_window(
@@ -548,6 +581,7 @@ class PetWindow(QWidget):
         )
         if not target:
             return
+        log.info("WIN_ACT drag target='%s' hwnd=%s pos=(%d,%d)", target.title, target.hwnd, self.x(), self.y())
         self._dragging_window_hwnd = target.hwnd
         self.pet.set_state(PetState.WALKING)
         self.movement.pick_random_target()
@@ -559,6 +593,7 @@ class PetWindow(QWidget):
             return
         success = self._window_awareness.try_tidy_windows()
         if success:
+            log.info("WIN_ACT tidy pos=(%d,%d)", self.x(), self.y())
             self.pet.set_state(PetState.INTERACTING)
             self._say(get_line("window_tidy", self.pet.name))
             self._temp_state_timer.start(3000)
@@ -570,6 +605,7 @@ class PetWindow(QWidget):
             self.movement.x, self.movement.y, self.pet.direction
         )
         if toppled:
+            log.info("WIN_ACT topple pos=(%d,%d) dir=%d", self.x(), self.y(), self.pet.direction)
             if "shooting" in self.animation.available_states:
                 self.pet.set_state(PetState.SHOOTING)
             else:
@@ -583,22 +619,27 @@ class PetWindow(QWidget):
         """Show a speech bubble with text."""
         if not text:
             return
+        log.info("SAY state=%s pos=(%d,%d) text='%s'", self.pet.state.name, self.x(), self.y(), text[:80])
         old_state = self.pet.state
         if old_state not in (PetState.HAPPY, PetState.EATING, PetState.DRAGGED):
             self.pet.set_state(PetState.TALKING)
 
         anchor_x = self.x() + self._sprite_size // 2
         anchor_y = self.y()
-        timeout = self._config.get("bubble_timeout", 5) * 1000
+        min_timeout = self._config.get("bubble_timeout", 5) * 1000
+        word_count = len(text.split())
+        timeout = max(min_timeout, int(word_count * 400))
         self._bubble.show_message(text, anchor_x, anchor_y, timeout_ms=timeout)
 
-        # Return to previous state after bubble hides (if not already changed)
+        # Return to IDLE after bubble hides — never restore transient states
+        # that could leave the pet stuck (PEEKING, FALLING, INTERACTING, etc.)
         if old_state not in (PetState.HAPPY, PetState.EATING, PetState.DRAGGED):
-            QTimer.singleShot(timeout, lambda: self._end_talk(old_state))
+            QTimer.singleShot(timeout, self._end_talk_to_idle)
 
-    def _end_talk(self, fallback_state: PetState):
+    def _end_talk_to_idle(self):
         if self.pet.state == PetState.TALKING:
-            self.pet.set_state(fallback_state if fallback_state != PetState.TALKING else PetState.IDLE)
+            log.debug("END_TALK -> IDLE pos=(%d,%d)", self.x(), self.y())
+            self.pet.set_state(PetState.IDLE)
 
     def _update_bubble_pos(self):
         if self._bubble.isVisible():
@@ -636,7 +677,9 @@ class PetWindow(QWidget):
         """Return to IDLE after a temporary state (happy, eating, interacting, peeking)."""
         if self.pet.state in (PetState.HAPPY, PetState.EATING, PetState.INTERACTING,
                               PetState.PEEKING, PetState.SHOOTING, PetState.THROWING,
-                              PetState.JUMPING, PetState.SLIDING, PetState.HURT):
+                              PetState.JUMPING, PetState.SLIDING, PetState.HURT,
+                              PetState.TALKING, PetState.SLASHING):
+            log.debug("END_TEMP %s -> IDLE pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
 
     # --- Config reload ---

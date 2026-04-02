@@ -64,15 +64,15 @@ class OllamaProvider:
                 if resp.status_code == 200:
                     data = resp.json()
                     raw = data.get("message", {}).get("content", "")
-                    print(f"[LLM] raw response: {raw!r}")
+                    #print(f"[LLM] raw response: {raw!r}")
                     text = _strip_think_tags(raw).strip()
-                    print(f"[LLM] cleaned text: {text!r}")
+                    #print(f"[LLM] cleaned text: {text!r}")
                     callback(text if text else None)
                 else:
-                    print(f"[LLM] bad status: {resp.status_code}")
+                    #print(f"[LLM] bad status: {resp.status_code}")
                     callback(None)
             except Exception as e:
-                print(f"[LLM] error: {e}")
+                #print(f"[LLM] error: {e}")
                 callback(None)
 
         thread = threading.Thread(target=_worker, daemon=True)
