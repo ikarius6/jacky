@@ -306,6 +306,9 @@ class PetWindow(QWidget):
             else:
                 self.movement.apply_gravity()
                 self.move(self.movement.x, self.movement.y)
+                # Switch to falling animation if airborne but not already falling
+                if self.movement.is_airborne and self.pet.state == PetState.IDLE:
+                    self.pet.set_state(PetState.FALLING)
                 # Land after falling
                 if self.pet.state == PetState.FALLING and not self.movement.is_airborne:
                     self.pet.set_state(PetState.IDLE)
