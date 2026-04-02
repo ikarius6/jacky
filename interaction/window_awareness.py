@@ -156,6 +156,8 @@ class WindowAwareness:
         """Get windows whose edges are near the pet's position."""
         nearby = []
         for w in self._windows:
+            if _is_junk_window(w.title, w.process_name):
+                continue
             # Check if pet is near any edge of this window
             dist_left = abs(pet_x - w.left)
             dist_right = abs(pet_x - w.right)
@@ -192,7 +194,9 @@ class WindowAwareness:
         if not self._enabled or not self._windows:
             return None
 
-        candidates = [w for w in self._windows if not w.is_minimized and w.width > pet_size * 2]
+        candidates = [w for w in self._windows
+                      if not w.is_minimized and w.width > pet_size * 2
+                      and not _is_junk_window(w.title, w.process_name)]
         if not candidates:
             return None
 
@@ -258,7 +262,8 @@ class WindowAwareness:
         candidates = [w for w in self._windows
                       if not w.is_minimized and not w.is_maximized
                       and w.width > pet_size
-                      and w.top >= pet_size]
+                      and w.top >= pet_size
+                      and not _is_junk_window(w.title, w.process_name)]
         if not candidates:
             return None
 
