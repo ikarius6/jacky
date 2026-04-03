@@ -129,69 +129,187 @@ DIALOGUE_POOLS = {
     ],
 }
 
-# App-specific comments keyed by process name or partial window title match
-APP_COMMENTS = {
-    "hentai": [
-        "¡Ooh, necesitas algo de privacidad!",
-        "¡No olvides cerrar esa pestaña!",
-    ],
-    "xvideos": [
-        "¡Ooh, necesitas algo de privacidad!",
-        "¡No olvides cerrar esa pestaña!",
-    ],
-    "chrome": [
-        "¿Navegando otra vez? ¡No caigas en un rabbit hole!",
-        "Ooh, ¿qué estás viendo?",
-        "Chrome se está comiendo toda la RAM otra vez...",
-    ],
-    "firefox": [
-        "¡Firefox! ¡Una persona de cultura!",
-        "¿Qué estás buscando?",
-    ],
-    "code": [
-        "¡Ooh, programando! ¿Te ayudo?",
-        "¡VS Code! ¿Estás haciendo algo genial?",
-        "¡No olvides guardar tu trabajo!",
-    ],
-    "discord": [
-        "¿Con quién estás chateando?",
-        "¡Discord! ¡Saluda a tus amigos de mi parte!",
-        "¿Estás en una llamada de voz?",
-    ],
-    "spotify": [
-        "Ooh, ¿qué canción suena?",
-        "¡Me encanta la música! ¡Súbele!",
-    ],
-    "notepad": [
-        "¿Tomando notas? ¡Inteligente!",
-        "¿Qué estás escribiendo?",
-    ],
-    "windsurf": [
-        "¡Ooh, programando en Windsurf! ¡Qué fancy!",
-        "¿Estás programando en pareja con IA?",
-        "¡No olvides guardar tu trabajo!",
-    ],
-    "explorer": [
-        "¿Buscando archivos?",
-        "¡Espero que tus archivos estén organizados!",
-    ],
-    "steam": [
-        "¡Ooh, vamos a jugar?!",
-        "¿Qué juego estás jugando?",
-    ],
-    "youtube": [
-        "¿Viendo videos? ¡No te distraigas!",
-        "Ooh, ¿qué estás viendo?",
-    ],
-    "terminal": [
-        "¡Ejecutando comandos, ya veo!",
-        "¡Ooh, una terminal! ¡Modo hacker!",
-    ],
-    "configuraci": [
-        "¿Cambiando configuraciones? ¡No vayas a romper algo!",
-        "Ajustando el sistema, ¿eh?",
-    ],
+# App-specific comments organised by category.
+# Each group has a list of keyword matchers and shared comment lines.
+# The flat APP_COMMENTS lookup is auto-generated at the bottom.
+_APP_GROUPS = {
+    "work_communication": {
+        "keywords": [
+            "slack", "teams", "meet", "zoom", "webex", "skype",
+        ],
+        "comments": [
+            "¿En una junta? ¡No te duermas!",
+            "¿Reunión de trabajo? ¡Ánimo!",
+            "¡Saluda a tus compañeros de mi parte!",
+            "¿Otra llamada más? ¡Aguante!",
+            "*se pone corbata* ¡Yo también soy profesional!",
+        ],
+    },
+    "social_chat": {
+        "keywords": [
+            "discord", "whatsapp", "telegram", "messenger", "signal",
+        ],
+        "comments": [
+            "¿Con quién estás chateando?",
+            "¡Saluda a tus amigos de mi parte!",
+            "¿Estás en una llamada?",
+            "¡No te distraigas mucho platicando!",
+            "¿Chismeando? ¡Cuéntame!",
+        ],
+    },
+    "coding": {
+        "keywords": [
+            "code", "windsurf", "cursor", "netbeans", "notepad",
+            "sublime", "intellij", "pycharm", "visual studio", "vim",
+            "neovim", "eclipse", "rider", "webstorm", "android studio",
+            "phpstorm", "goland", "fleet", "zed",
+        ],
+        "comments": [
+            "¡Ooh, programando! ¿Te ayudo?",
+            "¿Estás haciendo algo genial?",
+            "¡No olvides guardar tu trabajo!",
+            "¿Otro bug? ¡Tú puedes!",
+            "¡Recuerda hacer commits seguido!",
+            "*mira el código* No entiendo nada, ¡pero se ve cool!",
+        ],
+    },
+    "browsers": {
+        "keywords": [
+            "chrome", "firefox", "edge", "opera", "brave", "vivaldi",
+            "arc", "waterfox", "librewolf",
+        ],
+        "comments": [
+            "¿Navegando otra vez? ¡No caigas en un rabbit hole!",
+            "Ooh, ¿qué estás viendo?",
+            "¡Cuidado con las pestañas! ¡Tienes como mil!",
+            "¿Buscando algo interesante?",
+            "¡El navegador se está comiendo toda la RAM!",
+        ],
+    },
+    "media_players": {
+        "keywords": [
+            "vlc", "player", "mpv", "mpc", "plex", "kodi", "potplayer",
+        ],
+        "comments": [
+            "¡Hora de ver algo! ¿Qué veremos?",
+            "¿Película o serie?",
+            "*se sienta con palomitas* ¡Estoy listo!",
+            "¡Ooh, noche de cine!",
+        ],
+    },
+    "music": {
+        "keywords": [
+            "spotify", "music", "deezer", "tidal", "soundcloud",
+            "foobar", "audacity", "musicbee", "aimp",
+        ],
+        "comments": [
+            "Ooh, ¿qué canción suena?",
+            "¡Me encanta la música! ¡Súbele!",
+            "*baila al ritmo*",
+            "¡Ponme algo bueno!",
+            "¿Me pasas la playlist?",
+        ],
+    },
+    "gaming": {
+        "keywords": [
+            "steam", "epic", "ubisoft", "battle", "riot", "origin",
+            "gog", "xbox", "geforce", "playnite", "ea app",
+        ],
+        "comments": [
+            "¡Ooh, vamos a jugar?!",
+            "¿Qué juego estás jugando?",
+            "¡Hora de gaming! *agarra control*",
+            "¡No te olvides de comer por estar jugando!",
+            "¿Rankeds o casual?",
+        ],
+    },
+    "terminals": {
+        "keywords": [
+            "cmd", "powershell", "terminal", "bash", "wsl", "mintty",
+            "alacritty", "wezterm", "kitty", "hyper", "tabby",
+        ],
+        "comments": [
+            "¡Ejecutando comandos, ya veo!",
+            "¡Ooh, una terminal! ¡Modo hacker!",
+            "sudo hazme un sandwich",
+            "*teclea rápidamente* ¡Soy un hacker!",
+            "¡Cuidado con lo que ejecutas!",
+        ],
+    },
+    "file_management": {
+        "keywords": [
+            "explorer", "total commander", "7zip", "winrar", "everything",
+        ],
+        "comments": [
+            "¿Buscando archivos?",
+            "¡Espero que tus archivos estén organizados!",
+            "¿Limpiando el disco duro?",
+            "¡Cuidado con borrar algo importante!",
+        ],
+    },
+    "video_streaming": {
+        "keywords": [
+            "youtube", "twitch", "netflix", "disney", "prime video",
+            "hbo", "crunchyroll", "kick",
+        ],
+        "comments": [
+            "¿Viendo videos? ¡No te distraigas!",
+            "Ooh, ¿qué estás viendo?",
+            "¡Solo un episodio más! ...¿verdad?",
+            "¿Maratón? ¡Yo me apunto!",
+        ],
+    },
+    "productivity": {
+        "keywords": [
+            "word", "excel", "powerpoint", "onenote", "outlook",
+            "notion", "obsidian", "todoist", "trello", "asana",
+        ],
+        "comments": [
+            "¡Qué productivo! ¡Sigue así!",
+            "¿Trabajando duro o apenas duro trabajando?",
+            "¡No olvides guardar! Ctrl+S es tu amigo.",
+            "¡Tú puedes, ánimo con ese trabajo!",
+        ],
+    },
+    "design": {
+        "keywords": [
+            "photoshop", "illustrator", "figma", "gimp", "blender",
+            "canva", "inkscape", "premiere", "after effects", "davinci",
+            "paint",
+        ],
+        "comments": [
+            "¡Ooh, estás creando algo bonito!",
+            "¿Diseñando? ¡Qué artista!",
+            "¡A ver, dibújame a mí!",
+            "*observa con admiración*",
+        ],
+    },
+    "nsfw": {
+        "keywords": [
+            "hentai", "xvideos", "pornhub", "xnxx", "xxx", "rule34", "porn",
+        ],
+        "comments": [
+            "¡Ooh, necesitas algo de privacidad!",
+            "¡No olvides cerrar esa pestaña!",
+            "...No vi nada, no vi nada.",
+        ],
+    },
+    "settings": {
+        "keywords": [
+            "configuraci",
+        ],
+        "comments": [
+            "¿Cambiando configuraciones? ¡No vayas a romper algo!",
+            "Ajustando el sistema, ¿eh?",
+        ],
+    },
 }
+
+# Build flat keyword → comments lookup used by get_app_comment()
+APP_COMMENTS = {}
+for _group in _APP_GROUPS.values():
+    for _kw in _group["keywords"]:
+        APP_COMMENTS[_kw] = _group["comments"]
 
 
 def get_line(trigger: str, pet_name: str = "Jacky", **kwargs) -> Optional[str]:

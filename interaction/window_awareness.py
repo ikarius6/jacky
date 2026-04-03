@@ -301,7 +301,7 @@ class WindowAwareness:
         Knock on a background window to bring it to attention.
         Returns the knocked window or None.
         """
-        if not self._enabled or not self._windows:
+        if not self._push_enabled or not self._enabled or not self._windows:
             return None
 
         # Pick a non-foreground window
