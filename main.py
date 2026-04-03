@@ -20,9 +20,12 @@ def ensure_sprites():
 
 def main():
     # Configure logging — file + console
+    from utils.config_manager import load_config
+    cfg = load_config()
+    log_level = logging.DEBUG if cfg.get("debug_logging", False) else logging.WARNING
     log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jacky_debug.log")
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=log_level,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
         handlers=[

@@ -87,6 +87,11 @@ class PetWindow(QWidget):
         self._temp_state_timer.setSingleShot(True)
         self._temp_state_timer.timeout.connect(self._end_temp_state)
 
+        # Fall safety: force-land if FALLING lasts too long
+        self._fall_safety_timer = QTimer(self)
+        self._fall_safety_timer.setSingleShot(True)
+        self._fall_safety_timer.timeout.connect(self._force_land)
+
         # Window drag tracking
         self._dragging_window_hwnd = None
 
@@ -342,13 +347,17 @@ class PetWindow(QWidget):
             else:
                 self.movement.apply_gravity()
                 self.move(self.movement.x, self.movement.y)
-                # Switch to falling animation if airborne but not already falling
-                if self.movement.is_airborne and self.pet.state == PetState.IDLE:
-                    log.info("GRAVITY airborne detected pos=(%d,%d)", self.x(), self.y())
+                # Switch to falling animation if airborne (from any non-drag state)
+                _no_fall_states = (PetState.FALLING, PetState.DRAGGED, PetState.JUMPING)
+                if self.movement.is_airborne and self.pet.state not in _no_fall_states:
+                    log.info("GRAVITY airborne detected state=%s pos=(%d,%d)",
+                             self.pet.state.name, self.x(), self.y())
                     self.pet.set_state(PetState.FALLING)
-                # Land after falling
-                if self.pet.state == PetState.FALLING and not self.movement.is_airborne:
+                    self._start_fall_safety()
+                # Land after falling (elif prevents same-tick oscillation)
+                elif self.pet.state == PetState.FALLING and not self.movement.is_airborne:
                     log.info("GRAVITY landed pos=(%d,%d)", self.x(), self.y())
+                    self._cancel_fall_safety()
                     self.pet.set_state(PetState.IDLE)
 
         # Always keep bubble following the pet
@@ -491,9 +500,13 @@ class PetWindow(QWidget):
             return
         # Save position so we can return after the peek
         self._pre_peek_pos = (self.movement.x, self.movement.y)
-        log.info("WIN_ACT peek from=(%d,%d) to=(%d,%d)", self.x(), self.y(), result["x"], result["y"])
+        # Scale win32 coords to Qt logical coords
+        s = self.movement._dpi_scale
+        peek_x = int(result["x"] / s)
+        peek_y = int(result["y"] / s)
+        log.info("WIN_ACT peek from=(%d,%d) to=(%d,%d) dpi=%.2f", self.x(), self.y(), peek_x, peek_y, s)
         self.pet.set_state(PetState.PEEKING)
-        self.movement.set_position(result["x"], result["y"])
+        self.movement.set_position(peek_x, peek_y)
         self.move(self.movement.x, self.movement.y)
         self._say(get_line("peeking", self.pet.name))
         QTimer.singleShot(3000, self._return_from_peek)
@@ -558,9 +571,14 @@ class PetWindow(QWidget):
         result = self._window_awareness.get_titlebar_position(self._sprite_size)
         if not result:
             return
-        log.info("WIN_ACT sit from=(%d,%d) to=(%d,%d)", self.x(), self.y(), result["x"], result["y"])
+        # Scale win32 coords to Qt logical coords (matches platform coordinate space)
+        s = self.movement._dpi_scale
+        sit_x = int(result["x"] / s)
+        sit_y = int(result["y"] / s)
+        log.info("WIN_ACT sit from=(%d,%d) to=(%d,%d) dpi=%.2f", self.x(), self.y(), sit_x, sit_y, s)
+        self.movement.stop()
         self.pet.set_state(PetState.IDLE)
-        self.movement.set_position(result["x"], result["y"])
+        self.movement.set_position(sit_x, sit_y)
         self.move(self.movement.x, self.movement.y)
         self._say(get_line("window_sit", self.pet.name))
         self._temp_state_timer.start(5000)
@@ -696,6 +714,27 @@ class PetWindow(QWidget):
             log.debug("END_TEMP %s -> IDLE pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
 
+    def _start_fall_safety(self):
+        """Start a safety timer to force-land the pet if FALLING persists too long."""
+        if not self._fall_safety_timer.isActive():
+            self._fall_safety_timer.start(3000)
+
+    def _cancel_fall_safety(self):
+        """Cancel the fall safety timer (pet landed normally)."""
+        self._fall_safety_timer.stop()
+
+    def _force_land(self):
+        """Safety net: if the pet is still FALLING after the timeout, snap to ground."""
+        if self.pet.state != PetState.FALLING:
+            return
+        self._refresh_screen_bounds()
+        ground_y = self.movement._ground_y
+        log.warning("FORCE_LAND stuck falling pos=(%d,%d) -> ground_y=%d",
+                    self.x(), self.y(), ground_y)
+        self.movement.set_position(self.movement.x, ground_y)
+        self.move(self.movement.x, self.movement.y)
+        self.pet.set_state(PetState.IDLE)
+
     # --- Config reload ---
 
     def reload_config(self):
@@ -708,6 +747,14 @@ class PetWindow(QWidget):
         self._window_awareness.set_enabled(self._config.get("window_interaction_enabled", True))
         self._window_awareness.set_push_enabled(self._config.get("window_push_enabled", True))
         self._context_menu.refresh_llm_state()
+
+        # Toggle logging level at runtime
+        debug_on = self._config.get("debug_logging", False)
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG if debug_on else logging.WARNING)
+        for h in root.handlers:
+            h.setLevel(logging.DEBUG if debug_on else logging.WARNING)
+        log.info("Logging level set to %s", "DEBUG" if debug_on else "WARNING")
 
         # Hot-swap character if changed
         new_char = self._config.get("character", "placeholder")

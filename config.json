@@ -16,11 +16,12 @@
         10,
         30
     ],
-    "llm_enabled": true,
+    "llm_enabled": false,
     "ollama_url": "http://localhost:11434",
-    "ollama_model": "qwen3.5:0.8b",
+    "ollama_model": "huihui_ai/qwen3.5-abliterated:9b",
     "window_interaction_enabled": true,
     "window_push_enabled": true,
     "always_on_top": true,
-    "bubble_timeout": 5
+    "bubble_timeout": 5,
+    "debug_logging": true
 }

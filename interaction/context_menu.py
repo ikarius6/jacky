@@ -248,6 +248,15 @@ class SettingsDialog(QDialog):
         llm_group.setLayout(llm_form)
         layout.addWidget(llm_group)
 
+        # Debug group
+        debug_group = QGroupBox("Depuración")
+        debug_form = QFormLayout()
+        self._debug_logging = QCheckBox("Activar logging de depuración")
+        self._debug_logging.setChecked(self._config.get("debug_logging", False))
+        debug_form.addRow(self._debug_logging)
+        debug_group.setLayout(debug_form)
+        layout.addWidget(debug_group)
+
         # Buttons
         btn_layout = QHBoxLayout()
         save_btn = QPushButton("Guardar")
@@ -283,6 +292,7 @@ class SettingsDialog(QDialog):
         self._config["llm_enabled"] = self._llm_enabled.isChecked()
         self._config["ollama_url"] = self._ollama_url.text().strip()
         self._config["ollama_model"] = self._ollama_model.currentText().strip()
+        self._config["debug_logging"] = self._debug_logging.isChecked()
         save_config(self._config)
         self._pet_window.reload_config()
         self.accept()
