@@ -1,6 +1,8 @@
 import json
 import os
 
+from utils.paths import get_config_dir
+
 DEFAULT_CONFIG = {
     "pet_name": "Jacky",
     "sprite_set": "placeholder",
@@ -19,7 +21,7 @@ DEFAULT_CONFIG = {
     "bubble_timeout": 5,
 }
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.json")
+CONFIG_PATH = os.path.join(get_config_dir(), "config.json")
 
 
 def load_config() -> dict:

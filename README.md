@@ -53,3 +53,15 @@ Replace PNGs in `sprites/placeholder/` with your own. Follow the naming conventi
 - `drag_0.png`
 
 Sprites should be 128×128 px with transparent backgrounds.
+
+# Compile
+
+```powershell
+# From project root:
+.\venv\Scripts\pyinstaller.exe jacky.spec --noconfirm
+
+# Then copy config.json next to the exe (for user-writable settings):
+Copy-Item config.json dist\Jacky\config.json
+```
+
+Run `dist\Jacky\Jacky.exe` to start Jacky.

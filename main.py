@@ -3,15 +3,18 @@ import os
 import logging
 
 # Ensure the project root is on the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+if not getattr(sys, "frozen", False):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 
+from utils.paths import get_data_dir, get_config_dir
+
 
 def ensure_sprites():
     """Generate placeholder sprites if they don't exist."""
-    sprites_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sprites", "placeholder")
+    sprites_dir = os.path.join(get_data_dir(), "sprites", "placeholder")
     if not os.path.isdir(sprites_dir) or not any(f.endswith(".png") for f in os.listdir(sprites_dir)):
         print("Generating placeholder sprites...")
         from sprites.generate_placeholders import generate
@@ -23,7 +26,7 @@ def main():
     from utils.config_manager import load_config
     cfg = load_config()
     log_level = logging.DEBUG if cfg.get("debug_logging", False) else logging.WARNING
-    log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jacky_debug.log")
+    log_path = os.path.join(get_config_dir(), "jacky_debug.log")
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",

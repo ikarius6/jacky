@@ -6,14 +6,17 @@ import os
 import sys
 
 # Add project root to path so we can run standalone
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if not getattr(sys, "frozen", False):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QPainter, QColor, QPixmap, QBrush, QPen, QFont, QPainterPath
 from PyQt6.QtCore import Qt, QRectF, QPointF
 
+from utils.paths import get_data_dir
+
 SIZE = 128
-OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "placeholder")
+OUT_DIR = os.path.join(get_data_dir(), "sprites", "placeholder")
 
 
 # Color palette

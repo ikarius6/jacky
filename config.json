@@ -16,7 +16,7 @@
         10,
         30
     ],
-    "llm_enabled": false,
+    "llm_enabled": true,
     "ollama_url": "http://localhost:11434",
     "ollama_model": "huihui_ai/qwen3.5-abliterated:9b",
     "window_interaction_enabled": true,

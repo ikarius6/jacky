@@ -122,9 +122,9 @@ class PetWindow(QWidget):
 
     def _resolve_sprites_dir(self) -> str:
         """Legacy fallback — prefer get_sprites_dir(character_name)."""
+        from utils.paths import get_data_dir
         sprite_set = self._config.get("sprite_set", "placeholder")
-        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(base, "sprites", sprite_set)
+        return os.path.join(get_data_dir(), "sprites", sprite_set)
 
     def _apply_dpi_scale(self):
         """Pass the screen DPI scale to the movement engine for win32 coord conversion."""
