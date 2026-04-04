@@ -7,21 +7,21 @@ import ctypes.wintypes
 
 from PyQt6.QtWidgets import QWidget, QSystemTrayIcon, QMenu
 from PyQt6.QtCore import Qt, QTimer, QPoint, pyqtSignal
-from PyQt6.QtGui import QPainter, QIcon, QPixmap, QAction, QCursor
+from PyQt6.QtGui import QPainter, QIcon, QPixmap, QAction
 
 from core.pet import Pet, PetState
 from core.animation import AnimationController
 from core.movement import MovementEngine
 from core.character import get_character, get_sprites_dir
 from core.scheduler import Scheduler
+from core.window_interactions import WindowInteractionHandler
 from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
-from interaction.window_awareness import WindowAwareness, _is_junk_window
+from interaction.window_awareness import WindowAwareness
 from speech.bubble import SpeechBubble
-from speech.dialogue import get_line, get_app_comment
-from speech.llm_provider import OllamaProvider, OpenRouterProvider, create_llm_provider
-from utils.config_manager import load_config, save_config
-from utils.win32_helpers import WindowInfo, get_foreground_window
+from speech.dialogue import get_line
+from speech.llm_provider import create_llm_provider
+from utils.config_manager import load_config
 
 log = logging.getLogger("pet_window")
 
@@ -77,6 +77,7 @@ class PetWindow(QWidget):
         self._click_handler = ClickHandler(self)
         self._context_menu = PetContextMenu(self)
         self._window_awareness = WindowAwareness(self)
+        self._window_interactions = WindowInteractionHandler(self)
         self._bubble = SpeechBubble()
 
         # State tracking
@@ -93,9 +94,6 @@ class PetWindow(QWidget):
         self._fall_safety_timer = QTimer(self)
         self._fall_safety_timer.setSingleShot(True)
         self._fall_safety_timer.timeout.connect(self._force_land)
-
-        # Window drag tracking
-        self._dragging_window_hwnd = None
 
         # Animation timer
         self._anim_timer = QTimer(self)
@@ -176,7 +174,7 @@ class PetWindow(QWidget):
         self.scheduler.register("walk", self._scheduled_walk, idle_range)
         self.scheduler.register("chat", self._scheduled_chat, chat_range)
         if self._config.get("window_interaction_enabled", True):
-            self.scheduler.register("window_interact", self._scheduled_window_interact, win_range)
+            self.scheduler.register("window_interact", self._window_interactions.scheduled_interact, win_range)
 
     def _setup_window_awareness(self):
         if not self._config.get("window_interaction_enabled", True):
@@ -189,8 +187,8 @@ class PetWindow(QWidget):
             self._config.get("window_push_enabled", True) and any_destructive
         )
         self._window_awareness.set_callbacks(
-            on_opened=self._on_window_opened,
-            on_closed=self._on_window_closed,
+            on_opened=self._window_interactions.on_window_opened,
+            on_closed=self._window_interactions.on_window_closed,
         )
         self._window_awareness.start(poll_interval_ms=3000)
 
@@ -342,16 +340,16 @@ class PetWindow(QWidget):
                 self.pet.direction = self.movement.direction
 
                 # Drag window along while walking
-                if self._dragging_window_hwnd is not None:
+                if self._window_interactions.dragging_window_hwnd is not None:
                     self._window_awareness.drag_window_tick(
-                        self._dragging_window_hwnd,
+                        self._window_interactions.dragging_window_hwnd,
                         self.movement.x, self.movement.y,
                         self._sprite_size,
                     )
 
                 if not still_moving:
                     self.movement.speed_multiplier = 1.0
-                    self._dragging_window_hwnd = None
+                    self._window_interactions.dragging_window_hwnd = None
                     log.debug("WALK_DONE pos=(%d,%d)", self.x(), self.y())
                     self.pet.set_state(PetState.IDLE)
             else:
@@ -389,263 +387,6 @@ class PetWindow(QWidget):
             self._llm.generate(context, self._on_llm_response)
         else:
             self._say(get_line("idle", self.pet.name))
-
-    def _scheduled_window_interact(self):
-        if self.pet.state in (PetState.DRAGGED, PetState.FALLING, PetState.PEEKING):
-            return
-
-        _ACTION_PERM = {
-            "comment":  "allow_comment",
-            "push":     "allow_push",
-            "peek":     "allow_peek",
-            "shake":    "allow_shake",
-            "minimize": "allow_minimize",
-            "sit":      "allow_sit",
-            "resize":   "allow_resize",
-            "knock":    "allow_knock",
-            "drag":     "allow_drag",
-            "tidy":     "allow_tidy",
-            "topple":   "allow_topple",
-        }
-        _ACTION_WEIGHTS = {
-            "comment": 0.25, "push": 0.10, "peek": 0.10, "shake": 0.10,
-            "minimize": 0.05, "sit": 0.10, "resize": 0.08, "knock": 0.07,
-            "drag": 0.05, "tidy": 0.05, "topple": 0.05,
-        }
-
-        actions = [a for a, perm in _ACTION_PERM.items() if self._perm(perm)]
-        if not actions:
-            return
-        weights = [_ACTION_WEIGHTS[a] for a in actions]
-
-        action = random.choices(actions, weights=weights, k=1)[0]
-        log.info("SCHED window_interact action=%s state=%s pos=(%d,%d)", action, self.pet.state.name, self.x(), self.y())
-
-        if action == "comment":
-            self._comment_on_window()
-        elif action == "push":
-            self._try_push()
-        elif action == "peek":
-            self._try_peek()
-        elif action == "shake":
-            self._try_shake()
-        elif action == "minimize":
-            self._try_minimize()
-        elif action == "sit":
-            self._try_sit_on_window()
-        elif action == "resize":
-            self._try_resize()
-        elif action == "knock":
-            self._try_knock()
-        elif action == "drag":
-            self._try_drag()
-        elif action == "tidy":
-            self._try_tidy()
-        elif action == "topple":
-            self._try_topple()
-
-    # --- Window awareness callbacks ---
-
-    def _on_window_opened(self, win: WindowInfo):
-        if self.pet.state == PetState.DRAGGED:
-            return
-        if self._llm_enabled:
-            ctx = f"A new window just opened: '{win.title}'. React to it briefly."
-            self._llm.generate(ctx, self._on_llm_response)
-        else:
-            comment = get_app_comment(win.title, self.pet.name, process_name=win.process_name)
-            if comment:
-                self._say(comment)
-
-    def _on_window_closed(self, win: WindowInfo):
-        if self.pet.state == PetState.DRAGGED:
-            return
-        if random.random() < 0.3:  # Don't always comment on closes
-            if self._llm_enabled:
-                ctx = f"The window '{win.title}' just closed. React briefly."
-                self._llm.generate(ctx, self._on_llm_response)
-            else:
-                self._say(get_line("window_closed", self.pet.name, app=win.title))
-
-    # --- Window interaction behaviors ---
-
-    def _comment_on_window(self):
-        windows = self._window_awareness.get_interesting_windows()
-        if not windows:
-            return
-
-        # 50% chance to comment on the foreground window if it's interesting
-        fg = get_foreground_window()
-        #print(f"Foreground window: {fg.title, fg.process_name}")
-        if fg and random.random() < 0.5:
-            if not _is_junk_window(fg.title, fg.process_name):
-                target = fg
-            else:
-                target = random.choice(windows)
-        else:
-            target = random.choice(windows)
-
-        if self._llm_enabled:
-            ctx = f"I just noticed a window: '{target.title}' ({target.process_name}). Comment on it."
-            self._llm.generate(ctx, self._on_llm_response)
-        else:
-            comment = get_app_comment(
-                target.title, self.pet.name, process_name=target.process_name
-            )
-            if comment:
-                self._say(comment)
-
-    def _try_push(self):
-        pushed = self._window_awareness.try_push_window(
-            self.movement.x, self.movement.y
-        )
-        if pushed:
-            log.info("WIN_ACT push pos=(%d,%d)", self.x(), self.y())
-            self.pet.set_state(PetState.INTERACTING)
-            self._say(get_line("window_push", self.pet.name))
-            self._temp_state_timer.start(2000)
-
-    def _try_peek(self):
-        if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
-            return
-
-        result = self._window_awareness.get_peek_position(self._sprite_size)
-        if not result:
-            return
-        # Save position so we can return after the peek
-        self._pre_peek_pos = (self.movement.x, self.movement.y)
-        # Scale win32 coords to Qt logical coords
-        s = self.movement._dpi_scale
-        peek_x = int(result["x"] / s)
-        peek_y = int(result["y"] / s)
-        log.info("WIN_ACT peek from=(%d,%d) to=(%d,%d) dpi=%.2f", self.x(), self.y(), peek_x, peek_y, s)
-        self.pet.set_state(PetState.PEEKING)
-        self.movement.set_position(peek_x, peek_y)
-        self.move(self.movement.x, self.movement.y)
-        self._say(get_line("peeking", self.pet.name))
-        QTimer.singleShot(3000, self._return_from_peek)
-
-    def _return_from_peek(self):
-        """Restore pet to its pre-peek position so it doesn't get stranded."""
-        if not getattr(self, '_pre_peek_pos', None):
-            return
-        x, y = self._pre_peek_pos
-        self._pre_peek_pos = None
-        log.info("PEEK_RETURN to=(%d,%d) from pos=(%d,%d)", x, y, self.x(), self.y())
-        self.movement.set_position(x, y)
-        self.move(self.movement.x, self.movement.y)
-        if self.pet.state not in (PetState.DRAGGED, PetState.WALKING, PetState.RUNNING):
-            self.pet.set_state(PetState.IDLE)
-
-    def _try_shake(self):
-        target = self._window_awareness.try_shake_window(
-            self.movement.x, self.movement.y
-        )
-        if not target:
-            return
-        log.info("WIN_ACT shake target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
-        self.pet.set_state(PetState.INTERACTING)
-        self._say(get_line("window_shake", self.pet.name))
-        self._shake_hwnd = target.hwnd
-        self._shake_step = 0
-        self._shake_timer = QTimer(self)
-        self._shake_timer.timeout.connect(self._on_shake_tick)
-        self._shake_timer.start(50)
-
-    def _on_shake_tick(self):
-        if not self._window_awareness.do_shake_step(self._shake_hwnd, self._shake_step):
-            self._shake_timer.stop()
-            self._shake_timer.deleteLater()
-            self._temp_state_timer.start(1000)
-            return
-        self._shake_step += 1
-
-    def _try_minimize(self):
-        target = self._window_awareness.try_minimize_window(
-            self.movement.x, self.movement.y
-        )
-        if target:
-            log.info("WIN_ACT minimize target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
-            if "shooting" in self.animation.available_states:
-                self.pet.set_state(PetState.SHOOTING)
-            elif "slashing" in self.animation.available_states:
-                self.pet.set_state(PetState.SLASHING)
-            else:
-                self.pet.set_state(PetState.INTERACTING)
-            self._say(get_line("window_minimize", self.pet.name))
-            self._temp_state_timer.start(2000)
-
-    def _try_sit_on_window(self):
-        if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
-            return
-        result = self._window_awareness.get_titlebar_position(self._sprite_size)
-        if not result:
-            return
-        # Scale win32 coords to Qt logical coords (matches platform coordinate space)
-        s = self.movement._dpi_scale
-        sit_x = int(result["x"] / s)
-        sit_y = int(result["y"] / s)
-        log.info("WIN_ACT sit from=(%d,%d) to=(%d,%d) dpi=%.2f", self.x(), self.y(), sit_x, sit_y, s)
-        self.movement.stop()
-        self.pet.set_state(PetState.IDLE)
-        self.movement.set_position(sit_x, sit_y)
-        self.move(self.movement.x, self.movement.y)
-        self._say(get_line("window_sit", self.pet.name))
-        self._temp_state_timer.start(5000)
-
-    def _try_resize(self):
-        target = self._window_awareness.try_resize_window(
-            self.movement.x, self.movement.y
-        )
-        if target:
-            log.info("WIN_ACT resize target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
-            self.pet.set_state(PetState.INTERACTING)
-            self._say(get_line("window_resize", self.pet.name))
-            self._temp_state_timer.start(2000)
-
-    def _try_knock(self):
-        target = self._window_awareness.try_knock_window()
-        if target:
-            log.info("WIN_ACT knock target='%s' pos=(%d,%d)", target.title, self.x(), self.y())
-            self.pet.set_state(PetState.INTERACTING)
-            self._say(get_line("window_knock", self.pet.name))
-            self._temp_state_timer.start(2000)
-
-    def _try_drag(self):
-        if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
-            return
-        target = self._window_awareness.start_drag_window(
-            self.movement.x, self.movement.y
-        )
-        if not target:
-            return
-        log.info("WIN_ACT drag target='%s' hwnd=%s pos=(%d,%d)", target.title, target.hwnd, self.x(), self.y())
-        self._dragging_window_hwnd = target.hwnd
-        self.pet.set_state(PetState.WALKING)
-        self.movement.pick_random_target()
-        self._say(get_line("window_drag", self.pet.name))
-        # Drag ends when the walk finishes (handled in _on_move_tick)
-
-    def _try_tidy(self):
-        success = self._window_awareness.try_tidy_windows()
-        if success:
-            log.info("WIN_ACT tidy pos=(%d,%d)", self.x(), self.y())
-            self.pet.set_state(PetState.INTERACTING)
-            self._say(get_line("window_tidy", self.pet.name))
-            self._temp_state_timer.start(3000)
-
-    def _try_topple(self):
-        toppled = self._window_awareness.try_topple_windows(
-            self.movement.x, self.movement.y, self.pet.direction
-        )
-        if toppled:
-            log.info("WIN_ACT topple pos=(%d,%d) dir=%d", self.x(), self.y(), self.pet.direction)
-            if "shooting" in self.animation.available_states:
-                self.pet.set_state(PetState.SHOOTING)
-            else:
-                self.pet.set_state(PetState.INTERACTING)
-            self._say(get_line("window_topple", self.pet.name))
-            self._temp_state_timer.start(2500)
 
     # --- Speech ---
 
