@@ -1,11 +1,16 @@
 import ctypes
 import ctypes.wintypes as wintypes
-from typing import List, Tuple, Optional, Callable
+import time
+from typing import Dict, List, Tuple, Optional, Callable
 
 import win32gui
 import win32con
 import win32api
 import win32process
+
+# Cache: pid -> (process_name, timestamp)
+_process_name_cache: Dict[int, Tuple[str, float]] = {}
+_PROCESS_CACHE_TTL = 30.0  # seconds
 
 
 def get_taskbar_rect() -> Tuple[int, int, int, int]:
@@ -83,15 +88,27 @@ class WindowInfo:
 
 
 def _get_process_name(hwnd: int) -> str:
-    """Get the process name for a window handle."""
+    """Get the process name for a window handle (cached by PID, TTL 30s)."""
     try:
         _, pid = win32process.GetWindowThreadProcessId(hwnd)
+    except Exception:
+        return ""
+
+    now = time.monotonic()
+    cached = _process_name_cache.get(pid)
+    if cached is not None and (now - cached[1]) < _PROCESS_CACHE_TTL:
+        return cached[0]
+
+    try:
         handle = win32api.OpenProcess(0x0410, False, pid)  # PROCESS_QUERY_INFORMATION | PROCESS_VM_READ
         exe = win32process.GetModuleFileNameEx(handle, 0)
         win32api.CloseHandle(handle)
-        return exe.split("\\")[-1] if exe else ""
+        name = exe.split("\\")[-1] if exe else ""
     except Exception:
-        return ""
+        name = ""
+
+    _process_name_cache[pid] = (name, now)
+    return name
 
 
 def get_visible_windows() -> List[WindowInfo]:
