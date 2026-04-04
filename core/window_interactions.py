@@ -84,6 +84,9 @@ class WindowInteractionHandler:
         if pw.pet.state == PetState.DRAGGED:
             return
         if pw._llm_enabled:
+            if pw._llm_pending:
+                return
+            pw._llm_pending = True
             ctx = f"A new window just opened: '{win.title}'. React to it briefly."
             pw._llm.generate(ctx, pw._on_llm_response)
         else:
@@ -97,6 +100,9 @@ class WindowInteractionHandler:
             return
         if random.random() < 0.3:  # Don't always comment on closes
             if pw._llm_enabled:
+                if pw._llm_pending:
+                    return
+                pw._llm_pending = True
                 ctx = f"The window '{win.title}' just closed. React briefly."
                 pw._llm.generate(ctx, pw._on_llm_response)
             else:
@@ -123,6 +129,9 @@ class WindowInteractionHandler:
             target = random.choice(windows)
 
         if pw._llm_enabled:
+            if pw._llm_pending:
+                return
+            pw._llm_pending = True
             ctx = f"I just noticed a window: '{target.title}' ({target.process_name}). Comment on it."
             pw._llm.generate(ctx, pw._on_llm_response)
         else:
