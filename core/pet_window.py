@@ -13,6 +13,7 @@ from core.animation import AnimationController
 from core.movement import MovementEngine
 from core.character import get_character, get_sprites_dir
 from core.scheduler import Scheduler
+from core.system_events import SystemEventsMonitor, SystemEvent
 from core.window_interactions import WindowInteractionHandler
 from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
@@ -120,6 +121,10 @@ class PetWindow(QWidget):
 
         # Setup window awareness
         self._setup_window_awareness()
+
+        # System events (battery, idle, power)
+        self._system_events = SystemEventsMonitor(self)
+        self._setup_system_events()
 
         # System tray
         self._setup_tray()
@@ -237,6 +242,58 @@ class PetWindow(QWidget):
         self.scheduler.register("chat", self._scheduled_chat, chat_range)
         if self._config.get("window_interaction_enabled", True):
             self.scheduler.register("window_interact", self._window_interactions.scheduled_interact, win_range)
+
+    def _setup_system_events(self):
+        """Wire up system event reactions (battery, power, user idle)."""
+        self._system_events.event_triggered.connect(self._on_system_event)
+
+    def _on_system_event(self, event: SystemEvent, data: dict):
+        """React to a system-level event with speech (and optionally LLM)."""
+        if self.pet.state == PetState.DRAGGED:
+            return
+
+        # Map event → dialogue trigger + extra format kwargs
+        _EVENT_TRIGGERS = {
+            SystemEvent.BATTERY_LOW:         "battery_low",
+            SystemEvent.BATTERY_CRITICAL:    "battery_critical",
+            SystemEvent.BATTERY_CHARGING:    "battery_charging",
+            SystemEvent.BATTERY_DISCHARGING: "battery_discharging",
+            SystemEvent.BATTERY_FULL:        "battery_full",
+            SystemEvent.USER_RETURNED:       "user_returned",
+        }
+        trigger = _EVENT_TRIGGERS.get(event)
+        if not trigger:
+            return
+
+        # Try LLM for a richer reaction, fall back to predefined lines
+        if self._llm_enabled and not self._llm_pending:
+            pct = data.get("pct", "?")
+            _LLM_PROMPTS = {
+                SystemEvent.BATTERY_LOW:
+                    f"The laptop battery is low ({pct}%). React worried.",
+                SystemEvent.BATTERY_CRITICAL:
+                    f"The laptop battery is CRITICAL ({pct}%)! Panic!",
+                SystemEvent.BATTERY_CHARGING:
+                    "The laptop was just plugged in to charge. React happy/relieved.",
+                SystemEvent.BATTERY_DISCHARGING:
+                    "The laptop was just unplugged from power. React slightly concerned.",
+                SystemEvent.BATTERY_FULL:
+                    "The laptop battery just reached 100%. Celebrate briefly.",
+                SystemEvent.USER_RETURNED:
+                    "The user just came back after being away for a while. Welcome them.",
+            }
+            prompt = _LLM_PROMPTS.get(event)
+            if prompt:
+                self._llm_pending = True
+                ctx = self._build_llm_context(prompt)
+                self._llm.generate(ctx, self._on_llm_response)
+                return
+
+        # Predefined line
+        pct = data.get("pct", "")
+        line = get_line(trigger, self.pet.name, pct=pct)
+        if line:
+            self._say(line)
 
     def _setup_window_awareness(self):
         if not self._config.get("window_interaction_enabled", True):
@@ -390,6 +447,7 @@ class PetWindow(QWidget):
 
     def _do_quit(self):
         self.scheduler.stop_all()
+        self._system_events.stop()
         self._window_awareness.stop()
         self._bubble.hide()
         self._tray.hide()
@@ -647,6 +705,7 @@ class PetWindow(QWidget):
         """Show the pet and say hello."""
         self.show()
         self._remove_dwm_border()
+        self._system_events.start()
         QTimer.singleShot(500, lambda: self._say(get_line("greeting", self.pet.name)))
 
     def _remove_dwm_border(self):

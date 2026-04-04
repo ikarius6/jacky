@@ -127,6 +127,51 @@ DIALOGUE_POOLS = {
         "*bosteza* Es muy tarde...",
         "¡Ya vete a dormir!",
     ],
+    # ── System events ────────────────────────────────────
+    "battery_low": [
+        "¡Oye! La batería está al {pct}%... ¡conecta el cargador!",
+        "¡Alerta! Batería baja ({pct}%). ¡No me dejes morir!",
+        "¡{pct}% de batería! ¡Estamos en zona de peligro!",
+        "*mira nervioso el icono de batería* ¡{pct}%!",
+        "¡La batería se está acabando! ¡Enchufa, enchufa!",
+    ],
+    "battery_critical": [
+        "¡¡EMERGENCIA!! ¡¡{pct}% de batería!! ¡¡CONECTA EL CARGADOR YA!!",
+        "¡Nos vamos a apagar! ¡{pct}%! ¡CORRE POR EL CARGADOR!",
+        "*entra en pánico* ¡¡{pct}%!! ¡¡No quiero desaparecer!!",
+        "¡¡MAYDAY MAYDAY!! ¡Batería crítica al {pct}%!",
+        "¡Si no conectas el cargador, me voy al más allá! ({pct}%)",
+    ],
+    "battery_charging": [
+        "¡Yay! ¡Conectaron el cargador! ¡Estamos salvados!",
+        "*suspiro de alivio* ¡Al fin, energía!",
+        "¡Gracias por conectar la compu! Me sentía débil...",
+        "¡Enchufados y listos! ¡A darle!",
+        "¡Recargando energía! *se relaja*",
+    ],
+    "battery_discharging": [
+        "¡Oh no! ¡Desconectaron el cargador!",
+        "Hmm, ya no estamos conectados a la corriente...",
+        "¡Modo batería activado! A ahorrar energía...",
+        "*mira el cable desconectado* Espero que dure...",
+        "¡Sin corriente! ¡Usemos la batería con sabiduría!",
+    ],
+    "battery_full": [
+        "¡Batería al 100%! ¡Estamos a full!",
+        "¡Carga completa! ¡Listos para lo que sea!",
+        "*baila* ¡Energía al máximo!",
+        "¡100%! Ya puedes desconectar si quieres~",
+        "¡Tanque lleno! ¡Vámonos!",
+    ],
+    "user_returned": [
+        "¡Hey, volviste! ¡Te extrañé!",
+        "¡Oh! ¡Estás de vuelta! *mueve la colita*",
+        "*se emociona* ¡Pensé que me habías abandonado!",
+        "¡Bienvenido de vuelta! ¿Dónde andabas?",
+        "¡Ya estás aquí! Me estaba aburriendo solito...",
+        "¡Hola de nuevo! ¿Todo bien?",
+        "*salta de alegría* ¡Volviste, volviste!",
+    ],
 }
 
 # App-specific comments organised by category.
