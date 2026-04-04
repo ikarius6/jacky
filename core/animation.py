@@ -85,6 +85,12 @@ class AnimationController:
             self._frames[state_name] = []
         self._frames[state_name].append(pixmap)
 
+    def dispose(self):
+        """Explicitly release all cached pixmaps to free memory immediately."""
+        for frames in self._frames.values():
+            frames.clear()
+        self._frames.clear()
+
     @property
     def available_states(self) -> List[str]:
         return list(self._frames.keys())

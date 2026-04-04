@@ -580,6 +580,7 @@ class PetWindow(QWidget):
             self._character_name = new_char
             self._char_cfg = get_character(new_char)
             sprites_dir = get_sprites_dir(new_char)
+            self.animation.dispose()
             self.animation = AnimationController(
                 sprites_dir,
                 sprite_size=self._sprite_size,
