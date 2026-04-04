@@ -1,5 +1,6 @@
 import ctypes
 import ctypes.wintypes as wintypes
+import os
 import time
 from typing import Dict, List, Tuple, Optional, Callable
 
@@ -7,6 +8,8 @@ import win32gui
 import win32con
 import win32api
 import win32process
+
+_OWN_PID = os.getpid()
 
 # Cache: pid -> (process_name, timestamp)
 _process_name_cache: Dict[int, Tuple[str, float]] = {}
@@ -139,6 +142,14 @@ def get_visible_windows() -> List[WindowInfo]:
 
         if is_minimized:
             return True
+
+        # Skip windows belonging to our own process (pet window, speech bubble, etc.)
+        try:
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            if pid == _OWN_PID:
+                return True
+        except Exception:
+            pass
 
         process_name = _get_process_name(hwnd)
 

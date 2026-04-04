@@ -30,9 +30,6 @@ def _is_junk_window(title: str, process_name: str) -> bool:
     # Internal/system window names
     if t.startswith("_"):
         return True
-    # Our own pet process
-    if p in ("python.exe", "pythonw.exe") or t == "python":
-        return True
     # Known system junk patterns
     if any(pat in t for pat in _JUNK_PATTERNS):
         return True
