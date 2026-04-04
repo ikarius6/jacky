@@ -380,13 +380,27 @@ class SettingsDialog(QDialog):
         layout.addWidget(win_group)
 
         # LLM group
-        llm_group = QGroupBox("Ollama LLM")
+        llm_group = QGroupBox("LLM")
         llm_form = QFormLayout()
         self._llm_enabled = QCheckBox("Activar diálogo LLM")
         self._llm_enabled.setChecked(self._config.get("llm_enabled", False))
         llm_form.addRow(self._llm_enabled)
+
+        # Provider selector
+        self._provider_combo = QComboBox()
+        self._provider_combo.addItems(["ollama", "openrouter"])
+        current_provider = self._config.get("llm_provider", "ollama")
+        idx = self._provider_combo.findText(current_provider)
+        if idx >= 0:
+            self._provider_combo.setCurrentIndex(idx)
+        self._provider_combo.currentTextChanged.connect(self._on_provider_changed)
+        llm_form.addRow("Proveedor:", self._provider_combo)
+
+        # --- Ollama fields ---
+        self._ollama_url_label = QLabel("URL:")
         self._ollama_url = QLineEdit(self._config.get("ollama_url", "http://localhost:11434"))
-        llm_form.addRow("URL:", self._ollama_url)
+        llm_form.addRow(self._ollama_url_label, self._ollama_url)
+        self._ollama_model_label = QLabel("Modelo:")
         model_layout = QHBoxLayout()
         self._ollama_model = QComboBox()
         self._ollama_model.setEditable(True)
@@ -396,10 +410,25 @@ class SettingsDialog(QDialog):
         self._refresh_models_btn.clicked.connect(self._refresh_models)
         model_layout.addWidget(self._ollama_model)
         model_layout.addWidget(self._refresh_models_btn)
-        llm_form.addRow("Modelo:", model_layout)
+        llm_form.addRow(self._ollama_model_label, model_layout)
         self._refresh_models()
+
+        # --- OpenRouter fields ---
+        self._or_key_label = QLabel("API Key:")
+        self._or_api_key = QLineEdit(self._config.get("openrouter_api_key", ""))
+        self._or_api_key.setEchoMode(QLineEdit.EchoMode.Password)
+        self._or_api_key.setPlaceholderText("sk-or-...")
+        llm_form.addRow(self._or_key_label, self._or_api_key)
+        self._or_model_label = QLabel("Modelo:")
+        self._or_model = QLineEdit(self._config.get("openrouter_model", "qwen/qwen3.6-plus:free"))
+        self._or_model.setPlaceholderText("qwen/qwen3.6-plus:free")
+        llm_form.addRow(self._or_model_label, self._or_model)
+
         llm_group.setLayout(llm_form)
         layout.addWidget(llm_group)
+
+        # Show/hide the right fields for current provider
+        self._on_provider_changed(current_provider)
 
         # Debug group
         debug_group = QGroupBox("Depuración")
@@ -421,6 +450,17 @@ class SettingsDialog(QDialog):
             card.set_selected(card.char_name == name)
 
     # ── models / save ───────────────────────────────────────────────
+
+    def _on_provider_changed(self, provider: str):
+        """Show/hide fields depending on the selected LLM provider."""
+        is_ollama = provider == "ollama"
+        for w in (self._ollama_url_label, self._ollama_url,
+                  self._ollama_model_label, self._ollama_model,
+                  self._refresh_models_btn):
+            w.setVisible(is_ollama)
+        for w in (self._or_key_label, self._or_api_key,
+                  self._or_model_label, self._or_model):
+            w.setVisible(not is_ollama)
 
     def _refresh_models(self):
         """Fetch available models from the Ollama instance and populate the combo."""
@@ -444,8 +484,11 @@ class SettingsDialog(QDialog):
         self._config["window_interaction_enabled"] = self._win_enabled.isChecked()
         self._config["window_push_enabled"] = self._win_push.isChecked()
         self._config["llm_enabled"] = self._llm_enabled.isChecked()
+        self._config["llm_provider"] = self._provider_combo.currentText()
         self._config["ollama_url"] = self._ollama_url.text().strip()
         self._config["ollama_model"] = self._ollama_model.currentText().strip()
+        self._config["openrouter_api_key"] = self._or_api_key.text().strip()
+        self._config["openrouter_model"] = self._or_model.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
         save_config(self._config)
         self._pet_window.reload_config()

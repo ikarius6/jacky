@@ -19,7 +19,7 @@ from interaction.context_menu import PetContextMenu
 from interaction.window_awareness import WindowAwareness, _is_junk_window
 from speech.bubble import SpeechBubble
 from speech.dialogue import get_line, get_app_comment
-from speech.llm_provider import OllamaProvider
+from speech.llm_provider import OllamaProvider, OpenRouterProvider, create_llm_provider
 from utils.config_manager import load_config, save_config
 from utils.win32_helpers import WindowInfo, get_foreground_window
 
@@ -69,10 +69,7 @@ class PetWindow(QWidget):
         self.scheduler = Scheduler()
 
         # LLM (must be initialized before context menu)
-        self._llm = OllamaProvider(
-            base_url=self._config.get("ollama_url", "http://localhost:11434"),
-            model=self._config.get("ollama_model", "llama3"),
-        )
+        self._llm = create_llm_provider(self._config)
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._llm_text_ready.connect(self._say)
 
@@ -742,8 +739,7 @@ class PetWindow(QWidget):
         self._config = load_config()
         self.movement._speed = self._config.get("movement_speed", 3)
         self._llm_enabled = self._config.get("llm_enabled", False)
-        self._llm._base_url = self._config.get("ollama_url", "http://localhost:11434").rstrip("/")
-        self._llm._model = self._config.get("ollama_model", "llama3")
+        self._llm = create_llm_provider(self._config)
         self._window_awareness.set_enabled(self._config.get("window_interaction_enabled", True))
         self._window_awareness.set_push_enabled(self._config.get("window_push_enabled", True))
         self._context_menu.refresh_llm_state()

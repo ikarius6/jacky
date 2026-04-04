@@ -9,7 +9,7 @@ A Windows desktop pet application. Jacky is a cute chibi character who walks aro
 - **Click interactions** — left-click to pet, right-click for context menu, drag to reposition
 - **Speech bubbles** — contextual dialogue with predefined lines
 - **Window awareness** — detects open windows, reads titles, pushes windows, peeks from edges
-- **LLM integration** — optional Ollama support for dynamic dialogue
+- **LLM integration** — optional Ollama or OpenRouter support for dynamic dialogue
 - **System tray** — quick access to settings and quit
 
 ## Setup
@@ -24,23 +24,36 @@ python -m venv venv
 # Install dependencies
 pip install -r requirements.txt
 
+# Create your config from the example
+copy config.json.example config.json
+
 # Run
 python main.py
 ```
 
 ## Configuration
 
-Edit `config.json` or use the in-app Settings dialog (right-click Jacky → Settings).
+Edit `config.json` or use the in-app Settings dialog (right-click Jacky → Ajustes).
+
+> **Note:** `config.json` is git-ignored to prevent leaking API keys. Use `config.json.example` as template.
 
 | Key | Description | Default |
-|-----|-------------|---------|
+|-----|-------------|--------|
 | `movement_speed` | Walking speed (1-10) | 3 |
-| `llm_enabled` | Enable Ollama LLM dialogue | false |
+| `llm_enabled` | Enable LLM dialogue | false |
+| `llm_provider` | `"ollama"` or `"openrouter"` | ollama |
 | `ollama_url` | Ollama server URL | http://localhost:11434 |
 | `ollama_model` | Ollama model name | llama3 |
+| `openrouter_api_key` | OpenRouter API key | *(empty)* |
+| `openrouter_model` | OpenRouter model identifier | qwen/qwen3.6-plus:free |
 | `window_interaction_enabled` | Enable window awareness | true |
 | `window_push_enabled` | Allow pushing windows | true |
 | `bubble_timeout` | Speech bubble duration (seconds) | 5 |
+
+### LLM Providers
+
+- **Ollama** — Run a local model. Install [Ollama](https://ollama.com), pull a model, and set `ollama_url` / `ollama_model`.
+- **OpenRouter** — Use cloud models (some are free). Get an API key at [openrouter.ai](https://openrouter.ai), set `llm_provider` to `"openrouter"`, and paste your key in `openrouter_api_key`.
 
 ## Custom Sprites
 
@@ -60,7 +73,7 @@ Sprites should be 128×128 px with transparent backgrounds.
 # From project root:
 .\venv\Scripts\pyinstaller.exe jacky.spec --noconfirm
 
-# Then copy config.json next to the exe (for user-writable settings):
+# Then copy your config next to the exe (for user-writable settings):
 Copy-Item config.json dist\Jacky\config.json
 ```
 

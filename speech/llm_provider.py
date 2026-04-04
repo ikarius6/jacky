@@ -126,3 +126,102 @@ class OllamaProvider:
         except Exception:
             pass
         return None
+
+
+class OpenRouterProvider:
+    """OpenRouter API client — works with any model available on openrouter.ai."""
+
+    API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+    def __init__(self, api_key: str = "", model: str = "qwen/qwen3.6-plus:free"):
+        self._api_key = api_key
+        self._model = model
+        self._available: Optional[bool] = None
+
+    def is_available(self) -> bool:
+        """Check if the API key is set (basic validation)."""
+        self._available = bool(self._api_key)
+        return self._available
+
+    def _headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+
+    def _parse_response(self, data: dict) -> Optional[str]:
+        """Extract text from an OpenRouter chat completion response."""
+        try:
+            msg = data["choices"][0]["message"]
+            raw = msg.get("content", "") or ""
+            text = _strip_think_tags(raw).strip()
+            return text or None
+        except (KeyError, IndexError):
+            return None
+
+    def generate(self, context: str, callback: Callable[[Optional[str]], None]):
+        """Generate a response in a background thread (same interface as OllamaProvider)."""
+        def _worker():
+            try:
+                payload = {
+                    "model": self._model,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": context},
+                    ],
+                    "temperature": 0.8,
+                    "max_tokens": 120,
+                }
+                resp = requests.post(
+                    self.API_URL,
+                    headers=self._headers(),
+                    data=json.dumps(payload),
+                    timeout=30,
+                )
+                if resp.status_code == 200:
+                    callback(self._parse_response(resp.json()))
+                else:
+                    callback(None)
+            except Exception:
+                callback(None)
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
+
+    def generate_sync(self, context: str) -> Optional[str]:
+        """Synchronous generation (blocking)."""
+        try:
+            payload = {
+                "model": self._model,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": context},
+                ],
+                "temperature": 0.8,
+                "max_tokens": 120,
+            }
+            resp = requests.post(
+                self.API_URL,
+                headers=self._headers(),
+                data=json.dumps(payload),
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                return self._parse_response(resp.json())
+        except Exception:
+            pass
+        return None
+
+
+def create_llm_provider(config: dict):
+    """Factory: return the correct provider based on config['llm_provider']."""
+    provider = config.get("llm_provider", "ollama")
+    if provider == "openrouter":
+        return OpenRouterProvider(
+            api_key=config.get("openrouter_api_key", ""),
+            model=config.get("openrouter_model", "qwen/qwen3.6-plus:free"),
+        )
+    return OllamaProvider(
+        base_url=config.get("ollama_url", "http://localhost:11434"),
+        model=config.get("ollama_model", "llama3"),
+    )

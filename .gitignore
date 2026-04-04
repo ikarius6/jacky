@@ -3,3 +3,4 @@ venv/*
 *.log
 dist/
 build/
+config.json
