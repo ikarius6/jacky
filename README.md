@@ -2,6 +2,10 @@
 
 A Windows desktop pet application. Jacky is a cute chibi character who walks around your screen, interacts with windows, and talks to you.
 
+## Try it now!
+
+[⬇ Download](https://github.com/ikarius6/jacky/releases/latest)
+
 ## Screenshots
 
 ![Jacky](screens/1.jpg)
