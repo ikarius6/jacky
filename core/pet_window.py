@@ -301,7 +301,7 @@ class PetWindow(QWidget):
         log.info("ACTION on_drag_end pos=(%d,%d)", pos.x(), pos.y())
         self.movement.set_position_after_drop(pos.x(), pos.y())
         self.pet.set_state(PetState.IDLE)
-        self._setup_scheduler()  # re-register timers
+        self.scheduler.resume_all()  # resume paused timers, don't re-register
 
     def show_context_menu(self, pos: QPoint):
         self._context_menu.show_at(pos)

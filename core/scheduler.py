@@ -13,13 +13,19 @@ class Scheduler:
     def __init__(self):
         self._timers: dict[str, QTimer] = {}
         self._callbacks: dict[str, Callable] = {}
+        self._intervals: dict[str, tuple[int, int]] = {}
 
     def register(self, name: str, callback: Callable, interval_range: tuple[int, int]):
         """
         Register a named event that fires at random intervals.
         interval_range: (min_seconds, max_seconds).
         """
+        # Stop existing timer for this name to prevent leaks
+        old = self._timers.get(name)
+        if old is not None:
+            old.stop()
         self._callbacks[name] = callback
+        self._intervals[name] = interval_range
         timer = QTimer()
         timer.setSingleShot(True)
         timer.timeout.connect(lambda: self._fire(name, interval_range))
@@ -58,9 +64,15 @@ class Scheduler:
         """Resume a specific event timer."""
         self._schedule_next(name, interval_range)
 
+    def resume_all(self):
+        """Resume all registered event timers with their stored intervals."""
+        for name, interval_range in self._intervals.items():
+            self._schedule_next(name, interval_range)
+
     def stop_all(self):
         """Stop and clean up all timers."""
         for timer in self._timers.values():
             timer.stop()
         self._timers.clear()
         self._callbacks.clear()
+        self._intervals.clear()
