@@ -293,10 +293,7 @@ class PetWindow(QWidget):
         pos = self.pos()
         log.info("ACTION on_drag_end pos=(%d,%d)", pos.x(), pos.y())
         self.movement.set_position_after_drop(pos.x(), pos.y())
-        if self.movement.is_airborne:
-            self.pet.set_state(PetState.FALLING)
-        else:
-            self.pet.set_state(PetState.IDLE)
+        self.pet.set_state(PetState.IDLE)
         self._setup_scheduler()  # re-register timers
 
     def show_context_menu(self, pos: QPoint):
@@ -353,20 +350,7 @@ class PetWindow(QWidget):
                     log.debug("WALK_DONE pos=(%d,%d)", self.x(), self.y())
                     self.pet.set_state(PetState.IDLE)
             else:
-                self.movement.apply_gravity()
-                self.move(self.movement.x, self.movement.y)
-                # Switch to falling animation if airborne (from any non-drag state)
-                _no_fall_states = (PetState.FALLING, PetState.DRAGGED, PetState.JUMPING)
-                if self.movement.is_airborne and self.pet.state not in _no_fall_states:
-                    log.info("GRAVITY airborne detected state=%s pos=(%d,%d)",
-                             self.pet.state.name, self.x(), self.y())
-                    self.pet.set_state(PetState.FALLING)
-                    self._start_fall_safety()
-                # Land after falling (elif prevents same-tick oscillation)
-                elif self.pet.state == PetState.FALLING and not self.movement.is_airborne:
-                    log.info("GRAVITY landed pos=(%d,%d)", self.x(), self.y())
-                    self._cancel_fall_safety()
-                    self.pet.set_state(PetState.IDLE)
+                pass  # No gravity — pet stays where it is
 
         # Always keep bubble following the pet
         self._update_bubble_pos()
@@ -666,7 +650,10 @@ class PetWindow(QWidget):
             return
         log.info("SAY state=%s pos=(%d,%d) text='%s'", self.pet.state.name, self.x(), self.y(), text[:80])
         old_state = self.pet.state
-        if old_state not in (PetState.HAPPY, PetState.EATING, PetState.DRAGGED):
+        _KEEP_ANIM = (PetState.HAPPY, PetState.EATING, PetState.DRAGGED,
+                     PetState.SHOOTING, PetState.SLASHING, PetState.THROWING,
+                     PetState.SLIDING, PetState.INTERACTING)
+        if old_state not in _KEEP_ANIM:
             self.pet.set_state(PetState.TALKING)
 
         anchor_x = self.x() + self._sprite_size // 2
@@ -678,7 +665,7 @@ class PetWindow(QWidget):
 
         # Return to IDLE after bubble hides — never restore transient states
         # that could leave the pet stuck (PEEKING, FALLING, INTERACTING, etc.)
-        if old_state not in (PetState.HAPPY, PetState.EATING, PetState.DRAGGED):
+        if old_state not in _KEEP_ANIM:
             QTimer.singleShot(timeout, self._end_talk_to_idle)
 
     def _end_talk_to_idle(self):
