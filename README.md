@@ -2,6 +2,12 @@
 
 A Windows desktop pet application. Jacky is a cute chibi character who walks around your screen, interacts with windows, and talks to you.
 
+## Screenshots
+
+![Jacky](screens/1.jpg)
+![Skins](screens/2.jpg)
+
+
 ## Features
 
 - **Transparent frameless window** — only the pet sprite is visible
@@ -35,7 +41,7 @@ python main.py
 
 Edit `config.json` or use the in-app Settings dialog (right-click Jacky → Ajustes).
 
-> **Note:** `config.json` is git-ignored to prevent leaking API keys. Use `config.json.example` as template.
+> **Note:** Use `config.json.example` as template.
 
 | Key | Description | Default |
 |-----|-------------|--------|
