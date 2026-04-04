@@ -2,8 +2,9 @@ import os
 import logging
 import random
 import datetime
+import time
 
-from PyQt6.QtWidgets import QWidget, QSystemTrayIcon, QMenu
+from PyQt6.QtWidgets import QWidget, QSystemTrayIcon, QMenu, QApplication
 from PyQt6.QtCore import Qt, QTimer, QPoint, pyqtSignal
 from PyQt6.QtGui import QPainter, QIcon, QPixmap, QAction
 
@@ -105,6 +106,12 @@ class PetWindow(QWidget):
         self._move_timer.timeout.connect(self._on_move_tick)
         self._move_timer.start(33)
 
+        # Throttle for _refresh_screen_bounds (avoid querying geometry every 33ms)
+        self._BOUNDS_REFRESH_INTERVAL_S = 2.0
+        self._last_bounds_refresh = 0.0
+        self._bounds_dirty = True  # force first refresh
+        self._connect_screen_signals()
+
         # Pet state change listener
         self.pet.on_state_change(self._on_state_change)
 
@@ -148,8 +155,6 @@ class PetWindow(QWidget):
 
     def _current_screen(self):
         """Return the QScreen that contains the pet's center point."""
-        from PyQt6.QtWidgets import QApplication
-        from PyQt6.QtCore import QPoint
         center = QPoint(self.x() + self._sprite_size // 2,
                         self.y() + self._sprite_size // 2)
         screen = QApplication.screenAt(center)
@@ -167,7 +172,6 @@ class PetWindow(QWidget):
 
     def _virtual_desktop_geo(self):
         """Return the bounding rect of all screens' available geometries."""
-        from PyQt6.QtWidgets import QApplication
         from PyQt6.QtCore import QRect
         screens = QApplication.screens()
         if not screens:
@@ -176,6 +180,22 @@ class PetWindow(QWidget):
         for s in screens[1:]:
             result = result.united(s.availableGeometry())
         return result
+
+    def _connect_screen_signals(self):
+        """Listen for screen geometry changes to invalidate cached bounds."""
+        for screen in QApplication.screens():
+            screen.geometryChanged.connect(self._on_screen_geometry_changed)
+            screen.availableGeometryChanged.connect(self._on_screen_geometry_changed)
+        QApplication.instance().screenAdded.connect(self._on_screens_changed)
+        QApplication.instance().screenRemoved.connect(self._on_screens_changed)
+
+    def _on_screen_geometry_changed(self):
+        self._bounds_dirty = True
+
+    def _on_screens_changed(self, screen):
+        self._bounds_dirty = True
+        # Re-connect signals for the new screen list
+        self._connect_screen_signals()
 
     def _refresh_screen_bounds(self):
         """Push virtual desktop bounds into the movement engine (multi-monitor)."""
@@ -194,12 +214,19 @@ class PetWindow(QWidget):
             geo.y() + geo.height(),
         )
         # Per-screen rects for random target picking
-        from PyQt6.QtWidgets import QApplication
         rects = []
         for s in QApplication.screens():
             g = s.availableGeometry()
             rects.append((g.x(), g.y(), g.x() + g.width(), g.y() + g.height()))
         self.movement.update_screen_rects(rects)
+        self._last_bounds_refresh = time.monotonic()
+        self._bounds_dirty = False
+
+    def _maybe_refresh_screen_bounds(self):
+        """Throttled screen-bounds refresh: updates at most every 2s, or immediately if dirty."""
+        now = time.monotonic()
+        if self._bounds_dirty or (now - self._last_bounds_refresh) >= self._BOUNDS_REFRESH_INTERVAL_S:
+            self._refresh_screen_bounds()
 
     def _setup_scheduler(self):
         idle_range = tuple(self._config.get("idle_interval", [5, 15]))
@@ -354,7 +381,6 @@ class PetWindow(QWidget):
         self._window_awareness.stop()
         self._bubble.hide()
         self._tray.hide()
-        from PyQt6.QtWidgets import QApplication
         QApplication.instance().quit()
 
     # --- Animation tick ---
@@ -372,8 +398,8 @@ class PetWindow(QWidget):
 
     def _on_move_tick(self):
         if self.pet.state != PetState.DRAGGED:
-            # Keep screen bounds fresh (handles resolution/scaling changes)
-            self._refresh_screen_bounds()
+            # Keep screen bounds fresh (throttled — every ~2s or on geometry change)
+            self._maybe_refresh_screen_bounds()
 
             if self.pet.state in (PetState.WALKING, PetState.RUNNING):
                 self.movement.speed_multiplier = 2.0 if self.pet.state == PetState.RUNNING else 1.0
