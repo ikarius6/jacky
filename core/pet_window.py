@@ -70,6 +70,7 @@ class PetWindow(QWidget):
         # LLM (must be initialized before context menu)
         self._llm = create_llm_provider(self._config)
         self._llm_enabled = self._config.get("llm_enabled", False)
+        self._llm_pending = False
         self._llm_text_ready.connect(self._say)
 
         # Interaction components
@@ -278,6 +279,10 @@ class PetWindow(QWidget):
         """User asked a direct question via the Preguntar dialog."""
         if not self._llm_enabled:
             return
+        if self._llm_pending:
+            self._say("¡Espera, aún estoy pensando! >_<")
+            return
+        self._llm_pending = True
         context = self._build_llm_context(f"The user asks you directly: \"{question}\"")
         self._say("Hmm, déjame pensar...", timeout_ms=60000)
         self._llm.generate(context, self._on_ask_response)
@@ -382,6 +387,10 @@ class PetWindow(QWidget):
             return
 
         if self._llm_enabled:
+            if self._llm_pending:
+                log.debug("SCHED chat skipped — LLM request already pending")
+                return
+            self._llm_pending = True
             context = self._build_llm_context("idle chatter")
             self._llm.generate(context, self._on_llm_response)
         else:
@@ -447,6 +456,7 @@ class PetWindow(QWidget):
 
     def _on_llm_response(self, text: str | None):
         """Callback from LLM thread — emit signal for thread-safe delivery."""
+        self._llm_pending = False
         if text:
             self._llm_text_ready.emit(text)
         else:
@@ -456,6 +466,7 @@ class PetWindow(QWidget):
 
     def _on_ask_response(self, text: str | None):
         """Callback from LLM for user questions — shows error on failure."""
+        self._llm_pending = False
         if text:
             self._llm_text_ready.emit(text)
         else:
