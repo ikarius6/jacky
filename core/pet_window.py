@@ -694,10 +694,15 @@ class PetWindow(QWidget):
 
     def _build_llm_context(self, situation: str) -> str:
         parts = [f"Situation: {situation}"]
-        win_ctx = self._window_awareness.get_window_comment_context()
-        parts.append(win_ctx)
+        # Pick ONE random interesting window instead of listing all
+        interesting = self._window_awareness.get_interesting_windows()
+        if interesting:
+            pick = random.choice(interesting)
+            parts.append(f"Foreground app: {pick.title}")
+        # Only mention time if it's notably late or early
         hour = datetime.datetime.now().hour
-        parts.append(f"Current time: {datetime.datetime.now().strftime('%H:%M')}")
+        if hour >= 23 or hour < 6:
+            parts.append(f"Current time: {datetime.datetime.now().strftime('%H:%M')}")
         return " | ".join(parts)
 
     def _on_llm_response(self, text: str | None):
