@@ -1,9 +1,12 @@
 import json
+import logging
 import re
 import threading
 from typing import Optional, Callable
 
 import requests
+
+log = logging.getLogger("llm_provider")
 
 
 def _strip_think_tags(text: str) -> str:
@@ -162,6 +165,8 @@ class OpenRouterProvider:
     def generate(self, context: str, callback: Callable[[Optional[str]], None]):
         """Generate a response in a background thread (same interface as OllamaProvider)."""
         def _worker():
+            import time
+            t0 = time.monotonic()
             try:
                 payload = {
                     "model": self._model,
@@ -178,11 +183,18 @@ class OpenRouterProvider:
                     data=json.dumps(payload),
                     timeout=30,
                 )
+                elapsed = time.monotonic() - t0
                 if resp.status_code == 200:
-                    callback(self._parse_response(resp.json()))
+                    text = self._parse_response(resp.json())
+                    log.debug("OpenRouter OK %.1fs text=%r", elapsed, text[:80] if text else None)
+                    callback(text)
                 else:
+                    log.warning("OpenRouter HTTP %d after %.1fs: %s",
+                                resp.status_code, elapsed, resp.text[:200])
                     callback(None)
-            except Exception:
+            except Exception as e:
+                elapsed = time.monotonic() - t0
+                log.warning("OpenRouter error after %.1fs: %s", elapsed, e)
                 callback(None)
 
         thread = threading.Thread(target=_worker, daemon=True)

@@ -84,6 +84,11 @@ class PetWindow(QWidget):
         self._temp_state_timer.setSingleShot(True)
         self._temp_state_timer.timeout.connect(self._end_temp_state)
 
+        # Talk-to-idle timer (cancellable — replaces QTimer.singleShot)
+        self._talk_end_timer = QTimer(self)
+        self._talk_end_timer.setSingleShot(True)
+        self._talk_end_timer.timeout.connect(self._end_talk_to_idle)
+
         # Fall safety: force-land if FALLING lasts too long
         self._fall_safety_timer = QTimer(self)
         self._fall_safety_timer.setSingleShot(True)
@@ -277,8 +282,8 @@ class PetWindow(QWidget):
         if not self._llm_enabled:
             return
         context = self._build_llm_context(f"The user asks you directly: \"{question}\"")
-        self._say("Hmm, déjame pensar...")
-        self._llm.generate(context, self._on_llm_response)
+        self._say("Hmm, déjame pensar...", timeout_ms=60000)
+        self._llm.generate(context, self._on_ask_response)
 
     def on_drag_start(self):
         """User started dragging."""
@@ -644,8 +649,11 @@ class PetWindow(QWidget):
 
     # --- Speech ---
 
-    def _say(self, text: str | None):
-        """Show a speech bubble with text."""
+    def _say(self, text: str | None, timeout_ms: int = 0):
+        """Show a speech bubble with text.
+
+        timeout_ms: override auto-calculated timeout (0 = auto).
+        """
         if not text:
             return
         log.info("SAY state=%s pos=(%d,%d) text='%s'", self.pet.state.name, self.x(), self.y(), text[:80])
@@ -658,15 +666,17 @@ class PetWindow(QWidget):
 
         anchor_x = self.x() + self._sprite_size // 2
         anchor_y = self.y()
-        min_timeout = self._config.get("bubble_timeout", 5) * 1000
-        word_count = len(text.split())
-        timeout = max(min_timeout, int(word_count * 400))
-        self._bubble.show_message(text, anchor_x, anchor_y, timeout_ms=timeout)
+        if timeout_ms <= 0:
+            min_timeout = self._config.get("bubble_timeout", 5) * 1000
+            word_count = len(text.split())
+            timeout_ms = max(min_timeout, int(word_count * 400))
+        self._bubble.show_message(text, anchor_x, anchor_y, timeout_ms=timeout_ms)
 
         # Return to IDLE after bubble hides — never restore transient states
         # that could leave the pet stuck (PEEKING, FALLING, INTERACTING, etc.)
+        # Uses _talk_end_timer so a new _say() cancels any pending timer.
         if old_state not in _KEEP_ANIM:
-            QTimer.singleShot(timeout, self._end_talk_to_idle)
+            self._talk_end_timer.start(timeout_ms)
 
     def _end_talk_to_idle(self):
         if self.pet.state == PetState.TALKING:
@@ -698,6 +708,13 @@ class PetWindow(QWidget):
             # Fallback to predefined
             fallback = get_line("idle", self.pet.name) or "..."
             self._llm_text_ready.emit(fallback)
+
+    def _on_ask_response(self, text: str | None):
+        """Callback from LLM for user questions — shows error on failure."""
+        if text:
+            self._llm_text_ready.emit(text)
+        else:
+            self._llm_text_ready.emit("No pude pensar en nada... ¡intenta de nuevo! >_<")
 
     # --- State changes ---
 
