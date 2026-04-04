@@ -33,11 +33,46 @@ class SpeechBubble(QWidget):
         self._hide_timer.setSingleShot(True)
         self._hide_timer.timeout.connect(self.hide)
         self._anchor = QPoint(0, 0)  # Bottom center of bubble points here
+        self._flipped = False  # True = bubble below anchor (pointer on top)
+        self._pet_height = 0  # height of pet sprite, set via show_message
 
-    def show_message(self, text: str, anchor_x: int, anchor_y: int, timeout_ms: int = 5000):
+        # Thinking animation
+        self._thinking = False
+        self._think_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self._think_index = 0
+        self._think_timer = QTimer(self)
+        self._think_timer.setInterval(120)
+        self._think_timer.timeout.connect(self._on_think_tick)
+
+    def show_thinking(self, anchor_x: int, anchor_y: int, pet_height: int = 0):
+        """Show an animated thinking indicator in the bubble."""
+        self._thinking = True
+        self._think_index = 0
+        self._text = "Pensando " + self._think_frames[0]
+        self._anchor = QPoint(anchor_x, anchor_y)
+        self._pet_height = pet_height
+        self._recalculate_size()
+        self._reposition()
+        self.show()
+        self._remove_dwm_border()
+        self.update()
+        self._hide_timer.stop()
+        self._think_timer.start()
+
+    def _on_think_tick(self):
+        """Advance the thinking animation."""
+        self._think_index = (self._think_index + 1) % len(self._think_frames)
+        self._text = "Pensando " + self._think_frames[self._think_index]
+        self.update()
+
+    def show_message(self, text: str, anchor_x: int, anchor_y: int,
+                     timeout_ms: int = 5000, pet_height: int = 0):
         """Show a speech bubble with text, anchored above the given point."""
+        self._think_timer.stop()
+        self._thinking = False
         self._text = text
         self._anchor = QPoint(anchor_x, anchor_y)
+        self._pet_height = pet_height
         self._recalculate_size()
         self._reposition()
         self.show()
@@ -66,17 +101,27 @@ class SpeechBubble(QWidget):
         self.setFixedSize(max(w, 60), max(h, 40))
 
     def _reposition(self):
-        """Position the bubble so the pointer points at the anchor."""
+        """Position the bubble so the pointer points at the anchor.
+
+        If the bubble would be clipped at the top of the screen, flip it
+        below the pet instead.
+        """
         w = self.width()
         h = self.height()
         x = self._anchor.x() - w // 2
-        y = self._anchor.y() - h
-        # Keep on screen
+        # Default: bubble above the anchor
+        y_above = self._anchor.y() - h
+        # Flipped: bubble below the pet
+        y_below = self._anchor.y() + self._pet_height
+
+        self._flipped = y_above < 0
+        y = y_below if self._flipped else y_above
+
+        # Keep on screen horizontally
         from utils.win32_helpers import get_screen_size
         try:
             sw, sh = get_screen_size()
             x = max(0, min(x, sw - w))
-            y = max(0, y)
         except Exception:
             pass
         self.move(x, y)
@@ -87,18 +132,35 @@ class SpeechBubble(QWidget):
 
         w = self.width()
         h = self.height()
-        bubble_h = h - self.POINTER_SIZE
+        ps = self.POINTER_SIZE
+        bubble_h = h - ps
 
-        # Draw bubble body
         path = QPainterPath()
-        rect = QRectF(1, 1, w - 2, bubble_h - 2)
-        path.addRoundedRect(rect, self.BORDER_RADIUS, self.BORDER_RADIUS)
 
-        # Draw pointer (small triangle at bottom center)
-        cx = w // 2
-        path.moveTo(cx - self.POINTER_SIZE, bubble_h - 1)
-        path.lineTo(cx, h - 1)
-        path.lineTo(cx + self.POINTER_SIZE, bubble_h - 1)
+        if self._flipped:
+            # Pointer on top, bubble body below
+            rect = QRectF(1, ps + 1, w - 2, bubble_h - 2)
+            path.addRoundedRect(rect, self.BORDER_RADIUS, self.BORDER_RADIUS)
+            cx = w // 2
+            path.moveTo(cx - ps, ps + 1)
+            path.lineTo(cx, 1)
+            path.lineTo(cx + ps, ps + 1)
+            text_rect = QRectF(
+                self.PADDING, ps + self.PADDING,
+                w - 2 * self.PADDING, bubble_h - 2 * self.PADDING
+            )
+        else:
+            # Pointer on bottom (default), bubble body above
+            rect = QRectF(1, 1, w - 2, bubble_h - 2)
+            path.addRoundedRect(rect, self.BORDER_RADIUS, self.BORDER_RADIUS)
+            cx = w // 2
+            path.moveTo(cx - ps, bubble_h - 1)
+            path.lineTo(cx, h - 1)
+            path.lineTo(cx + ps, bubble_h - 1)
+            text_rect = QRectF(
+                self.PADDING, self.PADDING,
+                w - 2 * self.PADDING, bubble_h - 2 * self.PADDING
+            )
 
         painter.setBrush(QBrush(self.BUBBLE_COLOR))
         painter.setPen(QPen(self.BORDER_COLOR, 1.5))
@@ -107,10 +169,6 @@ class SpeechBubble(QWidget):
         # Draw text
         painter.setPen(QPen(self.TEXT_COLOR))
         painter.setFont(self._font)
-        text_rect = QRectF(
-            self.PADDING, self.PADDING,
-            w - 2 * self.PADDING, bubble_h - 2 * self.PADDING
-        )
         painter.drawText(text_rect, Qt.TextFlag.TextWordWrap, self._text)
         painter.end()
 

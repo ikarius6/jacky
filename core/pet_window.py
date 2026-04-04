@@ -256,14 +256,7 @@ class PetWindow(QWidget):
 
     def _setup_tray(self):
         self._tray = QSystemTrayIcon(self)
-        # Use a small pixmap as icon
-        icon_pm = QPixmap(32, 32)
-        icon_pm.fill(Qt.GlobalColor.transparent)
-        p = QPainter(icon_pm)
-        p.setBrush(Qt.GlobalColor.cyan)
-        p.drawEllipse(4, 4, 24, 24)
-        p.end()
-        self._tray.setIcon(QIcon(icon_pm))
+        self._update_tray_icon()
         self._tray.setToolTip(f"{self.pet.name} - Desktop Pet")
 
         tray_menu = QMenu()
@@ -282,6 +275,25 @@ class PetWindow(QWidget):
 
         self._tray.setContextMenu(tray_menu)
         self._tray.show()
+
+    def _update_tray_icon(self):
+        """Set the tray icon to the character's first idle frame, scaled to 32x32."""
+        idle_frame = self.animation.current_frame()
+        if idle_frame and not idle_frame.isNull():
+            icon_pm = idle_frame.scaled(
+                32, 32,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        else:
+            # Fallback: generic circle
+            icon_pm = QPixmap(32, 32)
+            icon_pm.fill(Qt.GlobalColor.transparent)
+            p = QPainter(icon_pm)
+            p.setBrush(Qt.GlobalColor.cyan)
+            p.drawEllipse(4, 4, 24, 24)
+            p.end()
+        self._tray.setIcon(QIcon(icon_pm))
 
     def _bring_to_front(self):
         self.show()
@@ -346,7 +358,7 @@ class PetWindow(QWidget):
             return
         self._llm_pending = True
         context = self._build_llm_context(f"The user asks you directly: \"{question}\"")
-        self._say("Hmm, déjame pensar...", timeout_ms=60000)
+        self._show_thinking()
         self._llm.generate(context, self._on_ask_response)
 
     def on_drag_start(self):
@@ -483,7 +495,8 @@ class PetWindow(QWidget):
             min_timeout = self._config.get("bubble_timeout", 5) * 1000
             word_count = len(text.split())
             timeout_ms = max(min_timeout, int(word_count * 400))
-        self._bubble.show_message(text, anchor_x, anchor_y, timeout_ms=timeout_ms)
+        self._bubble.show_message(text, anchor_x, anchor_y, timeout_ms=timeout_ms,
+                                  pet_height=self._sprite_size)
 
         # Return to IDLE after bubble hides — never restore transient states
         # that could leave the pet stuck (PEEKING, FALLING, INTERACTING, etc.)
@@ -495,6 +508,13 @@ class PetWindow(QWidget):
         if self.pet.state == PetState.TALKING:
             log.debug("END_TALK -> IDLE pos=(%d,%d)", self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
+
+    def _show_thinking(self):
+        """Show animated thinking indicator in the speech bubble."""
+        self.pet.set_state(PetState.TALKING)
+        anchor_x = self.x() + self._sprite_size // 2
+        anchor_y = self.y()
+        self._bubble.show_thinking(anchor_x, anchor_y, pet_height=self._sprite_size)
 
     def _update_bubble_pos(self):
         if self._bubble.isVisible():
@@ -592,6 +612,9 @@ class PetWindow(QWidget):
         )
         self._context_menu.refresh_llm_state()
 
+        # Re-apply scheduler intervals (register handles cleanup of old timers)
+        self._setup_scheduler()
+
         # Toggle logging level at runtime
         debug_on = self._config.get("debug_logging", False)
         root = logging.getLogger()
@@ -616,6 +639,7 @@ class PetWindow(QWidget):
                 flip_states=self._char_cfg.get("flip_states"),
             )
             self._anim_timer.setInterval(self.animation.frame_interval_ms)
+            self._update_tray_icon()
 
     # --- Greeting ---
 

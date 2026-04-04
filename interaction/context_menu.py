@@ -388,6 +388,52 @@ class SettingsDialog(QDialog):
         move_group.setLayout(move_form)
         layout.addWidget(move_group)
 
+        # Intervals group
+        interval_group = QGroupBox("Intervalos (segundos)")
+        interval_form = QFormLayout()
+
+        self._idle_min = QSpinBox()
+        self._idle_min.setRange(1, 300)
+        self._idle_max = QSpinBox()
+        self._idle_max.setRange(1, 300)
+        idle_iv = self._config.get("idle_interval", [5, 15])
+        self._idle_min.setValue(idle_iv[0])
+        self._idle_max.setValue(idle_iv[1])
+        idle_layout = QHBoxLayout()
+        idle_layout.addWidget(self._idle_min)
+        idle_layout.addWidget(QLabel("–"))
+        idle_layout.addWidget(self._idle_max)
+        interval_form.addRow("Caminar (idle):", idle_layout)
+
+        self._chat_min = QSpinBox()
+        self._chat_min.setRange(1, 600)
+        self._chat_max = QSpinBox()
+        self._chat_max.setRange(1, 600)
+        chat_iv = self._config.get("chat_interval", [20, 60])
+        self._chat_min.setValue(chat_iv[0])
+        self._chat_max.setValue(chat_iv[1])
+        chat_layout = QHBoxLayout()
+        chat_layout.addWidget(self._chat_min)
+        chat_layout.addWidget(QLabel("–"))
+        chat_layout.addWidget(self._chat_max)
+        interval_form.addRow("Hablar (chat):", chat_layout)
+
+        self._winchk_min = QSpinBox()
+        self._winchk_min.setRange(1, 300)
+        self._winchk_max = QSpinBox()
+        self._winchk_max.setRange(1, 300)
+        winchk_iv = self._config.get("window_check_interval", [10, 30])
+        self._winchk_min.setValue(winchk_iv[0])
+        self._winchk_max.setValue(winchk_iv[1])
+        winchk_layout = QHBoxLayout()
+        winchk_layout.addWidget(self._winchk_min)
+        winchk_layout.addWidget(QLabel("–"))
+        winchk_layout.addWidget(self._winchk_max)
+        interval_form.addRow("Interacción ventanas:", winchk_layout)
+
+        interval_group.setLayout(interval_form)
+        layout.addWidget(interval_group)
+
         # Window interaction group
         win_group = QGroupBox("Interacción con ventanas")
         win_form = QFormLayout()
@@ -432,7 +478,8 @@ class SettingsDialog(QDialog):
         model_layout.addWidget(self._ollama_model)
         model_layout.addWidget(self._refresh_models_btn)
         llm_form.addRow(self._ollama_model_label, model_layout)
-        self._refresh_models()
+        if current_provider == "ollama":
+            self._refresh_models()
 
         # --- OpenRouter fields ---
         self._or_key_label = QLabel("API Key:")
@@ -546,6 +593,8 @@ class SettingsDialog(QDialog):
 
     def _refresh_models(self):
         """Fetch available models from the Ollama instance and populate the combo."""
+        if self._provider_combo.currentText() != "ollama":
+            return
         url = self._ollama_url.text().strip()
         current = self._config.get("ollama_model", "llama3")
         models = fetch_ollama_models(url)
@@ -572,6 +621,15 @@ class SettingsDialog(QDialog):
         self._config["openrouter_api_key"] = self._or_api_key.text().strip()
         self._config["openrouter_model"] = self._or_model.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
+        idle_lo = self._idle_min.value()
+        idle_hi = max(idle_lo, self._idle_max.value())
+        self._config["idle_interval"] = [idle_lo, idle_hi]
+        chat_lo = self._chat_min.value()
+        chat_hi = max(chat_lo, self._chat_max.value())
+        self._config["chat_interval"] = [chat_lo, chat_hi]
+        winchk_lo = self._winchk_min.value()
+        winchk_hi = max(winchk_lo, self._winchk_max.value())
+        self._config["window_check_interval"] = [winchk_lo, winchk_hi]
         self._config["permissions"] = {
             key: self._perm_checks[key].isChecked()
             for key in self._perm_checks
