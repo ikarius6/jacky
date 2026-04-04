@@ -15,7 +15,7 @@ from core.movement import MovementEngine
 from core.character import get_character, get_sprites_dir
 from core.scheduler import Scheduler
 from interaction.click_handler import ClickHandler
-from interaction.context_menu import PetContextMenu
+from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
 from interaction.window_awareness import WindowAwareness, _is_junk_window
 from speech.bubble import SpeechBubble
 from speech.dialogue import get_line, get_app_comment
@@ -117,6 +117,11 @@ class PetWindow(QWidget):
         # Initial position: bottom center of screen
         self._init_position()
 
+    def _perm(self, key: str) -> bool:
+        """Check a granular permission from config['permissions']."""
+        perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
+        return perms.get(key, True)
+
     def _resolve_sprites_dir(self) -> str:
         """Legacy fallback — prefer get_sprites_dir(character_name)."""
         from utils.paths import get_data_dir
@@ -171,7 +176,13 @@ class PetWindow(QWidget):
     def _setup_window_awareness(self):
         if not self._config.get("window_interaction_enabled", True):
             return
-        self._window_awareness.set_push_enabled(self._config.get("window_push_enabled", True))
+        perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
+        any_destructive = any(
+            perms.get(p[0], True) for p in PERMISSION_DEFS if p[3] == "destructive"
+        )
+        self._window_awareness.set_push_enabled(
+            self._config.get("window_push_enabled", True) and any_destructive
+        )
         self._window_awareness.set_callbacks(
             on_opened=self._on_window_opened,
             on_closed=self._on_window_closed,
@@ -394,13 +405,31 @@ class PetWindow(QWidget):
         if self.pet.state in (PetState.DRAGGED, PetState.FALLING, PetState.PEEKING):
             return
 
-        action = random.choices(
-            ["comment", "push", "peek", "shake", "minimize",
-             "sit", "resize", "knock", "drag", "tidy", "topple"],
-            weights=[0.25, 0.10, 0.10, 0.10, 0.05,
-                     0.10, 0.08, 0.07, 0.05, 0.05, 0.05],
-            k=1
-        )[0]
+        _ACTION_PERM = {
+            "comment":  "allow_comment",
+            "push":     "allow_push",
+            "peek":     "allow_peek",
+            "shake":    "allow_shake",
+            "minimize": "allow_minimize",
+            "sit":      "allow_sit",
+            "resize":   "allow_resize",
+            "knock":    "allow_knock",
+            "drag":     "allow_drag",
+            "tidy":     "allow_tidy",
+            "topple":   "allow_topple",
+        }
+        _ACTION_WEIGHTS = {
+            "comment": 0.25, "push": 0.10, "peek": 0.10, "shake": 0.10,
+            "minimize": 0.05, "sit": 0.10, "resize": 0.08, "knock": 0.07,
+            "drag": 0.05, "tidy": 0.05, "topple": 0.05,
+        }
+
+        actions = [a for a, perm in _ACTION_PERM.items() if self._perm(perm)]
+        if not actions:
+            return
+        weights = [_ACTION_WEIGHTS[a] for a in actions]
+
+        action = random.choices(actions, weights=weights, k=1)[0]
         log.info("SCHED window_interact action=%s state=%s pos=(%d,%d)", action, self.pet.state.name, self.x(), self.y())
 
         if action == "comment":
@@ -478,8 +507,6 @@ class PetWindow(QWidget):
                 self._say(comment)
 
     def _try_push(self):
-        if not self._config.get("window_push_enabled", True):
-            return
         pushed = self._window_awareness.try_push_window(
             self.movement.x, self.movement.y
         )
@@ -492,6 +519,7 @@ class PetWindow(QWidget):
     def _try_peek(self):
         if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
             return
+
         result = self._window_awareness.get_peek_position(self._sprite_size)
         if not result:
             return
@@ -521,8 +549,6 @@ class PetWindow(QWidget):
             self.pet.set_state(PetState.IDLE)
 
     def _try_shake(self):
-        if not self._config.get("window_push_enabled", True):
-            return
         target = self._window_awareness.try_shake_window(
             self.movement.x, self.movement.y
         )
@@ -546,8 +572,6 @@ class PetWindow(QWidget):
         self._shake_step += 1
 
     def _try_minimize(self):
-        if not self._config.get("window_push_enabled", True):
-            return
         target = self._window_awareness.try_minimize_window(
             self.movement.x, self.movement.y
         )
@@ -581,8 +605,6 @@ class PetWindow(QWidget):
         self._temp_state_timer.start(5000)
 
     def _try_resize(self):
-        if not self._config.get("window_push_enabled", True):
-            return
         target = self._window_awareness.try_resize_window(
             self.movement.x, self.movement.y
         )
@@ -603,8 +625,6 @@ class PetWindow(QWidget):
     def _try_drag(self):
         if self.pet.state not in (PetState.IDLE, PetState.INTERACTING):
             return
-        if not self._config.get("window_push_enabled", True):
-            return
         target = self._window_awareness.start_drag_window(
             self.movement.x, self.movement.y
         )
@@ -618,8 +638,6 @@ class PetWindow(QWidget):
         # Drag ends when the walk finishes (handled in _on_move_tick)
 
     def _try_tidy(self):
-        if not self._config.get("window_push_enabled", True):
-            return
         success = self._window_awareness.try_tidy_windows()
         if success:
             log.info("WIN_ACT tidy pos=(%d,%d)", self.x(), self.y())
@@ -628,8 +646,6 @@ class PetWindow(QWidget):
             self._temp_state_timer.start(3000)
 
     def _try_topple(self):
-        if not self._config.get("window_push_enabled", True):
-            return
         toppled = self._window_awareness.try_topple_windows(
             self.movement.x, self.movement.y, self.pet.direction
         )
@@ -741,7 +757,15 @@ class PetWindow(QWidget):
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._llm = create_llm_provider(self._config)
         self._window_awareness.set_enabled(self._config.get("window_interaction_enabled", True))
-        self._window_awareness.set_push_enabled(self._config.get("window_push_enabled", True))
+        perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
+        any_destructive = any(
+            perms.get(p[0], True)
+            for p in PERMISSION_DEFS
+            if p[3] == "destructive"
+        )
+        self._window_awareness.set_push_enabled(
+            self._config.get("window_push_enabled", True) and any_destructive
+        )
         self._context_menu.refresh_llm_state()
 
         # Toggle logging level at runtime

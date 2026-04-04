@@ -236,6 +236,25 @@ class CharacterCard(QFrame):
         super().mousePressEvent(event)
 
 
+# Permission definitions: (config_key, label, description, group)
+# group: "observe" = non-destructive, "destructive" = modifies windows
+PERMISSION_DEFS = [
+    ("allow_comment",  "Comentar sobre ventanas",  "Hacer comentarios sobre las ventanas abiertas",   "observe"),
+    ("allow_peek",     "Asomarse en ventanas",     "Asomarse detr\u00e1s de los bordes de ventanas",       "observe"),
+    ("allow_sit",      "Sentarse en ventanas",     "Sentarse sobre la barra de t\u00edtulo de ventanas",   "observe"),
+    ("allow_push",     "Empujar ventanas",         "Empujar ventanas cercanas",                       "destructive"),
+    ("allow_shake",    "Sacudir ventanas",         "Sacudir ventanas r\u00e1pidamente",                    "destructive"),
+    ("allow_minimize", "Minimizar ventanas",       "Minimizar ventanas cercanas",                     "destructive"),
+    ("allow_resize",   "Redimensionar ventanas",   "Encoger o agrandar ventanas",                     "destructive"),
+    ("allow_knock",    "Tocar ventanas",           "Parpadear y traer al frente una ventana",         "destructive"),
+    ("allow_drag",     "Arrastrar ventanas",       "Arrastrar una ventana mientras camina",           "destructive"),
+    ("allow_tidy",     "Ordenar ventanas",         "Organizar ventanas en una cuadr\u00edcula",             "destructive"),
+    ("allow_topple",   "Tumbar ventanas",          "Empujar ventanas en cadena como domin\u00f3s",         "destructive"),
+]
+
+DEFAULT_PERMISSIONS = {p[0]: True for p in PERMISSION_DEFS}
+
+
 class SettingsDialog(QDialog):
     """Settings dialog for configuring Jacky."""
 
@@ -295,6 +314,7 @@ class SettingsDialog(QDialog):
         self._config = load_config()
         self._selected_char = self._config.get("character", "placeholder")
         self._char_cards: list[CharacterCard] = []
+        self._perm_checks: dict[str, QCheckBox] = {}
         self._build_ui()
 
     # ── UI construction ─────────────────────────────────────────────
@@ -305,6 +325,7 @@ class SettingsDialog(QDialog):
         tabs = QTabWidget()
         tabs.addTab(self._build_character_tab(), "Personaje")
         tabs.addTab(self._build_settings_tab(), "Ajustes")
+        tabs.addTab(self._build_permissions_tab(), "Permisos")
         layout.addWidget(tabs)
 
         # Buttons
@@ -442,6 +463,67 @@ class SettingsDialog(QDialog):
         layout.addStretch()
         return tab
 
+    def _build_permissions_tab(self) -> QWidget:
+        """Build the granular permissions tab."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        hint = QLabel("Controla qu\u00e9 acciones puede realizar la mascota con las ventanas:")
+        hint.setStyleSheet("font-size: 10pt; color: #5A3E2B; padding: 2px 4px;")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
+
+        # Toggle-all buttons
+        toggle_layout = QHBoxLayout()
+        enable_all_btn = QPushButton("Activar todos")
+        enable_all_btn.clicked.connect(lambda: self._set_all_perms(True))
+        disable_all_btn = QPushButton("Desactivar todos")
+        disable_all_btn.clicked.connect(lambda: self._set_all_perms(False))
+        toggle_layout.addWidget(enable_all_btn)
+        toggle_layout.addWidget(disable_all_btn)
+        toggle_layout.addStretch()
+        layout.addLayout(toggle_layout)
+
+        # Non-destructive group
+        obs_group = QGroupBox("Observar (no modifica ventanas)")
+        obs_form = QVBoxLayout()
+        for key, label, desc, group in PERMISSION_DEFS:
+            if group != "observe":
+                continue
+            cb = QCheckBox(label)
+            cb.setChecked(perms.get(key, True))
+            cb.setToolTip(desc)
+            cb.setStyleSheet("font-size: 10pt; padding: 2px 0px;")
+            obs_form.addWidget(cb)
+            self._perm_checks[key] = cb
+        obs_group.setLayout(obs_form)
+        layout.addWidget(obs_group)
+
+        # Destructive group
+        dest_group = QGroupBox("Destructivo (modifica ventanas)")
+        dest_form = QVBoxLayout()
+        for key, label, desc, group in PERMISSION_DEFS:
+            if group != "destructive":
+                continue
+            cb = QCheckBox(label)
+            cb.setChecked(perms.get(key, True))
+            cb.setToolTip(desc)
+            cb.setStyleSheet("font-size: 10pt; padding: 2px 0px;")
+            dest_form.addWidget(cb)
+            self._perm_checks[key] = cb
+        dest_group.setLayout(dest_form)
+        layout.addWidget(dest_group)
+
+        layout.addStretch()
+        return tab
+
+    def _set_all_perms(self, checked: bool):
+        """Toggle all permission checkboxes."""
+        for cb in self._perm_checks.values():
+            cb.setChecked(checked)
+
     # ── character selection ──────────────────────────────────────────
 
     def _on_card_clicked(self, name: str):
@@ -490,6 +572,10 @@ class SettingsDialog(QDialog):
         self._config["openrouter_api_key"] = self._or_api_key.text().strip()
         self._config["openrouter_model"] = self._or_model.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
+        self._config["permissions"] = {
+            key: self._perm_checks[key].isChecked()
+            for key in self._perm_checks
+        }
         save_config(self._config)
         self._pet_window.reload_config()
         self.accept()
