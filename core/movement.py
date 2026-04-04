@@ -26,6 +26,8 @@ class MovementEngine:
         self._is_on_platform: bool = False
         self._current_platform: Optional[Tuple[int, int, int, int]] = None
         self._bounds: Optional[Tuple[int, int, int, int]] = None  # (left, top, right, bottom)
+        self._current_screen_bounds: Optional[Tuple[int, int, int, int]] = None
+        self._screen_rects: List[Tuple[int, int, int, int]] = []  # per-monitor available geometries
         self._dpi_scale: float = 1.0
         self._just_dropped: bool = False
         self._speed_multiplier: float = 1.0
@@ -35,6 +37,15 @@ class MovementEngine:
         """Set screen bounds from the host window (Qt coordinates)."""
         self._bounds = (left, top, right, bottom)
         self._refresh_ground()
+
+    def update_current_screen(self, left: int, top: int, right: int, bottom: int):
+        """Set the bounds of the screen the pet is currently on (for ground_y)."""
+        self._current_screen_bounds = (left, top, right, bottom)
+        self._ground_y = bottom - self._sprite_size
+
+    def update_screen_rects(self, rects: List[Tuple[int, int, int, int]]):
+        """Set the list of all available screen geometries (multi-monitor)."""
+        self._screen_rects = rects
 
     def _get_bounds(self) -> Tuple[int, int, int, int]:
         """Return current screen bounds, preferring externally-set Qt bounds."""
@@ -46,9 +57,12 @@ class MovementEngine:
             return _DEFAULT_BOUNDS
 
     def _refresh_ground(self):
-        """Update the ground Y coordinate from the screen bounds."""
-        bounds = self._get_bounds()
-        self._ground_y = bounds[3] - self._sprite_size
+        """Update the ground Y coordinate from the current screen bounds."""
+        if self._current_screen_bounds is not None:
+            self._ground_y = self._current_screen_bounds[3] - self._sprite_size
+        else:
+            bounds = self._get_bounds()
+            self._ground_y = bounds[3] - self._sprite_size
 
     @property
     def x(self) -> int:
@@ -124,18 +138,24 @@ class MovementEngine:
             ))
 
     def pick_random_target(self):
-        """Choose a random target position to walk toward anywhere on screen."""
-        bounds = self._get_bounds()
-        min_x = bounds[0]
-        max_x = bounds[2] - self._sprite_size
-        min_y = bounds[1]
-        max_y = bounds[3] - self._sprite_size
+        """Choose a random target position to walk toward on any available screen."""
+        if self._screen_rects:
+            # Pick a random screen to walk toward
+            rect = random.choice(self._screen_rects)
+            min_x, min_y = rect[0], rect[1]
+            max_x = rect[2] - self._sprite_size
+            max_y = rect[3] - self._sprite_size
+        else:
+            bounds = self._get_bounds()
+            min_x, min_y = bounds[0], bounds[1]
+            max_x = bounds[2] - self._sprite_size
+            max_y = bounds[3] - self._sprite_size
 
-        self._target_x = random.randint(min_x, max_x)
-        self._target_y = random.randint(min_y, max_y)
+        self._target_x = random.randint(min_x, max(min_x, max_x))
+        self._target_y = random.randint(min_y, max(min_y, max_y))
         self._direction = 1 if self._target_x > self._x else -1
-        log.info("TARGET free (%d,%d)->(%d,%d) bounds=%s",
-                 self._x, self._y, self._target_x, self._target_y, bounds)
+        log.info("TARGET free (%d,%d)->(%d,%d) screens=%d",
+                 self._x, self._y, self._target_x, self._target_y, len(self._screen_rects))
 
     def stop(self):
         """Stop walking."""

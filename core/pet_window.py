@@ -133,8 +133,7 @@ class PetWindow(QWidget):
 
     def _apply_dpi_scale(self):
         """Pass the screen DPI scale to the movement engine for win32 coord conversion."""
-        from PyQt6.QtWidgets import QApplication
-        screen = QApplication.primaryScreen()
+        screen = self._current_screen()
         if screen:
             self.movement.set_dpi_scale(screen.devicePixelRatio())
 
@@ -147,24 +146,60 @@ class PetWindow(QWidget):
         self.movement.set_position(x, y)
         log.info("INIT_POS (%d,%d) screen=%s", x, y, (geo.x(), geo.y(), geo.width(), geo.height()))
 
-    def _screen_geo(self):
-        """Return the available screen geometry from Qt (logical pixels)."""
+    def _current_screen(self):
+        """Return the QScreen that contains the pet's center point."""
         from PyQt6.QtWidgets import QApplication
-        screen = QApplication.primaryScreen()
+        from PyQt6.QtCore import QPoint
+        center = QPoint(self.x() + self._sprite_size // 2,
+                        self.y() + self._sprite_size // 2)
+        screen = QApplication.screenAt(center)
+        if screen is None:
+            screen = QApplication.primaryScreen()
+        return screen
+
+    def _screen_geo(self):
+        """Return the available geometry of the screen Jacky is currently on."""
+        screen = self._current_screen()
         if screen:
             return screen.availableGeometry()
-        # Fallback
         from PyQt6.QtCore import QRect
         return QRect(0, 0, 1920, 1080)
 
+    def _virtual_desktop_geo(self):
+        """Return the bounding rect of all screens' available geometries."""
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtCore import QRect
+        screens = QApplication.screens()
+        if not screens:
+            return QRect(0, 0, 1920, 1080)
+        result = screens[0].availableGeometry()
+        for s in screens[1:]:
+            result = result.united(s.availableGeometry())
+        return result
+
     def _refresh_screen_bounds(self):
-        """Push Qt screen bounds into the movement engine."""
-        geo = self._screen_geo()
+        """Push virtual desktop bounds into the movement engine (multi-monitor)."""
+        # Virtual desktop bounds for clamping — allows crossing screens
+        vgeo = self._virtual_desktop_geo()
         self.movement.update_bounds(
+            vgeo.x(), vgeo.y(),
+            vgeo.x() + vgeo.width(),
+            vgeo.y() + vgeo.height(),
+        )
+        # Current screen bounds for ground_y calculation
+        geo = self._screen_geo()
+        self.movement.update_current_screen(
             geo.x(), geo.y(),
             geo.x() + geo.width(),
             geo.y() + geo.height(),
         )
+        # Per-screen rects for random target picking
+        from PyQt6.QtWidgets import QApplication
+        rects = []
+        for s in QApplication.screens():
+            g = s.availableGeometry()
+            rects.append((g.x(), g.y(), g.x() + g.width(), g.y() + g.height()))
+        self.movement.update_screen_rects(rects)
 
     def _setup_scheduler(self):
         idle_range = tuple(self._config.get("idle_interval", [5, 15]))
@@ -299,6 +334,9 @@ class PetWindow(QWidget):
         """User stopped dragging."""
         pos = self.pos()
         log.info("ACTION on_drag_end pos=(%d,%d)", pos.x(), pos.y())
+        # Refresh bounds & DPI — pet may have been dragged to a different monitor
+        self._refresh_screen_bounds()
+        self._apply_dpi_scale()
         self.movement.set_position_after_drop(pos.x(), pos.y())
         self.pet.set_state(PetState.IDLE)
         self.scheduler.resume_all()  # resume paused timers, don't re-register
