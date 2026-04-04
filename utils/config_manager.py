@@ -22,6 +22,7 @@ DEFAULT_CONFIG = {
     "window_push_enabled": True,
     "always_on_top": True,
     "bubble_timeout": 5,
+    "silent_mode": False,
 }
 
 # Schema: key -> (type, min, max, choices)
@@ -45,6 +46,7 @@ _SCHEMA = {
     "openrouter_api_key":         (str,   None, None, None),
     "openrouter_model":           (str,   None, None, None),
     "debug_logging":              (bool,  None, None, None),
+    "silent_mode":                (bool,  None, None, None),
 }
 
 # Interval keys: list of exactly 2 positive ints where [0] <= [1]

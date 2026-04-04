@@ -60,6 +60,14 @@ class PetContextMenu(QMenu):
 
         self.addSeparator()
 
+        self._silent_action = QAction("🔇 Modo silencioso", self)
+        self._silent_action.setCheckable(True)
+        self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
+        self._silent_action.triggered.connect(self._toggle_silent_mode)
+        self.addAction(self._silent_action)
+
+        self.addSeparator()
+
         self._ask_action = QAction("💬 Preguntar", self)
         self._ask_action.triggered.connect(self._open_ask_dialog)
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
@@ -88,9 +96,17 @@ class PetContextMenu(QMenu):
         dlg = SettingsDialog(self._pet_window)
         dlg.exec()
 
+    def _toggle_silent_mode(self, checked: bool):
+        """Toggle silent mode and persist to config."""
+        self._pet_window._silent_mode = checked
+        cfg = load_config()
+        cfg["silent_mode"] = checked
+        save_config(cfg)
+
     def refresh_llm_state(self):
         """Update the Preguntar action enabled state after config reload."""
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
+        self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
 
     def show_at(self, pos: QPoint):
         self.popup(pos)

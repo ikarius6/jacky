@@ -59,6 +59,8 @@ class WindowInteractionHandler:
     def scheduled_interact(self):
         """Called by the Scheduler — pick a random permitted action."""
         pw = self._pw
+        if pw._silent_mode:
+            return
         if pw.pet.state in (PetState.DRAGGED, PetState.FALLING, PetState.PEEKING):
             return
 
@@ -81,7 +83,7 @@ class WindowInteractionHandler:
 
     def on_window_opened(self, win: WindowInfo):
         pw = self._pw
-        if pw.pet.state == PetState.DRAGGED:
+        if pw._silent_mode or pw.pet.state == PetState.DRAGGED:
             return
         if pw._llm_enabled:
             if pw._llm_pending:
@@ -96,7 +98,7 @@ class WindowInteractionHandler:
 
     def on_window_closed(self, win: WindowInfo):
         pw = self._pw
-        if pw.pet.state == PetState.DRAGGED:
+        if pw._silent_mode or pw.pet.state == PetState.DRAGGED:
             return
         if random.random() < 0.3:  # Don't always comment on closes
             if pw._llm_enabled:

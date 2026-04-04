@@ -31,6 +31,7 @@ class PetWindow(QWidget):
     """Main transparent frameless window that IS the pet."""
 
     _llm_text_ready = pyqtSignal(str)
+    _llm_ask_ready = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -72,8 +73,10 @@ class PetWindow(QWidget):
         # LLM (must be initialized before context menu)
         self._llm = create_llm_provider(self._config)
         self._llm_enabled = self._config.get("llm_enabled", False)
+        self._silent_mode = self._config.get("silent_mode", False)
         self._llm_pending = False
         self._llm_text_ready.connect(self._say)
+        self._llm_ask_ready.connect(self._say_forced)
 
         # Interaction components
         self._click_handler = ClickHandler(self)
@@ -249,6 +252,8 @@ class PetWindow(QWidget):
 
     def _on_system_event(self, event: SystemEvent, data: dict):
         """React to a system-level event with speech (and optionally LLM)."""
+        if self._silent_mode:
+            return
         if self.pet.state == PetState.DRAGGED:
             return
 
@@ -411,7 +416,7 @@ class PetWindow(QWidget):
         if not self._llm_enabled:
             return
         if self._llm_pending:
-            self._say("¡Espera, aún estoy pensando! >_<")
+            self._say("¡Espera, aún estoy pensando! >_<", force=True)
             return
         self._llm_pending = True
         context = self._build_llm_context(f"The user asks you directly: \"{question}\"")
@@ -511,6 +516,8 @@ class PetWindow(QWidget):
 
     def _scheduled_chat(self):
         log.info("SCHED chat state=%s pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
+        if self._silent_mode:
+            return
         if self.pet.state in (PetState.DRAGGED, PetState.TALKING):
             return
 
@@ -532,12 +539,15 @@ class PetWindow(QWidget):
 
     # --- Speech ---
 
-    def _say(self, text: str | None, timeout_ms: int = 0):
+    def _say(self, text: str | None, timeout_ms: int = 0, force: bool = False):
         """Show a speech bubble with text.
 
         timeout_ms: override auto-calculated timeout (0 = auto).
+        force: if True, ignore silent mode (used for direct user questions).
         """
         if not text:
+            return
+        if self._silent_mode and not force:
             return
         log.info("SAY state=%s pos=(%d,%d) text='%s'", self.pet.state.name, self.x(), self.y(), text[:80])
         old_state = self.pet.state
@@ -561,6 +571,10 @@ class PetWindow(QWidget):
         # Uses _talk_end_timer so a new _say() cancels any pending timer.
         if old_state not in _KEEP_ANIM:
             self._talk_end_timer.start(timeout_ms)
+
+    def _say_forced(self, text: str | None):
+        """Show speech bubble ignoring silent mode (for direct user questions)."""
+        self._say(text, force=True)
 
     def _end_talk_to_idle(self):
         if self.pet.state == PetState.TALKING:
@@ -610,9 +624,9 @@ class PetWindow(QWidget):
         """Callback from LLM for user questions — shows error on failure."""
         self._llm_pending = False
         if text:
-            self._llm_text_ready.emit(text)
+            self._llm_ask_ready.emit(text)
         else:
-            self._llm_text_ready.emit("No pude pensar en nada... ¡intenta de nuevo! >_<")
+            self._llm_ask_ready.emit("No pude pensar en nada... ¡intenta de nuevo! >_<")
 
     # --- State changes ---
 
@@ -657,6 +671,7 @@ class PetWindow(QWidget):
         self._config = load_config()
         self.movement._speed = self._config.get("movement_speed", 3)
         self._llm_enabled = self._config.get("llm_enabled", False)
+        self._silent_mode = self._config.get("silent_mode", False)
         self._llm = create_llm_provider(self._config)
         self._window_awareness.set_enabled(self._config.get("window_interaction_enabled", True))
         perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
