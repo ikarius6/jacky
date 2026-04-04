@@ -1,8 +1,8 @@
-import ctypes
-
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF
 from PyQt6.QtGui import QPainter, QColor, QFont, QPainterPath, QBrush, QPen
+
+from utils.dwm_helpers import remove_dwm_border
 
 
 class SpeechBubble(QWidget):
@@ -116,52 +116,7 @@ class SpeechBubble(QWidget):
 
     def _remove_dwm_border(self):
         """Use Windows DWM API to remove the shadow/border around the window."""
-        try:
-            hwnd = int(self.winId())
-            dwmapi = ctypes.windll.dwmapi
-            user32 = ctypes.windll.user32
-
-            policy = ctypes.c_int(1)
-            dwmapi.DwmSetWindowAttribute(
-                hwnd, 2, ctypes.byref(policy), ctypes.sizeof(policy)
-            )
-
-            disabled = ctypes.c_int(1)
-            dwmapi.DwmSetWindowAttribute(
-                hwnd, 3, ctypes.byref(disabled), ctypes.sizeof(disabled)
-            )
-
-            color_none = ctypes.c_uint(0xFFFFFFFE)
-            dwmapi.DwmSetWindowAttribute(
-                hwnd, 34, ctypes.byref(color_none), ctypes.sizeof(color_none)
-            )
-
-            corner = ctypes.c_int(1)
-            dwmapi.DwmSetWindowAttribute(
-                hwnd, 33, ctypes.byref(corner), ctypes.sizeof(corner)
-            )
-
-            class MARGINS(ctypes.Structure):
-                _fields_ = [
-                    ("cxLeftWidth", ctypes.c_int),
-                    ("cxRightWidth", ctypes.c_int),
-                    ("cyTopHeight", ctypes.c_int),
-                    ("cyBottomHeight", ctypes.c_int),
-                ]
-            margins = MARGINS(0, 0, 0, 0)
-            dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
-
-            GWL_EXSTYLE = -20
-            style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            style &= ~(0x0001 | 0x0200 | 0x00020000)
-            user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
-
-            user32.SetWindowPos(
-                hwnd, 0, 0, 0, 0, 0,
-                0x0020 | 0x0002 | 0x0001 | 0x0004,
-            )
-        except Exception:
-            pass
+        remove_dwm_border(int(self.winId()))
 
     def mousePressEvent(self, event):
         """Click the bubble to dismiss it."""

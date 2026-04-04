@@ -56,6 +56,22 @@ class OllamaProvider:
             self._available = False
         return self._available
 
+    def _build_payload(self, context: str) -> dict:
+        """Build the Ollama chat payload for the given context."""
+        return {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": context},
+            ],
+            "stream": False,
+            "think": False,
+            "options": {
+                "temperature": 0.8,
+                "num_predict": 80,
+            },
+        }
+
     def generate(self, context: str, callback: Callable[[Optional[str]], None]):
         """
         Generate a response in a background thread.
@@ -64,19 +80,7 @@ class OllamaProvider:
         """
         def _worker():
             try:
-                payload = {
-                    "model": self._model,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": context},
-                    ],
-                    "stream": False,
-                    "think": False,
-                    "options": {
-                        "temperature": 0.8,
-                        "num_predict": 80,
-                    },
-                }
+                payload = self._build_payload(context)
                 resp = requests.post(self.chat_url, json=payload, timeout=30)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -103,19 +107,7 @@ class OllamaProvider:
     def generate_sync(self, context: str) -> Optional[str]:
         """Synchronous generation (blocking). Use generate() for non-blocking."""
         try:
-            payload = {
-                "model": self._model,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": context},
-                ],
-                "stream": False,
-                "think": False,
-                "options": {
-                    "temperature": 0.8,
-                    "num_predict": 80,
-                },
-            }
+            payload = self._build_payload(context)
             resp = requests.post(self.chat_url, json=payload, timeout=30)
             if resp.status_code == 200:
                 data = resp.json()
@@ -153,6 +145,18 @@ class OpenRouterProvider:
             "Content-Type": "application/json",
         }
 
+    def _build_payload(self, context: str) -> dict:
+        """Build the OpenRouter chat completion payload for the given context."""
+        return {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": context},
+            ],
+            "temperature": 0.8,
+            "max_tokens": 120,
+        }
+
     def _parse_response(self, data: dict) -> Optional[str]:
         """Extract text from an OpenRouter chat completion response."""
         try:
@@ -169,15 +173,7 @@ class OpenRouterProvider:
             import time
             t0 = time.monotonic()
             try:
-                payload = {
-                    "model": self._model,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": context},
-                    ],
-                    "temperature": 0.8,
-                    "max_tokens": 120,
-                }
+                payload = self._build_payload(context)
                 resp = requests.post(
                     self.API_URL,
                     headers=self._headers(),
@@ -204,15 +200,7 @@ class OpenRouterProvider:
     def generate_sync(self, context: str) -> Optional[str]:
         """Synchronous generation (blocking)."""
         try:
-            payload = {
-                "model": self._model,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": context},
-                ],
-                "temperature": 0.8,
-                "max_tokens": 120,
-            }
+            payload = self._build_payload(context)
             resp = requests.post(
                 self.API_URL,
                 headers=self._headers(),
