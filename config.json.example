@@ -24,6 +24,12 @@
     "always_on_top": true,
     "bubble_timeout": 5,
     "silent_mode": false,
+    "peer_interaction_enabled": true,
+    "max_peer_instances": 5,
+    "peer_check_interval": [
+        8,
+        20
+    ],
     "permissions": {
         "allow_comment": true,
         "allow_peek": true,
