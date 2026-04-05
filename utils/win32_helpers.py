@@ -114,9 +114,10 @@ def _get_process_name(hwnd: int) -> str:
     return name
 
 
-def get_visible_windows() -> List[WindowInfo]:
+def get_visible_windows(exclude_pids: Optional[set] = None) -> List[WindowInfo]:
     """Enumerate all visible, non-minimized top-level windows."""
     windows = []
+    _exclude_pids = exclude_pids or set()
 
     def callback(hwnd, _):
         if not win32gui.IsWindowVisible(hwnd):
@@ -143,10 +144,10 @@ def get_visible_windows() -> List[WindowInfo]:
         if is_minimized:
             return True
 
-        # Skip windows belonging to our own process (pet window, speech bubble, etc.)
+        # Skip windows belonging to our own process or peer Jacky processes
         try:
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            if pid == _OWN_PID:
+            if pid == _OWN_PID or pid in _exclude_pids:
                 return True
         except Exception:
             pass

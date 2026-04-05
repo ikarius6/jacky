@@ -15,9 +15,11 @@ from core.character import get_character, get_sprites_dir
 from core.scheduler import Scheduler
 from core.system_events import SystemEventsMonitor, SystemEvent
 from core.window_interactions import WindowInteractionHandler
+from core.peer_interactions import PeerInteractionHandler
 from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
 from interaction.window_awareness import WindowAwareness
+from interaction.peer_discovery import PeerDiscovery
 from speech.bubble import SpeechBubble
 from speech.dialogue import get_line
 from speech.llm_provider import create_llm_provider
@@ -83,6 +85,8 @@ class PetWindow(QWidget):
         self._context_menu = PetContextMenu(self)
         self._window_awareness = WindowAwareness(self)
         self._window_interactions = WindowInteractionHandler(self)
+        self._peer_discovery = PeerDiscovery(self)
+        self._peer_interactions = PeerInteractionHandler(self)
         self._bubble = SpeechBubble()
 
         # State tracking
@@ -124,6 +128,9 @@ class PetWindow(QWidget):
 
         # Setup window awareness
         self._setup_window_awareness()
+
+        # Setup peer discovery
+        self._setup_peer_discovery()
 
         # System events (battery, idle, power)
         self._system_events = SystemEventsMonitor(self)
@@ -245,6 +252,9 @@ class PetWindow(QWidget):
         self.scheduler.register("chat", self._scheduled_chat, chat_range)
         if self._config.get("window_interaction_enabled", True):
             self.scheduler.register("window_interact", self._window_interactions.scheduled_interact, win_range)
+        if self._config.get("peer_interaction_enabled", True):
+            peer_range = tuple(self._config.get("peer_check_interval", [8, 20]))
+            self.scheduler.register("peer_interact", self._peer_interactions.scheduled_interact, peer_range)
 
     def _setup_system_events(self):
         """Wire up system event reactions (battery, power, user idle)."""
@@ -299,6 +309,14 @@ class PetWindow(QWidget):
         line = get_line(trigger, self.pet.name, pct=pct)
         if line:
             self._say(line)
+
+    def _setup_peer_discovery(self):
+        """Wire up peer discovery and peer interaction callbacks."""
+        if not self._config.get("peer_interaction_enabled", True):
+            return
+        self._peer_discovery.on_peer_joined = self._peer_interactions.on_peer_joined
+        self._peer_discovery.on_peer_left = self._peer_interactions.on_peer_left
+        self._peer_discovery.on_event_received = self._peer_interactions.on_event_received
 
     def _setup_window_awareness(self):
         if not self._config.get("window_interaction_enabled", True):
@@ -453,6 +471,7 @@ class PetWindow(QWidget):
     def _do_quit(self):
         self.scheduler.stop_all()
         self._system_events.stop()
+        self._peer_discovery.stop()
         self._window_awareness.stop()
         self._bubble.hide()
         self._tray.hide()
@@ -495,6 +514,9 @@ class PetWindow(QWidget):
                     self._window_interactions.dragging_window_hwnd = None
                     log.debug("WALK_DONE pos=(%d,%d)", self.x(), self.y())
                     self.pet.set_state(PetState.IDLE)
+
+                # Check if walking toward a peer
+                self._peer_interactions.check_peer_arrival()
             else:
                 pass  # No gravity — pet stays where it is
 
@@ -722,6 +744,9 @@ class PetWindow(QWidget):
         self.show()
         self._remove_dwm_border()
         self._system_events.start()
+        if self._config.get("peer_interaction_enabled", True):
+            max_peers = self._config.get("max_peer_instances", 5)
+            self._peer_discovery.start(poll_interval_ms=500, max_peers=max_peers)
         QTimer.singleShot(500, lambda: self._say(get_line("greeting", self.pet.name)))
 
     def _remove_dwm_border(self):

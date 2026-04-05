@@ -64,6 +64,14 @@ class PetContextMenu(QMenu):
 
         self.addSeparator()
 
+        # Peer interactions submenu (dynamic, rebuilt on each show)
+        self._peers_menu = QMenu("👥 Compañeros", self)
+        self._peers_menu.setStyleSheet(self.styleSheet())
+        self._peers_action = self.addMenu(self._peers_menu)
+        self._peers_action.setVisible(False)
+
+        self.addSeparator()
+
         self._silent_action = QAction("🔇 Modo silencioso", self)
         self._silent_action.setCheckable(True)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
@@ -114,7 +122,48 @@ class PetContextMenu(QMenu):
         self._pet_action.setText(f"🤗 Acariciar a {self._pet_name}")
 
     def show_at(self, pos: QPoint):
+        self._rebuild_peers_menu()
         self.popup(pos)
+
+    def _rebuild_peers_menu(self):
+        """Rebuild the Compañeros submenu with current live peers."""
+        self._peers_menu.clear()
+        pw = self._pet_window
+        if not hasattr(pw, '_peer_discovery'):
+            self._peers_action.setVisible(False)
+            return
+
+        peers = pw._peer_discovery.get_peers()
+        if not peers:
+            self._peers_action.setVisible(False)
+            return
+
+        self._peers_action.setVisible(True)
+        for peer in peers:
+            peer_sub = QMenu(f"🐾 {peer.display_name}", self._peers_menu)
+            peer_sub.setStyleSheet(self.styleSheet())
+
+            greet = QAction("👋 Saludar", peer_sub)
+            greet.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_greet(p))
+            peer_sub.addAction(greet)
+
+            attack = QAction("⚔️ Atacar", peer_sub)
+            attack.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_attack(p))
+            peer_sub.addAction(attack)
+
+            chase = QAction("🏃 Perseguir", peer_sub)
+            chase.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_chase(p))
+            peer_sub.addAction(chase)
+
+            dance = QAction("💃 Bailar", peer_sub)
+            dance.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_dance(p))
+            peer_sub.addAction(dance)
+
+            fight = QAction("🥊 Pelear", peer_sub)
+            fight.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_fight(p))
+            peer_sub.addAction(fight)
+
+            self._peers_menu.addMenu(peer_sub)
 
 
 class AskDialog(QDialog):

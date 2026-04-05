@@ -163,6 +163,66 @@ DIALOGUE_POOLS = {
         "¡100%! Ya puedes desconectar si quieres~",
         "¡Tanque lleno! ¡Vámonos!",
     ],
+    # ── Peer interactions ─────────────────────────────────────
+    "peer_discovered": [
+        "¡Oh! ¡Hay otro {peer_name} por aquí!",
+        "¿Quién eres tú? ¡Hola, {peer_name}!",
+        "¡No estoy solo! ¡Mira, es {peer_name}!",
+        "*mira sorprendido* ¡¿Otro como yo?!",
+    ],
+    "peer_greet": [
+        "¡Hola, {peer_name}! ¡Qué gusto verte!",
+        "*saluda con la manita* ¡Hey, {peer_name}!",
+        "¡{peer_name}! ¡Ven a jugar conmigo!",
+    ],
+    "peer_greet_response": [
+        "¡Oh, hola {peer_name}! ¡Qué onda!",
+        "*devuelve el saludo* ¡Hey!",
+        "¡Aww, me saludó! ¡Hola, {peer_name}!",
+    ],
+    "peer_attack": [
+        "¡Toma esto, {peer_name}! *ataca*",
+        "¡En guardia, {peer_name}!",
+        "¡PEW PEW! ¡Te ataqué, {peer_name}!",
+    ],
+    "peer_hurt": [
+        "¡Ouch! ¡{peer_name} me atacó!",
+        "¡Ay! ¡Eso dolió, {peer_name}!",
+        "*se queja* ¡{peer_name}, eso no se vale!",
+    ],
+    "peer_chase": [
+        "¡Ven aquí, {peer_name}! ¡No te escapas!",
+        "¡A que te alcanzo, {peer_name}!",
+        "*corre tras {peer_name}*",
+    ],
+    "peer_flee": [
+        "¡No me atrapes, {peer_name}!",
+        "¡Ahhh! ¡{peer_name} me persigue!",
+        "*huye* ¡Auxilio!",
+    ],
+    "peer_dance": [
+        "¡Vamos a bailar, {peer_name}! *baila*",
+        "*baila con {peer_name}* ¡La la la!",
+        "¡Fiesta con {peer_name}!",
+    ],
+    "peer_dance_response": [
+        "¡Sí, a bailar! *baila con {peer_name}*",
+        "*mueve las patitas* ¡Qué ritmo, {peer_name}!",
+        "¡Fiestaaaa! *baila*",
+    ],
+    "peer_fight_win": [
+        "¡Gané! ¡Soy el más fuerte, {peer_name}!",
+        "¡Victoria! *pose triunfante*",
+    ],
+    "peer_fight_lose": [
+        "¡Nooo! ¡{peer_name} me ganó!",
+        "*cae derrotado* Bien jugado, {peer_name}...",
+    ],
+    "peer_left": [
+        "¡{peer_name} se fue! ¡Adiós!",
+        "*se pone triste* {peer_name} se desconectó...",
+        "¡Bye, {peer_name}! ¡Nos vemos!",
+    ],
     "user_returned": [
         "¡Hey, volviste! ¡Te extrañé!",
         "¡Oh! ¡Estás de vuelta! *mueve la colita*",

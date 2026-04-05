@@ -23,6 +23,9 @@ DEFAULT_CONFIG = {
     "always_on_top": True,
     "bubble_timeout": 5,
     "silent_mode": False,
+    "peer_interaction_enabled": True,
+    "max_peer_instances": 5,
+    "peer_check_interval": [8, 20],
 }
 
 # Schema: key -> (type, min, max, choices)
@@ -47,10 +50,12 @@ _SCHEMA = {
     "openrouter_model":           (str,   None, None, None),
     "debug_logging":              (bool,  None, None, None),
     "silent_mode":                (bool,  None, None, None),
+    "peer_interaction_enabled":   (bool,  None, None, None),
+    "max_peer_instances":         (int,   1,    20,   None),
 }
 
 # Interval keys: list of exactly 2 positive ints where [0] <= [1]
-_INTERVAL_KEYS = {"idle_interval", "chat_interval", "window_check_interval"}
+_INTERVAL_KEYS = {"idle_interval", "chat_interval", "window_check_interval", "peer_check_interval"}
 
 CONFIG_PATH = os.path.join(get_config_dir(), "config.json")
 

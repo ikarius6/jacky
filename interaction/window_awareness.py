@@ -57,6 +57,7 @@ class WindowAwareness:
         self._poll_timer.timeout.connect(self._poll_windows)
         self._enabled = True
         self._push_enabled = True
+        self._peer_pids: Set[int] = set()
 
         # Callbacks
         self._on_window_opened: Optional[Callable[[WindowInfo], None]] = None
@@ -98,6 +99,10 @@ class WindowAwareness:
     def set_push_enabled(self, enabled: bool):
         self._push_enabled = enabled
 
+    def set_peer_pids(self, pids: Set[int]):
+        """Set PIDs of peer Jacky processes (all their windows are excluded)."""
+        self._peer_pids = pids
+
     def set_callbacks(self,
                       on_opened: Optional[Callable[[WindowInfo], None]] = None,
                       on_closed: Optional[Callable[[WindowInfo], None]] = None):
@@ -109,7 +114,7 @@ class WindowAwareness:
         if not self._enabled:
             return
         try:
-            new_windows = get_visible_windows()
+            new_windows = get_visible_windows(exclude_pids=self._peer_pids)
         except Exception:
             return
 
