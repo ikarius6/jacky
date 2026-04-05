@@ -531,7 +531,7 @@ class PetWindow(QWidget):
         log.info("SCHED walk from pos=(%d,%d)", self.x(), self.y())
         self.movement.pick_random_target()
         # 30% chance to run instead of walk (if character supports it)
-        if random.random() < 0.3 and "run_right" in self.animation.available_states:
+        if random.random() < 0.3 and {"run_right", "run_left"} & set(self.animation.available_states):
             self.pet.set_state(PetState.RUNNING)
         else:
             self.pet.set_state(PetState.WALKING)

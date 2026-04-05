@@ -35,6 +35,7 @@ class PeerInteractionHandler:
         self._fight_timer: QTimer | None = None
         self._fight_step: int = 0
         self._fight_target_pid: int = 0
+        self._fight_role: str | None = None
 
     # ------------------------------------------------------------------
     # Scheduler entry point (spontaneous interactions)
@@ -92,7 +93,7 @@ class PeerInteractionHandler:
         self._chase_timer.timeout.connect(self._chase_tick)
         self._chase_timer.start(300)
 
-        if "run_right" in pw.animation.available_states:
+        if {"run_right", "run_left"} & set(pw.animation.available_states):
             pw.pet.set_state(PetState.RUNNING)
         else:
             pw.pet.set_state(PetState.WALKING)
@@ -111,8 +112,9 @@ class PeerInteractionHandler:
         pw._peer_discovery.send_event(target.pid, "fight")
         self._fight_target_pid = target.pid
         self._fight_step = 0
+        self._fight_role = "initiator"
 
-        # First strike
+        # First strike (step 0)
         self._do_fight_strike(target)
 
     # ------------------------------------------------------------------
@@ -122,7 +124,7 @@ class PeerInteractionHandler:
     def _walk_toward_peer(self, target: PeerInfo, action: str):
         """Set the pet walking toward a peer's position. Execute action on arrival."""
         pw = self._pw
-        if pw.pet.state not in (PetState.IDLE, PetState.WALKING, PetState.INTERACTING):
+        if pw.pet.state not in (PetState.IDLE, PetState.WALKING, PetState.RUNNING, PetState.INTERACTING):
             return
 
         self._walk_to_peer = target
@@ -137,7 +139,10 @@ class PeerInteractionHandler:
         pw.movement._target_y = target_y
         pw.movement._direction = 1 if target_x > pw.movement.x else -1
         pw.pet.direction = pw.movement._direction
-        pw.pet.set_state(PetState.WALKING)
+        if {"run_right", "run_left"} & set(pw.animation.available_states):
+            pw.pet.set_state(PetState.RUNNING)
+        else:
+            pw.pet.set_state(PetState.WALKING)
 
         log.info("WALK_TO_PEER '%s' target=(%d,%d) action=%s",
                  target.display_name, target_x, target_y, action)
@@ -253,21 +258,17 @@ class PeerInteractionHandler:
         pw._say(get_line("peer_attack", pw.pet.name, peer_name=target.display_name))
         pw._peer_discovery.send_event(target.pid, "fight_strike",
                                       {"step": self._fight_step})
-        self._fight_step += 1
 
-        # Use dedicated fight timer to chain strikes (not _temp_state_timer
-        # which is shared and can be cancelled by other actions)
-        self._stop_fight_timer()
-
-        self._fight_timer = QTimer()
-        self._fight_timer.setSingleShot(True)
-        if self._fight_step >= 3:
-            # Fight over — determine winner after delay
+        # Initiator resolves the fight after the final strike (step 2)
+        if self._fight_role == "initiator" and self._fight_step >= 2:
+            self._stop_fight_timer()
+            self._fight_timer = QTimer()
+            self._fight_timer.setSingleShot(True)
             self._fight_timer.timeout.connect(self._resolve_fight)
+            self._fight_timer.start(1500)
         else:
-            # Schedule next strike
-            self._fight_timer.timeout.connect(self._next_fight_strike)
-        self._fight_timer.start(1500)
+            # Wait for the other side to strike back
+            pw._temp_state_timer.start(1500)
 
     def _next_fight_strike(self):
         """Continue the fight with the next strike (called by _fight_timer)."""
@@ -304,6 +305,7 @@ class PeerInteractionHandler:
         self._stop_fight_timer()
         self._fight_target_pid = 0
         self._fight_step = 0
+        self._fight_role = None
 
     def _resolve_fight(self):
         """Determine the fight outcome."""
@@ -403,7 +405,7 @@ class PeerInteractionHandler:
                 pw.movement._direction = flee_dir
                 break
 
-        if "run_right" in pw.animation.available_states:
+        if {"run_right", "run_left"} & set(pw.animation.available_states):
             pw.pet.set_state(PetState.RUNNING)
         else:
             pw.pet.set_state(PetState.WALKING)
@@ -417,20 +419,43 @@ class PeerInteractionHandler:
         pw._temp_state_timer.start(4000)
 
     def _react_to_fight(self, event: PeerEvent):
-        """Received a fight initiation — react with hurt on first hit."""
+        """Received a fight initiation — prepare as responder."""
         pw = self._pw
         name = self._get_source_name(event)
+        self._fight_target_pid = event.source_pid
+        self._fight_role = "responder"
+        self._fight_step = 0
         pw.pet.set_state(PetState.HURT)
         pw._say(get_line("peer_hurt", pw.pet.name, peer_name=name))
         pw._temp_state_timer.start(1500)
 
     def _react_to_fight_strike(self, event: PeerEvent):
-        """Received a fight strike during an ongoing fight."""
+        """Received a fight strike — show hurt and strike back if it's our turn."""
         pw = self._pw
         name = self._get_source_name(event)
+        step = event.data.get("step", 0)
         pw.pet.set_state(PetState.HURT)
         pw._say(get_line("peer_hurt", pw.pet.name, peer_name=name))
-        pw._temp_state_timer.start(1500)
+
+        # Responder strikes back after initiator's turn (even steps < 2)
+        if self._fight_role == "responder" and step % 2 == 0 and step < 2:
+            self._fight_step = step + 1
+            self._stop_fight_timer()
+            self._fight_timer = QTimer()
+            self._fight_timer.setSingleShot(True)
+            self._fight_timer.timeout.connect(self._next_fight_strike)
+            self._fight_timer.start(1500)
+        # Initiator received responder's strike (odd step) — continue attacking
+        elif self._fight_role == "initiator" and step % 2 == 1:
+            self._fight_step = step + 1
+            self._stop_fight_timer()
+            self._fight_timer = QTimer()
+            self._fight_timer.setSingleShot(True)
+            self._fight_timer.timeout.connect(self._next_fight_strike)
+            self._fight_timer.start(1500)
+        else:
+            # Final strike received or not in an active fight
+            pw._temp_state_timer.start(1500)
 
     def _react_to_fight_result(self, event: PeerEvent):
         """The fight initiator sent the result."""
