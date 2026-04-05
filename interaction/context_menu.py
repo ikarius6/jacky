@@ -12,7 +12,7 @@ from speech.llm_provider import fetch_ollama_models
 
 
 class PetContextMenu(QMenu):
-    """Right-click context menu for interacting with Jacky."""
+    """Right-click context menu for interacting with the pet."""
 
     def __init__(self, pet_window):
         super().__init__()
@@ -45,10 +45,14 @@ class PetContextMenu(QMenu):
             }
         """)
 
+    @property
+    def _pet_name(self) -> str:
+        return self._pet_window.pet.name
+
     def _build_menu(self):
-        pet_action = QAction("🤗 Acariciar a Jacky", self)
-        pet_action.triggered.connect(self._pet_window.on_pet_clicked)
-        self.addAction(pet_action)
+        self._pet_action = QAction(f"🤗 Acariciar a {self._pet_name}", self)
+        self._pet_action.triggered.connect(self._pet_window.on_pet_clicked)
+        self.addAction(self._pet_action)
 
         feed_action = QAction("🍔 Alimentar", self)
         feed_action.triggered.connect(self._pet_window.on_feed)
@@ -107,18 +111,20 @@ class PetContextMenu(QMenu):
         """Update the Preguntar action enabled state after config reload."""
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
+        self._pet_action.setText(f"🤗 Acariciar a {self._pet_name}")
 
     def show_at(self, pos: QPoint):
         self.popup(pos)
 
 
 class AskDialog(QDialog):
-    """Small dialog with a text field to ask Jacky a question via LLM."""
+    """Small dialog with a text field to ask the pet a question via LLM."""
 
     def __init__(self, pet_window, parent=None):
         super().__init__(parent)
         self._pet_window = pet_window
-        self.setWindowTitle("Preguntarle a Jacky")
+        pet_name = pet_window.pet.name
+        self.setWindowTitle(f"Preguntarle a {pet_name}")
         self.setFixedWidth(360)
         self.setStyleSheet("""
             QDialog {
@@ -272,12 +278,12 @@ DEFAULT_PERMISSIONS = {p[0]: True for p in PERMISSION_DEFS}
 
 
 class SettingsDialog(QDialog):
-    """Settings dialog for configuring Jacky."""
+    """Settings dialog for configuring the pet."""
 
     def __init__(self, pet_window, parent=None):
         super().__init__(parent)
         self._pet_window = pet_window
-        self.setWindowTitle("Ajustes de Jacky")
+        self.setWindowTitle(f"Ajustes de {pet_window.pet.name}")
         self.setMinimumWidth(460)
         self.setStyleSheet("""
             QDialog {
@@ -393,6 +399,16 @@ class SettingsDialog(QDialog):
         """Build the general settings tab."""
         tab = QWidget()
         layout = QVBoxLayout(tab)
+
+        # Pet name group
+        name_group = QGroupBox("Mascota")
+        name_form = QFormLayout()
+        self._pet_name_edit = QLineEdit(self._config.get("pet_name", "Jacky"))
+        self._pet_name_edit.setMaxLength(30)
+        self._pet_name_edit.setPlaceholderText("Nombre de tu mascota")
+        name_form.addRow("Nombre:", self._pet_name_edit)
+        name_group.setLayout(name_form)
+        layout.addWidget(name_group)
 
         # Movement group
         move_group = QGroupBox("Movimiento")
@@ -626,6 +642,9 @@ class SettingsDialog(QDialog):
             self._ollama_model.setCurrentText(current)
 
     def _save(self):
+        new_name = self._pet_name_edit.text().strip()
+        if new_name:
+            self._config["pet_name"] = new_name
         self._config["character"] = self._selected_char
         self._config["movement_speed"] = self._speed_spin.value()
         self._config["window_interaction_enabled"] = self._win_enabled.isChecked()

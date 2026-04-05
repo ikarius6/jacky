@@ -669,6 +669,7 @@ class PetWindow(QWidget):
     def reload_config(self):
         """Reload config after settings change."""
         self._config = load_config()
+        self.pet.name = self._config.get("pet_name", "Jacky")
         self.movement._speed = self._config.get("movement_speed", 3)
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._silent_mode = self._config.get("silent_mode", False)

@@ -14,7 +14,9 @@ def _strip_think_tags(text: str) -> str:
     return re.sub(r"<think>[\s\S]*?</think>", "", text).strip()
 
 
-SYSTEM_PROMPT = """Eres Jacky, una mascota virtual humanoide chibi que vive en el escritorio de Windows de alguien.
+def build_system_prompt(pet_name: str = "Jacky") -> str:
+    """Build the LLM system prompt with the pet's actual name."""
+    return f"""Eres {pet_name}, una mascota virtual humanoide chibi que vive en el escritorio de Windows de alguien.
 Eres pequeño, juguetón y curioso. Hablas en frases cortas y casuales (1-2 oraciones máximo).
 Si se te menciona una ventana o app, haz UN solo comentario puntual sobre ella. No enumeres ni menciones otras ventanas.
 No menciones la hora a menos que la situación lo pida explícitamente.
@@ -38,9 +40,10 @@ def fetch_ollama_models(base_url: str = "http://localhost:11434") -> list[str]:
 class OllamaProvider:
     """Async Ollama LLM client for generating Jacky's dynamic dialogue."""
 
-    def __init__(self, base_url: str = "http://localhost:11434", model: str = "llama3"):
+    def __init__(self, base_url: str = "http://localhost:11434", model: str = "llama3", pet_name: str = "Jacky"):
         self._base_url = base_url.rstrip("/")
         self._model = model
+        self._pet_name = pet_name
         self._available: Optional[bool] = None
 
     @property
@@ -61,7 +64,7 @@ class OllamaProvider:
         return {
             "model": self._model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": build_system_prompt(self._pet_name)},
                 {"role": "user", "content": context},
             ],
             "stream": False,
@@ -129,9 +132,10 @@ class OpenRouterProvider:
 
     API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-    def __init__(self, api_key: str = "", model: str = "qwen/qwen3.6-plus:free"):
+    def __init__(self, api_key: str = "", model: str = "qwen/qwen3.6-plus:free", pet_name: str = "Jacky"):
         self._api_key = api_key
         self._model = model
+        self._pet_name = pet_name
         self._available: Optional[bool] = None
 
     def is_available(self) -> bool:
@@ -150,7 +154,7 @@ class OpenRouterProvider:
         return {
             "model": self._model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": build_system_prompt(self._pet_name)},
                 {"role": "user", "content": context},
             ],
             "temperature": 0.8,
@@ -217,12 +221,15 @@ class OpenRouterProvider:
 def create_llm_provider(config: dict):
     """Factory: return the correct provider based on config['llm_provider']."""
     provider = config.get("llm_provider", "ollama")
+    pet_name = config.get("pet_name", "Jacky")
     if provider == "openrouter":
         return OpenRouterProvider(
             api_key=config.get("openrouter_api_key", ""),
             model=config.get("openrouter_model", "qwen/qwen3.6-plus:free"),
+            pet_name=pet_name,
         )
     return OllamaProvider(
         base_url=config.get("ollama_url", "http://localhost:11434"),
         model=config.get("ollama_model", "llama3"),
+        pet_name=pet_name,
     )
