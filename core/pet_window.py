@@ -575,7 +575,8 @@ class PetWindow(QWidget):
         old_state = self.pet.state
         _KEEP_ANIM = (PetState.HAPPY, PetState.EATING, PetState.DRAGGED,
                      PetState.SHOOTING, PetState.SLASHING, PetState.THROWING,
-                     PetState.SLIDING, PetState.INTERACTING)
+                     PetState.SLIDING, PetState.INTERACTING, PetState.HURT,
+                     PetState.DYING)
         if old_state not in _KEEP_ANIM:
             self.pet.set_state(PetState.TALKING)
 
@@ -661,7 +662,7 @@ class PetWindow(QWidget):
         if self.pet.state in (PetState.HAPPY, PetState.EATING, PetState.INTERACTING,
                               PetState.PEEKING, PetState.SHOOTING, PetState.THROWING,
                               PetState.JUMPING, PetState.SLIDING, PetState.HURT,
-                              PetState.TALKING, PetState.SLASHING):
+                              PetState.TALKING, PetState.SLASHING, PetState.DYING):
             log.debug("END_TEMP %s -> IDLE pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
 

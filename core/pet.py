@@ -18,6 +18,7 @@ class PetState(Enum):
     JUMPING = auto()
     FALLING = auto()
     HURT = auto()
+    DYING = auto()
     SHOOTING = auto()
     SLASHING = auto()
     THROWING = auto()
@@ -38,6 +39,7 @@ STATE_ANIMATION_MAP = {
     PetState.JUMPING: "jump_loop",
     PetState.FALLING: "falling",
     PetState.HURT: "hurt",
+    PetState.DYING: "dying",
     PetState.SHOOTING: "shooting",
     PetState.SLASHING: "slashing",
     PetState.THROWING: "throwing",

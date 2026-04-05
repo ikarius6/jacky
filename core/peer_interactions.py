@@ -255,12 +255,55 @@ class PeerInteractionHandler:
                                       {"step": self._fight_step})
         self._fight_step += 1
 
+        # Use dedicated fight timer to chain strikes (not _temp_state_timer
+        # which is shared and can be cancelled by other actions)
+        self._stop_fight_timer()
+
+        self._fight_timer = QTimer()
+        self._fight_timer.setSingleShot(True)
         if self._fight_step >= 3:
-            # Fight over — determine winner
-            QTimer.singleShot(1500, self._resolve_fight)
+            # Fight over — determine winner after delay
+            self._fight_timer.timeout.connect(self._resolve_fight)
         else:
-            # Wait for next round
-            pw._temp_state_timer.start(1500)
+            # Schedule next strike
+            self._fight_timer.timeout.connect(self._next_fight_strike)
+        self._fight_timer.start(1500)
+
+    def _next_fight_strike(self):
+        """Continue the fight with the next strike (called by _fight_timer)."""
+        pw = self._pw
+        if pw.pet.state in (PetState.DRAGGED, PetState.FALLING):
+            self._reset_fight()
+            return
+
+        # Look up current target by stored PID
+        peers = pw._peer_discovery.get_peers()
+        target = None
+        for p in peers:
+            if p.pid == self._fight_target_pid:
+                target = p
+                break
+
+        if target is None:
+            # Target disappeared mid-fight
+            self._reset_fight()
+            pw.pet.set_state(PetState.IDLE)
+            return
+
+        self._do_fight_strike(target)
+
+    def _stop_fight_timer(self):
+        """Stop and clean up the fight timer."""
+        if self._fight_timer is not None:
+            self._fight_timer.stop()
+            self._fight_timer.deleteLater()
+            self._fight_timer = None
+
+    def _reset_fight(self):
+        """Reset all fight state."""
+        self._stop_fight_timer()
+        self._fight_target_pid = 0
+        self._fight_step = 0
 
     def _resolve_fight(self):
         """Determine the fight outcome."""
@@ -279,13 +322,12 @@ class PeerInteractionHandler:
             pw._peer_discovery.send_event(self._fight_target_pid, "fight_result",
                                           {"winner": "source"})
         else:
-            pw.pet.set_state(PetState.HURT)
+            pw.pet.set_state(PetState.DYING)
             pw._say(get_line("peer_fight_lose", pw.pet.name, peer_name=target_name))
             pw._peer_discovery.send_event(self._fight_target_pid, "fight_result",
                                           {"winner": "target"})
         pw._temp_state_timer.start(3000)
-        self._fight_target_pid = 0
-        self._fight_step = 0
+        self._reset_fight()
 
     # ------------------------------------------------------------------
     # Incoming event reactions
@@ -430,8 +472,7 @@ class PeerInteractionHandler:
         if self._chase_timer and hasattr(self, '_chase_target_pid') and self._chase_target_pid == peer.pid:
             self._stop_chase()
         if self._fight_target_pid == peer.pid:
-            self._fight_target_pid = 0
-            self._fight_step = 0
+            self._reset_fight()
 
         # Update window awareness
         pw._window_awareness.set_peer_pids(pw._peer_discovery.get_peer_pids())
