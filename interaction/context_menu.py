@@ -6,6 +6,8 @@ from PyQt6.QtWidgets import (QMenu, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt, QPoint, QSize, pyqtSignal
 from PyQt6.QtGui import QAction, QFont, QPixmap
 
+import copy
+
 from utils.config_manager import load_config, save_config
 from core.character import get_character_names, get_character_preview
 from speech.llm_provider import fetch_ollama_models
@@ -109,11 +111,9 @@ class PetContextMenu(QMenu):
         dlg.exec()
 
     def _toggle_silent_mode(self, checked: bool):
-        """Toggle silent mode and persist to config."""
+        """Toggle silent mode (in-memory only for this instance)."""
+        self._pet_window._config["silent_mode"] = checked
         self._pet_window._silent_mode = checked
-        cfg = load_config()
-        cfg["silent_mode"] = checked
-        save_config(cfg)
 
     def refresh_llm_state(self):
         """Update the Preguntar action enabled state after config reload."""
@@ -382,7 +382,7 @@ class SettingsDialog(QDialog):
                 margin-top: 2px;
             }
         """)
-        self._config = load_config()
+        self._config = copy.deepcopy(pet_window._config)
         self._selected_char = self._config.get("character", "placeholder")
         self._char_cards: list[CharacterCard] = []
         self._perm_checks: dict[str, QCheckBox] = {}
@@ -719,5 +719,6 @@ class SettingsDialog(QDialog):
             for key in self._perm_checks
         }
         save_config(self._config)
+        self._pet_window._config = self._config
         self._pet_window.reload_config()
         self.accept()
