@@ -219,6 +219,12 @@ class PeerDiscovery:
         # Update our own entry
         my_key = str(self._pid)
         if my_key in file_data["peers"]:
+            current_name = self._pw.pet.name
+            old_pet_name = file_data["peers"][my_key].get("pet_name", "")
+            if current_name != old_pet_name:
+                self._display_name = self._assign_display_name(file_data)
+                file_data["peers"][my_key]["pet_name"] = current_name
+                file_data["peers"][my_key]["display_name"] = self._display_name
             file_data["peers"][my_key]["heartbeat"] = now
             file_data["peers"][my_key]["x"] = self._pw.x()
             file_data["peers"][my_key]["y"] = self._pw.y()
