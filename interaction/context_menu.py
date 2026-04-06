@@ -31,10 +31,12 @@ class PetContextMenu(QMenu):
                 padding: 4px;
                 font-family: 'Segoe UI';
                 font-size: 11pt;
+                color: #5A3E2B;
             }
             QMenu::item {
                 padding: 6px 20px;
                 border-radius: 4px;
+                color: #5A3E2B;
             }
             QMenu::item:selected {
                 background-color: #FFDDB5;
@@ -179,6 +181,10 @@ class AskDialog(QDialog):
             QDialog {
                 background-color: #FFF8F0;
                 font-family: 'Segoe UI';
+                color: #5A3E2B;
+            }
+            QLabel {
+                color: #5A3E2B;
             }
             QPlainTextEdit {
                 border: 1px solid #DDB892;
@@ -186,6 +192,7 @@ class AskDialog(QDialog):
                 padding: 6px;
                 font-size: 11pt;
                 background-color: #FFFFFF;
+                color: #5A3E2B;
             }
             QPushButton {
                 background-color: #FFDDB5;
@@ -193,6 +200,7 @@ class AskDialog(QDialog):
                 border-radius: 4px;
                 padding: 6px 16px;
                 font-weight: bold;
+                color: #5A3E2B;
             }
             QPushButton:hover {
                 background-color: #FFD0A0;
@@ -338,6 +346,13 @@ class SettingsDialog(QDialog):
             QDialog {
                 background-color: #FFF8F0;
                 font-family: 'Segoe UI';
+                color: #5A3E2B;
+            }
+            QLabel {
+                color: #5A3E2B;
+            }
+            QCheckBox {
+                color: #5A3E2B;
             }
             QGroupBox {
                 font-weight: bold;
@@ -345,10 +360,19 @@ class SettingsDialog(QDialog):
                 border-radius: 6px;
                 margin-top: 8px;
                 padding-top: 16px;
+                color: #5A3E2B;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 padding: 0 6px;
+                color: #5A3E2B;
+            }
+            QLineEdit, QSpinBox, QComboBox, QPlainTextEdit {
+                background-color: #FFFFFF;
+                color: #5A3E2B;
+                border: 1px solid #DDB892;
+                border-radius: 4px;
+                padding: 2px 4px;
             }
             QPushButton {
                 background-color: #FFDDB5;
@@ -356,6 +380,7 @@ class SettingsDialog(QDialog):
                 border-radius: 4px;
                 padding: 6px 16px;
                 font-weight: bold;
+                color: #5A3E2B;
             }
             QPushButton:hover {
                 background-color: #FFD0A0;
@@ -380,6 +405,17 @@ class SettingsDialog(QDialog):
             }
             QTabBar::tab:!selected {
                 margin-top: 2px;
+            }
+            QScrollArea {
+                background: transparent;
+            }
+            QTabWidget > QWidget {
+                background-color: #FFF8F0;
+            }
+            QToolTip {
+                background-color: #FFF8F0;
+                color: #5A3E2B;
+                border: 1px solid #DDB892;
             }
         """)
         self._config = copy.deepcopy(pet_window._config)
