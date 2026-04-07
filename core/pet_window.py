@@ -457,7 +457,7 @@ class PetWindow(QWidget):
         self._llm_pending = True
         self._show_thinking()
 
-        if self._needs_vision(question):
+        if self._needs_vision(question) and self._perm("allow_vision"):
             context = self._build_llm_context(
                 f'The user asks you to LOOK at the screen: "{question}". '
                 'An image of your surroundings is attached. Describe what you see briefly.'
@@ -472,6 +472,9 @@ class PetWindow(QWidget):
         """Context-menu action: pet looks at the screen and comments on what it sees."""
         if not self._llm_enabled:
             self._say("No puedo ver nada sin el LLM activado... >_<", force=True)
+            return
+        if not self._perm("allow_vision"):
+            self._say("No tengo permiso para ver la pantalla... >_<", force=True)
             return
         if self._llm_pending:
             self._say("¡Espera, aún estoy pensando! >_<", force=True)

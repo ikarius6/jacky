@@ -125,7 +125,8 @@ class PetContextMenu(QMenu):
     def refresh_llm_state(self):
         """Update the Preguntar/Mirar actions enabled state after config reload."""
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
-        self._look_action.setEnabled(self._pet_window._llm_enabled)
+        vision_allowed = self._pet_window._perm("allow_vision")
+        self._look_action.setVisible(self._pet_window._llm_enabled and vision_allowed)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
         self._pet_action.setText(f"🤗 Acariciar a {self._pet_name}")
 
@@ -327,6 +328,7 @@ PERMISSION_DEFS = [
     ("allow_comment",  "Comentar sobre ventanas",  "Hacer comentarios sobre las ventanas abiertas",   "observe"),
     ("allow_peek",     "Asomarse en ventanas",     "Asomarse detr\u00e1s de los bordes de ventanas",       "observe"),
     ("allow_sit",      "Sentarse en ventanas",     "Sentarse sobre la barra de t\u00edtulo de ventanas",   "observe"),
+    ("allow_vision",   "Ver pantalla",             "Capturar y analizar la pantalla con visi\u00f3n LLM",   "observe"),
     ("allow_push",     "Empujar ventanas",         "Empujar ventanas cercanas",                       "destructive"),
     ("allow_shake",    "Sacudir ventanas",         "Sacudir ventanas r\u00e1pidamente",                    "destructive"),
     ("allow_minimize", "Minimizar ventanas",       "Minimizar ventanas cercanas",                     "destructive"),
@@ -438,6 +440,7 @@ class SettingsDialog(QDialog):
         tabs = QTabWidget()
         tabs.addTab(self._build_character_tab(), "Personaje")
         tabs.addTab(self._build_settings_tab(), "Ajustes")
+        tabs.addTab(self._build_llm_tab(), "LLM")
         tabs.addTab(self._build_permissions_tab(), "Permisos")
         layout.addWidget(tabs)
 
@@ -569,14 +572,30 @@ class SettingsDialog(QDialog):
         win_group.setLayout(win_form)
         layout.addWidget(win_group)
 
-        # LLM group
-        llm_group = QGroupBox("LLM")
-        llm_form = QFormLayout()
+        # Debug group
+        debug_group = QGroupBox("Depuración")
+        debug_form = QFormLayout()
+        self._debug_logging = QCheckBox("Activar logging de depuración")
+        self._debug_logging.setChecked(self._config.get("debug_logging", False))
+        debug_form.addRow(self._debug_logging)
+        debug_group.setLayout(debug_form)
+        layout.addWidget(debug_group)
+
+        layout.addStretch()
+        return tab
+
+    def _build_llm_tab(self) -> QWidget:
+        """Build the LLM configuration tab."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
         self._llm_enabled = QCheckBox("Activar diálogo LLM")
         self._llm_enabled.setChecked(self._config.get("llm_enabled", False))
-        llm_form.addRow(self._llm_enabled)
+        layout.addWidget(self._llm_enabled)
 
         # Provider selector
+        provider_group = QGroupBox("Proveedor")
+        provider_form = QFormLayout()
         self._provider_combo = QComboBox()
         self._provider_combo.addItems(["ollama", "openrouter"])
         current_provider = self._config.get("llm_provider", "ollama")
@@ -584,13 +603,15 @@ class SettingsDialog(QDialog):
         if idx >= 0:
             self._provider_combo.setCurrentIndex(idx)
         self._provider_combo.currentTextChanged.connect(self._on_provider_changed)
-        llm_form.addRow("Proveedor:", self._provider_combo)
+        provider_form.addRow("Proveedor:", self._provider_combo)
+        provider_group.setLayout(provider_form)
+        layout.addWidget(provider_group)
 
         # --- Ollama fields ---
-        self._ollama_url_label = QLabel("URL:")
+        self._ollama_group = QGroupBox("Ollama")
+        ollama_form = QFormLayout()
         self._ollama_url = QLineEdit(self._config.get("ollama_url", "http://localhost:11434"))
-        llm_form.addRow(self._ollama_url_label, self._ollama_url)
-        self._ollama_model_label = QLabel("Modelo:")
+        ollama_form.addRow("URL:", self._ollama_url)
         model_layout = QHBoxLayout()
         self._ollama_model = QComboBox()
         self._ollama_model.setEditable(True)
@@ -600,35 +621,27 @@ class SettingsDialog(QDialog):
         self._refresh_models_btn.clicked.connect(self._refresh_models)
         model_layout.addWidget(self._ollama_model)
         model_layout.addWidget(self._refresh_models_btn)
-        llm_form.addRow(self._ollama_model_label, model_layout)
+        ollama_form.addRow("Modelo:", model_layout)
+        self._ollama_group.setLayout(ollama_form)
+        layout.addWidget(self._ollama_group)
         if current_provider == "ollama":
             self._refresh_models()
 
         # --- OpenRouter fields ---
-        self._or_key_label = QLabel("API Key:")
+        self._or_group = QGroupBox("OpenRouter")
+        or_form = QFormLayout()
         self._or_api_key = QLineEdit(self._config.get("openrouter_api_key", ""))
         self._or_api_key.setEchoMode(QLineEdit.EchoMode.Password)
         self._or_api_key.setPlaceholderText("sk-or-...")
-        llm_form.addRow(self._or_key_label, self._or_api_key)
-        self._or_model_label = QLabel("Modelo:")
+        or_form.addRow("API Key:", self._or_api_key)
         self._or_model = QLineEdit(self._config.get("openrouter_model", "qwen/qwen3.6-plus:free"))
         self._or_model.setPlaceholderText("qwen/qwen3.6-plus:free")
-        llm_form.addRow(self._or_model_label, self._or_model)
-
-        llm_group.setLayout(llm_form)
-        layout.addWidget(llm_group)
+        or_form.addRow("Modelo:", self._or_model)
+        self._or_group.setLayout(or_form)
+        layout.addWidget(self._or_group)
 
         # Show/hide the right fields for current provider
         self._on_provider_changed(current_provider)
-
-        # Debug group
-        debug_group = QGroupBox("Depuración")
-        debug_form = QFormLayout()
-        self._debug_logging = QCheckBox("Activar logging de depuración")
-        self._debug_logging.setChecked(self._config.get("debug_logging", False))
-        debug_form.addRow(self._debug_logging)
-        debug_group.setLayout(debug_form)
-        layout.addWidget(debug_group)
 
         layout.addStretch()
         return tab
@@ -706,13 +719,8 @@ class SettingsDialog(QDialog):
     def _on_provider_changed(self, provider: str):
         """Show/hide fields depending on the selected LLM provider."""
         is_ollama = provider == "ollama"
-        for w in (self._ollama_url_label, self._ollama_url,
-                  self._ollama_model_label, self._ollama_model,
-                  self._refresh_models_btn):
-            w.setVisible(is_ollama)
-        for w in (self._or_key_label, self._or_api_key,
-                  self._or_model_label, self._or_model):
-            w.setVisible(not is_ollama)
+        self._ollama_group.setVisible(is_ollama)
+        self._or_group.setVisible(not is_ollama)
 
     def _refresh_models(self):
         """Fetch available models from the Ollama instance and populate the combo."""
