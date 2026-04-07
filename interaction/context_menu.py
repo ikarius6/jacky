@@ -9,6 +9,7 @@ from PyQt6.QtGui import QAction, QFont, QPixmap
 import copy
 
 from utils.config_manager import load_config, save_config
+from utils.i18n import t, get_permission_defs, available_languages, current_language
 from core.character import get_character_names, get_character_preview
 from speech.llm_provider import fetch_ollama_models
 
@@ -54,29 +55,29 @@ class PetContextMenu(QMenu):
         return self._pet_window.pet.name
 
     def _build_menu(self):
-        self._pet_action = QAction(f"🤗 Acariciar a {self._pet_name}", self)
+        self._pet_action = QAction(t("ui.menu_pet", name=self._pet_name), self)
         self._pet_action.triggered.connect(self._pet_window.on_pet_clicked)
         self.addAction(self._pet_action)
 
-        feed_action = QAction("🍔 Alimentar", self)
-        feed_action.triggered.connect(self._pet_window.on_feed)
-        self.addAction(feed_action)
+        self._feed_action = QAction(t("ui.menu_feed"), self)
+        self._feed_action.triggered.connect(self._pet_window.on_feed)
+        self.addAction(self._feed_action)
 
-        attack_action = QAction("⚔️ Atacar", self)
-        attack_action.triggered.connect(self._pet_window.on_attack)
-        self.addAction(attack_action)
+        self._attack_action = QAction(t("ui.menu_attack"), self)
+        self._attack_action.triggered.connect(self._pet_window.on_attack)
+        self.addAction(self._attack_action)
 
         self.addSeparator()
 
         # Peer interactions submenu (dynamic, rebuilt on each show)
-        self._peers_menu = QMenu("👥 Compañeros", self)
+        self._peers_menu = QMenu(t("ui.menu_peers"), self)
         self._peers_menu.setStyleSheet(self.styleSheet())
         self._peers_action = self.addMenu(self._peers_menu)
         self._peers_action.setVisible(False)
 
         self.addSeparator()
 
-        self._silent_action = QAction("🔇 Modo silencioso", self)
+        self._silent_action = QAction(t("ui.menu_silent"), self)
         self._silent_action.setCheckable(True)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
         self._silent_action.triggered.connect(self._toggle_silent_mode)
@@ -84,27 +85,27 @@ class PetContextMenu(QMenu):
 
         self.addSeparator()
 
-        self._ask_action = QAction("💬 Preguntar", self)
+        self._ask_action = QAction(t("ui.menu_ask"), self)
         self._ask_action.triggered.connect(self._open_ask_dialog)
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._ask_action)
 
-        self._look_action = QAction("👁 Mirar pantalla", self)
+        self._look_action = QAction(t("ui.menu_look"), self)
         self._look_action.triggered.connect(self._pet_window.on_look)
         self._look_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._look_action)
 
         self.addSeparator()
 
-        settings_action = QAction("⚙️ Ajustes", self)
-        settings_action.triggered.connect(self._open_settings)
-        self.addAction(settings_action)
+        self._settings_action = QAction(t("ui.menu_settings"), self)
+        self._settings_action.triggered.connect(self._open_settings)
+        self.addAction(self._settings_action)
 
         self.addSeparator()
 
-        quit_action = QAction("👋 Salir", self)
-        quit_action.triggered.connect(self._pet_window.on_quit)
-        self.addAction(quit_action)
+        self._quit_action = QAction(t("ui.menu_quit"), self)
+        self._quit_action.triggered.connect(self._pet_window.on_quit)
+        self.addAction(self._quit_action)
 
     def _open_ask_dialog(self):
         dlg = AskDialog(self._pet_window)
@@ -128,7 +129,16 @@ class PetContextMenu(QMenu):
         vision_allowed = self._pet_window._perm("allow_vision")
         self._look_action.setVisible(self._pet_window._llm_enabled and vision_allowed)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
-        self._pet_action.setText(f"🤗 Acariciar a {self._pet_name}")
+        # Refresh all labels for current language
+        self._pet_action.setText(t("ui.menu_pet", name=self._pet_name))
+        self._feed_action.setText(t("ui.menu_feed"))
+        self._attack_action.setText(t("ui.menu_attack"))
+        self._peers_menu.setTitle(t("ui.menu_peers"))
+        self._silent_action.setText(t("ui.menu_silent"))
+        self._ask_action.setText(t("ui.menu_ask"))
+        self._look_action.setText(t("ui.menu_look"))
+        self._settings_action.setText(t("ui.menu_settings"))
+        self._quit_action.setText(t("ui.menu_quit"))
 
     def show_at(self, pos: QPoint):
         self._rebuild_peers_menu()
@@ -152,23 +162,23 @@ class PetContextMenu(QMenu):
             peer_sub = QMenu(f"🐾 {peer.display_name}", self._peers_menu)
             peer_sub.setStyleSheet(self.styleSheet())
 
-            greet = QAction("👋 Saludar", peer_sub)
+            greet = QAction(t("ui.peer_greet"), peer_sub)
             greet.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_greet(p))
             peer_sub.addAction(greet)
 
-            attack = QAction("⚔️ Atacar", peer_sub)
+            attack = QAction(t("ui.peer_attack"), peer_sub)
             attack.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_attack(p))
             peer_sub.addAction(attack)
 
-            chase = QAction("🏃 Perseguir", peer_sub)
+            chase = QAction(t("ui.peer_chase"), peer_sub)
             chase.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_chase(p))
             peer_sub.addAction(chase)
 
-            dance = QAction("💃 Bailar", peer_sub)
+            dance = QAction(t("ui.peer_dance"), peer_sub)
             dance.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_dance(p))
             peer_sub.addAction(dance)
 
-            fight = QAction("🥊 Pelear", peer_sub)
+            fight = QAction(t("ui.peer_fight"), peer_sub)
             fight.triggered.connect(lambda checked, p=peer: pw._peer_interactions.do_fight(p))
             peer_sub.addAction(fight)
 
@@ -182,7 +192,7 @@ class AskDialog(QDialog):
         super().__init__(parent)
         self._pet_window = pet_window
         pet_name = pet_window.pet.name
-        self.setWindowTitle(f"Preguntarle a {pet_name}")
+        self.setWindowTitle(t("ui.ask_title", name=pet_name))
         self.setFixedWidth(360)
         self.setStyleSheet("""
             QDialog {
@@ -217,19 +227,19 @@ class AskDialog(QDialog):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        label = QLabel("Escribe tu pregunta:")
+        label = QLabel(t("ui.ask_label"))
         label.setStyleSheet("font-size: 11pt; color: #5A3E2B;")
         layout.addWidget(label)
 
         self._text_edit = QPlainTextEdit()
-        self._text_edit.setPlaceholderText("Ej: ¿Qué opinas de mi escritorio?")
+        self._text_edit.setPlaceholderText(t("ui.ask_placeholder"))
         self._text_edit.setFixedHeight(80)
         layout.addWidget(self._text_edit)
 
         btn_layout = QHBoxLayout()
-        send_btn = QPushButton("Enviar")
+        send_btn = QPushButton(t("ui.btn_send"))
         send_btn.clicked.connect(self.accept)
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton(t("ui.btn_cancel"))
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addStretch()
         btn_layout.addWidget(send_btn)
@@ -322,23 +332,42 @@ class CharacterCard(QFrame):
         super().mousePressEvent(event)
 
 
-# Permission definitions: (config_key, label, description, group)
+# Permission definitions: (config_key, group)
+# Labels and descriptions are loaded from i18n at runtime.
 # group: "observe" = non-destructive, "destructive" = modifies windows
-PERMISSION_DEFS = [
-    ("allow_comment",  "Comentar sobre ventanas",  "Hacer comentarios sobre las ventanas abiertas",   "observe"),
-    ("allow_peek",     "Asomarse en ventanas",     "Asomarse detr\u00e1s de los bordes de ventanas",       "observe"),
-    ("allow_sit",      "Sentarse en ventanas",     "Sentarse sobre la barra de t\u00edtulo de ventanas",   "observe"),
-    ("allow_vision",   "Ver pantalla",             "Capturar y analizar la pantalla con visi\u00f3n LLM",   "observe"),
-    ("allow_push",     "Empujar ventanas",         "Empujar ventanas cercanas",                       "destructive"),
-    ("allow_shake",    "Sacudir ventanas",         "Sacudir ventanas r\u00e1pidamente",                    "destructive"),
-    ("allow_minimize", "Minimizar ventanas",       "Minimizar ventanas cercanas",                     "destructive"),
-    ("allow_resize",   "Redimensionar ventanas",   "Encoger o agrandar ventanas",                     "destructive"),
-    ("allow_knock",    "Tocar ventanas",           "Parpadear y traer al frente una ventana",         "destructive"),
-    ("allow_drag",     "Arrastrar ventanas",       "Arrastrar una ventana mientras camina",           "destructive"),
-    ("allow_tidy",     "Ordenar ventanas",         "Organizar ventanas en una cuadr\u00edcula",             "destructive"),
-    ("allow_topple",   "Tumbar ventanas",          "Empujar ventanas en cadena como domin\u00f3s",         "destructive"),
+_PERMISSION_KEYS = [
+    ("allow_comment",  "observe"),
+    ("allow_peek",     "observe"),
+    ("allow_sit",      "observe"),
+    ("allow_vision",   "observe"),
+    ("allow_push",     "destructive"),
+    ("allow_shake",    "destructive"),
+    ("allow_minimize", "destructive"),
+    ("allow_resize",   "destructive"),
+    ("allow_knock",    "destructive"),
+    ("allow_drag",     "destructive"),
+    ("allow_tidy",     "destructive"),
+    ("allow_topple",   "destructive"),
 ]
 
+
+def _build_permission_defs() -> list[tuple]:
+    """Build PERMISSION_DEFS from i18n data.
+
+    Returns list of (config_key, label, description, group) tuples.
+    """
+    perm_i18n = get_permission_defs()
+    result = []
+    for key, group in _PERMISSION_KEYS:
+        info = perm_i18n.get(key, {})
+        label = info.get("label", key)
+        desc = info.get("desc", "")
+        result.append((key, label, desc, group))
+    return result
+
+
+# Keep module-level references for backward compatibility (used by pet_window.py)
+PERMISSION_DEFS = _build_permission_defs()
 DEFAULT_PERMISSIONS = {p[0]: True for p in PERMISSION_DEFS}
 
 
@@ -348,7 +377,7 @@ class SettingsDialog(QDialog):
     def __init__(self, pet_window, parent=None):
         super().__init__(parent)
         self._pet_window = pet_window
-        self.setWindowTitle(f"Ajustes de {pet_window.pet.name}")
+        self.setWindowTitle(t("ui.settings_title", name=pet_window.pet.name))
         self.setMinimumWidth(460)
         self.setStyleSheet("""
             QDialog {
@@ -438,17 +467,17 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
 
         tabs = QTabWidget()
-        tabs.addTab(self._build_character_tab(), "Personaje")
-        tabs.addTab(self._build_settings_tab(), "Ajustes")
-        tabs.addTab(self._build_llm_tab(), "LLM")
-        tabs.addTab(self._build_permissions_tab(), "Permisos")
+        tabs.addTab(self._build_character_tab(), t("ui.tab_character"))
+        tabs.addTab(self._build_settings_tab(), t("ui.tab_settings"))
+        tabs.addTab(self._build_llm_tab(), t("ui.tab_llm"))
+        tabs.addTab(self._build_permissions_tab(), t("ui.tab_permissions"))
         layout.addWidget(tabs)
 
         # Buttons
         btn_layout = QHBoxLayout()
-        save_btn = QPushButton("Guardar")
+        save_btn = QPushButton(t("ui.btn_save"))
         save_btn.clicked.connect(self._save)
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton(t("ui.btn_cancel"))
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addStretch()
         btn_layout.addWidget(save_btn)
@@ -461,7 +490,7 @@ class SettingsDialog(QDialog):
         tab_layout = QVBoxLayout(tab)
         tab_layout.setContentsMargins(4, 8, 4, 4)
 
-        hint = QLabel("Selecciona un personaje:")
+        hint = QLabel(t("ui.select_character"))
         hint.setStyleSheet("font-size: 10pt; color: #5A3E2B; padding: 2px 4px;")
         tab_layout.addWidget(hint)
 
@@ -494,28 +523,43 @@ class SettingsDialog(QDialog):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
+        # Language selector
+        lang_group = QGroupBox(t("ui.label_language").rstrip(":"))
+        lang_form = QFormLayout()
+        self._lang_combo = QComboBox()
+        langs = available_languages()
+        current_lang = self._config.get("language", "es")
+        for code, name in langs:
+            self._lang_combo.addItem(name, code)
+        idx = self._lang_combo.findData(current_lang)
+        if idx >= 0:
+            self._lang_combo.setCurrentIndex(idx)
+        lang_form.addRow(t("ui.label_language"), self._lang_combo)
+        lang_group.setLayout(lang_form)
+        layout.addWidget(lang_group)
+
         # Pet name group
-        name_group = QGroupBox("Mascota")
+        name_group = QGroupBox(t("ui.group_pet"))
         name_form = QFormLayout()
         self._pet_name_edit = QLineEdit(self._config.get("pet_name", "Jacky"))
         self._pet_name_edit.setMaxLength(30)
-        self._pet_name_edit.setPlaceholderText("Nombre de tu mascota")
-        name_form.addRow("Nombre:", self._pet_name_edit)
+        self._pet_name_edit.setPlaceholderText(t("ui.placeholder_name"))
+        name_form.addRow(t("ui.label_name"), self._pet_name_edit)
         name_group.setLayout(name_form)
         layout.addWidget(name_group)
 
         # Movement group
-        move_group = QGroupBox("Movimiento")
+        move_group = QGroupBox(t("ui.group_movement"))
         move_form = QFormLayout()
         self._speed_spin = QSpinBox()
         self._speed_spin.setRange(1, 10)
         self._speed_spin.setValue(self._config.get("movement_speed", 3))
-        move_form.addRow("Velocidad:", self._speed_spin)
+        move_form.addRow(t("ui.label_speed"), self._speed_spin)
         move_group.setLayout(move_form)
         layout.addWidget(move_group)
 
         # Intervals group
-        interval_group = QGroupBox("Intervalos (segundos)")
+        interval_group = QGroupBox(t("ui.group_intervals"))
         interval_form = QFormLayout()
 
         self._idle_min = QSpinBox()
@@ -529,7 +573,7 @@ class SettingsDialog(QDialog):
         idle_layout.addWidget(self._idle_min)
         idle_layout.addWidget(QLabel("–"))
         idle_layout.addWidget(self._idle_max)
-        interval_form.addRow("Caminar (idle):", idle_layout)
+        interval_form.addRow(t("ui.label_idle"), idle_layout)
 
         self._chat_min = QSpinBox()
         self._chat_min.setRange(1, 600)
@@ -542,7 +586,7 @@ class SettingsDialog(QDialog):
         chat_layout.addWidget(self._chat_min)
         chat_layout.addWidget(QLabel("–"))
         chat_layout.addWidget(self._chat_max)
-        interval_form.addRow("Hablar (chat):", chat_layout)
+        interval_form.addRow(t("ui.label_chat"), chat_layout)
 
         self._winchk_min = QSpinBox()
         self._winchk_min.setRange(1, 300)
@@ -555,27 +599,27 @@ class SettingsDialog(QDialog):
         winchk_layout.addWidget(self._winchk_min)
         winchk_layout.addWidget(QLabel("–"))
         winchk_layout.addWidget(self._winchk_max)
-        interval_form.addRow("Interacción ventanas:", winchk_layout)
+        interval_form.addRow(t("ui.label_wincheck"), winchk_layout)
 
         interval_group.setLayout(interval_form)
         layout.addWidget(interval_group)
 
         # Window interaction group
-        win_group = QGroupBox("Interacción con ventanas")
+        win_group = QGroupBox(t("ui.group_window"))
         win_form = QFormLayout()
-        self._win_enabled = QCheckBox("Activar detección de ventanas")
+        self._win_enabled = QCheckBox(t("ui.check_window_detect"))
         self._win_enabled.setChecked(self._config.get("window_interaction_enabled", True))
         win_form.addRow(self._win_enabled)
-        self._win_push = QCheckBox("Permitir empujar ventanas")
+        self._win_push = QCheckBox(t("ui.check_window_push"))
         self._win_push.setChecked(self._config.get("window_push_enabled", True))
         win_form.addRow(self._win_push)
         win_group.setLayout(win_form)
         layout.addWidget(win_group)
 
         # Debug group
-        debug_group = QGroupBox("Depuración")
+        debug_group = QGroupBox(t("ui.group_debug"))
         debug_form = QFormLayout()
-        self._debug_logging = QCheckBox("Activar logging de depuración")
+        self._debug_logging = QCheckBox(t("ui.check_debug_log"))
         self._debug_logging.setChecked(self._config.get("debug_logging", False))
         debug_form.addRow(self._debug_logging)
         debug_group.setLayout(debug_form)
@@ -589,12 +633,12 @@ class SettingsDialog(QDialog):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        self._llm_enabled = QCheckBox("Activar diálogo LLM")
+        self._llm_enabled = QCheckBox(t("ui.check_llm_enable"))
         self._llm_enabled.setChecked(self._config.get("llm_enabled", False))
         layout.addWidget(self._llm_enabled)
 
         # Provider selector
-        provider_group = QGroupBox("Proveedor")
+        provider_group = QGroupBox(t("ui.group_provider"))
         provider_form = QFormLayout()
         self._provider_combo = QComboBox()
         self._provider_combo.addItems(["ollama", "openrouter", "groq"])
@@ -603,7 +647,7 @@ class SettingsDialog(QDialog):
         if idx >= 0:
             self._provider_combo.setCurrentIndex(idx)
         self._provider_combo.currentTextChanged.connect(self._on_provider_changed)
-        provider_form.addRow("Proveedor:", self._provider_combo)
+        provider_form.addRow(t("ui.label_provider"), self._provider_combo)
         provider_group.setLayout(provider_form)
         layout.addWidget(provider_group)
 
@@ -611,17 +655,17 @@ class SettingsDialog(QDialog):
         self._ollama_group = QGroupBox("Ollama")
         ollama_form = QFormLayout()
         self._ollama_url = QLineEdit(self._config.get("ollama_url", "http://localhost:11434"))
-        ollama_form.addRow("URL:", self._ollama_url)
+        ollama_form.addRow(t("ui.label_url"), self._ollama_url)
         model_layout = QHBoxLayout()
         self._ollama_model = QComboBox()
         self._ollama_model.setEditable(True)
         self._refresh_models_btn = QPushButton("🔄")
         self._refresh_models_btn.setFixedWidth(50)
-        self._refresh_models_btn.setToolTip("Actualizar lista de modelos")
+        self._refresh_models_btn.setToolTip(t("ui.tooltip_refresh"))
         self._refresh_models_btn.clicked.connect(self._refresh_models)
         model_layout.addWidget(self._ollama_model)
         model_layout.addWidget(self._refresh_models_btn)
-        ollama_form.addRow("Modelo:", model_layout)
+        ollama_form.addRow(t("ui.label_model"), model_layout)
         self._ollama_group.setLayout(ollama_form)
         layout.addWidget(self._ollama_group)
         if current_provider == "ollama":
@@ -633,10 +677,10 @@ class SettingsDialog(QDialog):
         self._or_api_key = QLineEdit(self._config.get("openrouter_api_key", ""))
         self._or_api_key.setEchoMode(QLineEdit.EchoMode.Password)
         self._or_api_key.setPlaceholderText("sk-or-...")
-        or_form.addRow("API Key:", self._or_api_key)
+        or_form.addRow(t("ui.label_apikey"), self._or_api_key)
         self._or_model = QLineEdit(self._config.get("openrouter_model", "qwen/qwen3.6-plus:free"))
         self._or_model.setPlaceholderText("qwen/qwen3.6-plus:free")
-        or_form.addRow("Modelo:", self._or_model)
+        or_form.addRow(t("ui.label_model"), self._or_model)
         self._or_group.setLayout(or_form)
         layout.addWidget(self._or_group)
 
@@ -657,11 +701,11 @@ class SettingsDialog(QDialog):
 
         keys_btn_layout = QHBoxLayout()
         keys_btn_layout.setContentsMargins(0, 0, 0, 0)
-        groq_add_btn = QPushButton("＋ Agregar")
-        groq_add_btn.setToolTip("Agregar API key")
+        groq_add_btn = QPushButton(t("ui.btn_add"))
+        groq_add_btn.setToolTip(t("ui.tooltip_add_key"))
         groq_add_btn.clicked.connect(self._groq_add_key)
-        groq_del_btn = QPushButton("- Quitar")
-        groq_del_btn.setToolTip("Eliminar API key seleccionada")
+        groq_del_btn = QPushButton(t("ui.btn_remove"))
+        groq_del_btn.setToolTip(t("ui.tooltip_del_key"))
         groq_del_btn.clicked.connect(self._groq_del_key)
         keys_btn_layout.addWidget(groq_add_btn)
         keys_btn_layout.addWidget(groq_del_btn)
@@ -671,12 +715,12 @@ class SettingsDialog(QDialog):
         keys_layout.setSpacing(4)
         keys_layout.addWidget(self._groq_keys_list)
         keys_layout.addLayout(keys_btn_layout)
-        groq_form.addRow("API Keys:", keys_layout)
+        groq_form.addRow(t("ui.label_apikeys"), keys_layout)
 
         self._groq_model = QLineEdit(
             self._config.get("groq_model", "meta-llama/llama-4-scout-17b-16e-instruct"))
         self._groq_model.setPlaceholderText("meta-llama/llama-4-scout-17b-16e-instruct")
-        groq_form.addRow("Modelo:", self._groq_model)
+        groq_form.addRow(t("ui.label_model"), self._groq_model)
         self._groq_group.setLayout(groq_form)
         layout.addWidget(self._groq_group)
 
@@ -691,18 +735,19 @@ class SettingsDialog(QDialog):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        hint = QLabel("Controla qu\u00e9 acciones puede realizar la mascota con las ventanas:")
+        hint = QLabel(t("ui.perm_hint"))
         hint.setStyleSheet("font-size: 10pt; color: #5A3E2B; padding: 2px 4px;")
         hint.setWordWrap(True)
         layout.addWidget(hint)
 
         perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
+        perm_defs = _build_permission_defs()
 
         # Toggle-all buttons
         toggle_layout = QHBoxLayout()
-        enable_all_btn = QPushButton("Activar todos")
+        enable_all_btn = QPushButton(t("ui.btn_enable_all"))
         enable_all_btn.clicked.connect(lambda: self._set_all_perms(True))
-        disable_all_btn = QPushButton("Desactivar todos")
+        disable_all_btn = QPushButton(t("ui.btn_disable_all"))
         disable_all_btn.clicked.connect(lambda: self._set_all_perms(False))
         toggle_layout.addWidget(enable_all_btn)
         toggle_layout.addWidget(disable_all_btn)
@@ -710,9 +755,9 @@ class SettingsDialog(QDialog):
         layout.addLayout(toggle_layout)
 
         # Non-destructive group
-        obs_group = QGroupBox("Observar (no modifica ventanas)")
+        obs_group = QGroupBox(t("ui.group_observe"))
         obs_form = QVBoxLayout()
-        for key, label, desc, group in PERMISSION_DEFS:
+        for key, label, desc, group in perm_defs:
             if group != "observe":
                 continue
             cb = QCheckBox(label)
@@ -725,9 +770,9 @@ class SettingsDialog(QDialog):
         layout.addWidget(obs_group)
 
         # Destructive group
-        dest_group = QGroupBox("Destructivo (modifica ventanas)")
+        dest_group = QGroupBox(t("ui.group_destructive"))
         dest_form = QVBoxLayout()
-        for key, label, desc, group in PERMISSION_DEFS:
+        for key, label, desc, group in perm_defs:
             if group != "destructive":
                 continue
             cb = QCheckBox(label)
@@ -765,8 +810,8 @@ class SettingsDialog(QDialog):
 
     def _groq_add_key(self):
         """Prompt for a new Groq API key and add it to the list."""
-        key, ok = QInputDialog.getText(self, "Agregar Groq API Key",
-                                       "Pega tu API key de Groq:")
+        key, ok = QInputDialog.getText(self, t("ui.dlg_add_groq_title"),
+                                       t("ui.dlg_add_groq_label"))
         key = key.strip() if ok else ""
         if key:
             self._groq_api_keys.append(key)
@@ -807,6 +852,7 @@ class SettingsDialog(QDialog):
         new_name = self._pet_name_edit.text().strip()
         if new_name:
             self._config["pet_name"] = new_name
+        self._config["language"] = self._lang_combo.currentData()
         self._config["character"] = self._selected_char
         self._config["movement_speed"] = self._speed_spin.value()
         self._config["window_interaction_enabled"] = self._win_enabled.isChecked()

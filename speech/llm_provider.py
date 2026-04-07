@@ -17,13 +17,8 @@ def _strip_think_tags(text: str) -> str:
 
 def build_system_prompt(pet_name: str = "Jacky") -> str:
     """Build the LLM system prompt with the pet's actual name."""
-    return f"""Eres {pet_name}, una mascota virtual humanoide chibi que vive en el escritorio de Windows de alguien.
-Eres pequeño, juguetón y curioso. Hablas en frases cortas y casuales (1-2 oraciones máximo).
-Si se te menciona una ventana o app, haz UN solo comentario puntual sobre ella. No enumeres ni menciones otras ventanas.
-No menciones la hora a menos que la situación lo pida explícitamente.
-Sé amigable, gracioso y un poco travieso. Usa emoticones ocasionales como :3 o ^_^
-Mantén las respuestas en menos de 50 palabras.
-SIEMPRE responde en español."""
+    from utils.i18n import get_system_prompt
+    return get_system_prompt(pet_name)
 
 
 def fetch_ollama_models(base_url: str = "http://localhost:11434") -> list[str]:

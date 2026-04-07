@@ -28,6 +28,7 @@ DEFAULT_CONFIG = {
     "peer_check_interval": [8, 20],
     "groq_api_keys": [],
     "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "language": "es",
 }
 
 # Schema: key -> (type, min, max, choices)
@@ -55,6 +56,7 @@ _SCHEMA = {
     "silent_mode":                (bool,  None, None, None),
     "peer_interaction_enabled":   (bool,  None, None, None),
     "max_peer_instances":         (int,   1,    20,   None),
+    "language":                   (str,   None, None, None),
 }
 
 # Interval keys: list of exactly 2 positive ints where [0] <= [1]

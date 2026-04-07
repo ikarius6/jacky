@@ -49,5 +49,6 @@
     "openrouter_model": "qwen/qwen3.6-plus:free",
     "groq_api_keys": [],
     "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
-    "debug_logging": false
+    "debug_logging": false,
+    "language": "es"
 }

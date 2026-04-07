@@ -26,6 +26,7 @@ from speech.llm_provider import create_llm_provider
 from utils.config_manager import load_config
 from utils.dwm_helpers import remove_dwm_border
 from utils.screen_capture import capture_vision_area
+from utils.i18n import load_language, t, get_vision_keywords, current_language
 
 log = logging.getLogger("pet_window")
 
@@ -39,6 +40,7 @@ class PetWindow(QWidget):
     def __init__(self):
         super().__init__()
         self._config = load_config()
+        load_language(self._config.get("language", "es"))
         self._sprite_size = self._config.get("sprite_size", 128)
 
         # Window setup — fully transparent, no border, no shadow
@@ -341,16 +343,16 @@ class PetWindow(QWidget):
         self._tray.setToolTip(f"{self.pet.name} - Desktop Pet")
 
         tray_menu = QMenu()
-        show_action = QAction(f"Show {self.pet.name}", tray_menu)
+        show_action = QAction(t("ui.tray_show", name=self.pet.name), tray_menu)
         show_action.triggered.connect(self._bring_to_front)
         tray_menu.addAction(show_action)
 
-        settings_action = QAction("Settings", tray_menu)
+        settings_action = QAction(t("ui.tray_settings"), tray_menu)
         settings_action.triggered.connect(lambda: self._context_menu._open_settings())
         tray_menu.addAction(settings_action)
 
         tray_menu.addSeparator()
-        quit_action = QAction("Quit", tray_menu)
+        quit_action = QAction(t("ui.tray_quit"), tray_menu)
         quit_action.triggered.connect(self.on_quit)
         tray_menu.addAction(quit_action)
 
@@ -430,14 +432,10 @@ class PetWindow(QWidget):
             self.pet.set_state(PetState.INTERACTING)
         self._temp_state_timer.start(2000)
 
-    # Vision trigger keywords
-    _VISION_KEYWORDS = {"mira", "observa", "ve", "pantalla", "screen", "ves",
-                        "mirá", "viendo", "mirar", "observar", "miras"}
-
     def _needs_vision(self, text: str) -> bool:
         """Check if the user's question contains vision trigger words."""
         words = set(text.lower().split())
-        return bool(words & self._VISION_KEYWORDS)
+        return bool(words & get_vision_keywords())
 
     def _capture_vision(self) -> str:
         """Capture the 1024x1024 vision area centred on the pet and return base64 PNG."""
@@ -452,7 +450,7 @@ class PetWindow(QWidget):
         if not self._llm_enabled:
             return
         if self._llm_pending:
-            self._say("¡Espera, aún estoy pensando! >_<", force=True)
+            self._say(t("ui.busy"), force=True)
             return
         self._llm_pending = True
         self._show_thinking()
@@ -471,13 +469,13 @@ class PetWindow(QWidget):
     def on_look(self):
         """Context-menu action: pet looks at the screen and comments on what it sees."""
         if not self._llm_enabled:
-            self._say("No puedo ver nada sin el LLM activado... >_<", force=True)
+            self._say(t("ui.no_llm"), force=True)
             return
         if not self._perm("allow_vision"):
-            self._say("No tengo permiso para ver la pantalla... >_<", force=True)
+            self._say(t("ui.no_vision_perm"), force=True)
             return
         if self._llm_pending:
-            self._say("¡Espera, aún estoy pensando! >_<", force=True)
+            self._say(t("ui.busy"), force=True)
             return
         self._llm_pending = True
         self._show_thinking()
@@ -697,7 +695,7 @@ class PetWindow(QWidget):
         if text:
             self._llm_ask_ready.emit(text)
         else:
-            self._llm_ask_ready.emit("No pude pensar en nada... ¡intenta de nuevo! >_<")
+            self._llm_ask_ready.emit(t("ui.llm_error"))
 
     # --- State changes ---
 
@@ -743,6 +741,10 @@ class PetWindow(QWidget):
         self.movement._speed = self._config.get("movement_speed", 3)
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._silent_mode = self._config.get("silent_mode", False)
+        # Reload language if changed
+        new_lang = self._config.get("language", "es")
+        if new_lang != current_language():
+            load_language(new_lang)
         self._llm = create_llm_provider(self._config)
         self._window_awareness.set_enabled(self._config.get("window_interaction_enabled", True))
         perms = self._config.get("permissions", DEFAULT_PERMISSIONS)

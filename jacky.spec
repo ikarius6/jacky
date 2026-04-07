@@ -20,6 +20,8 @@ a = Analysis(
     datas=[
         # Bundle sprites (all character packs)
         ('sprites', 'sprites'),
+        # Bundle locale files (i18n)
+        ('locales', 'locales'),
         # Bundle config.json as a template (user copy lives next to .exe)
         ('config.json', '.'),
     ],

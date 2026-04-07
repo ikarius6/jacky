@@ -48,7 +48,8 @@ class SpeechBubble(QWidget):
         """Show an animated thinking indicator in the bubble."""
         self._thinking = True
         self._think_index = 0
-        self._text = "Pensando " + self._think_frames[0]
+        from utils.i18n import t
+        self._text = t("ui.thinking") + " " + self._think_frames[0]
         self._anchor = QPoint(anchor_x, anchor_y)
         self._pet_height = pet_height
         self._recalculate_size()
@@ -62,7 +63,8 @@ class SpeechBubble(QWidget):
     def _on_think_tick(self):
         """Advance the thinking animation."""
         self._think_index = (self._think_index + 1) % len(self._think_frames)
-        self._text = "Pensando " + self._think_frames[self._think_index]
+        from utils.i18n import t
+        self._text = t("ui.thinking") + " " + self._think_frames[self._think_index]
         self.update()
 
     def show_message(self, text: str, anchor_x: int, anchor_y: int,
