@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QMenu, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QCheckBox, QSpinBox, QLineEdit, QPushButton,
                              QGroupBox, QFormLayout, QComboBox, QPlainTextEdit,
                              QTabWidget, QWidget, QGridLayout, QScrollArea,
-                             QFrame, QSizePolicy)
+                             QFrame, QSizePolicy, QListWidget, QInputDialog)
 from PyQt6.QtCore import Qt, QPoint, QSize, pyqtSignal
 from PyQt6.QtGui import QAction, QFont, QPixmap
 
@@ -597,7 +597,7 @@ class SettingsDialog(QDialog):
         provider_group = QGroupBox("Proveedor")
         provider_form = QFormLayout()
         self._provider_combo = QComboBox()
-        self._provider_combo.addItems(["ollama", "openrouter"])
+        self._provider_combo.addItems(["ollama", "openrouter", "groq"])
         current_provider = self._config.get("llm_provider", "ollama")
         idx = self._provider_combo.findText(current_provider)
         if idx >= 0:
@@ -639,6 +639,46 @@ class SettingsDialog(QDialog):
         or_form.addRow("Modelo:", self._or_model)
         self._or_group.setLayout(or_form)
         layout.addWidget(self._or_group)
+
+        # --- Groq fields ---
+        self._groq_group = QGroupBox("Groq")
+        groq_form = QFormLayout()
+
+        # API keys list
+        self._groq_keys_list = QListWidget()
+        self._groq_keys_list.setFixedHeight(90)
+        self._groq_keys_list.setStyleSheet(
+            "QListWidget { font-size: 10pt; }"
+            "QListWidget::item { padding: 2px 4px; }"
+        )
+        self._groq_api_keys: list[str] = list(self._config.get("groq_api_keys", []))
+        for k in self._groq_api_keys:
+            self._groq_keys_list.addItem(self._mask_key(k))
+
+        keys_btn_layout = QHBoxLayout()
+        keys_btn_layout.setContentsMargins(0, 0, 0, 0)
+        groq_add_btn = QPushButton("＋ Agregar")
+        groq_add_btn.setToolTip("Agregar API key")
+        groq_add_btn.clicked.connect(self._groq_add_key)
+        groq_del_btn = QPushButton("- Quitar")
+        groq_del_btn.setToolTip("Eliminar API key seleccionada")
+        groq_del_btn.clicked.connect(self._groq_del_key)
+        keys_btn_layout.addWidget(groq_add_btn)
+        keys_btn_layout.addWidget(groq_del_btn)
+        keys_btn_layout.addStretch()
+
+        keys_layout = QVBoxLayout()
+        keys_layout.setSpacing(4)
+        keys_layout.addWidget(self._groq_keys_list)
+        keys_layout.addLayout(keys_btn_layout)
+        groq_form.addRow("API Keys:", keys_layout)
+
+        self._groq_model = QLineEdit(
+            self._config.get("groq_model", "meta-llama/llama-4-scout-17b-16e-instruct"))
+        self._groq_model.setPlaceholderText("meta-llama/llama-4-scout-17b-16e-instruct")
+        groq_form.addRow("Modelo:", self._groq_model)
+        self._groq_group.setLayout(groq_form)
+        layout.addWidget(self._groq_group)
 
         # Show/hide the right fields for current provider
         self._on_provider_changed(current_provider)
@@ -716,11 +756,34 @@ class SettingsDialog(QDialog):
 
     # ── models / save ───────────────────────────────────────────────
 
+    @staticmethod
+    def _mask_key(key: str) -> str:
+        """Show first 6 and last 4 chars of an API key."""
+        if len(key) <= 12:
+            return "*" * len(key)
+        return f"{key[:6]}...{key[-4:]}"
+
+    def _groq_add_key(self):
+        """Prompt for a new Groq API key and add it to the list."""
+        key, ok = QInputDialog.getText(self, "Agregar Groq API Key",
+                                       "Pega tu API key de Groq:")
+        key = key.strip() if ok else ""
+        if key:
+            self._groq_api_keys.append(key)
+            self._groq_keys_list.addItem(self._mask_key(key))
+
+    def _groq_del_key(self):
+        """Remove the selected Groq API key from the list."""
+        row = self._groq_keys_list.currentRow()
+        if row >= 0:
+            self._groq_keys_list.takeItem(row)
+            self._groq_api_keys.pop(row)
+
     def _on_provider_changed(self, provider: str):
         """Show/hide fields depending on the selected LLM provider."""
-        is_ollama = provider == "ollama"
-        self._ollama_group.setVisible(is_ollama)
-        self._or_group.setVisible(not is_ollama)
+        self._ollama_group.setVisible(provider == "ollama")
+        self._or_group.setVisible(provider == "openrouter")
+        self._groq_group.setVisible(provider == "groq")
 
     def _refresh_models(self):
         """Fetch available models from the Ollama instance and populate the combo."""
@@ -754,6 +817,8 @@ class SettingsDialog(QDialog):
         self._config["ollama_model"] = self._ollama_model.currentText().strip()
         self._config["openrouter_api_key"] = self._or_api_key.text().strip()
         self._config["openrouter_model"] = self._or_model.text().strip()
+        self._config["groq_api_keys"] = list(self._groq_api_keys)
+        self._config["groq_model"] = self._groq_model.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
         idle_lo = self._idle_min.value()
         idle_hi = max(idle_lo, self._idle_max.value())

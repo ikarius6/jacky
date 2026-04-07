@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 import threading
 from typing import Optional, Callable
 
@@ -297,10 +298,191 @@ class OpenRouterProvider:
         thread.start()
 
 
+class GroqKeyManager:
+    """Round-robin key rotation for Groq API keys with per-key cooldown."""
+
+    _DEFAULT_COOLDOWN = 60.0  # seconds
+
+    def __init__(self, api_keys: list[str], cooldown_s: float = _DEFAULT_COOLDOWN):
+        if not api_keys:
+            raise ValueError("GroqKeyManager requires at least one API key")
+        self._cooldown_s = cooldown_s
+        self._lock = threading.Lock()
+        self._slots: list[dict] = [
+            {"key": k, "available": True, "last_used": 0.0}
+            for k in api_keys
+        ]
+        self._index = 0
+        log.info("GroqKeyManager initialised with %d key(s)", len(self._slots))
+
+    def get_next_key(self) -> str:
+        """Return the next available key (round-robin). Force-resets oldest if all cooling."""
+        with self._lock:
+            n = len(self._slots)
+            for i in range(n):
+                idx = (self._index + i) % n
+                slot = self._slots[idx]
+                if slot["available"]:
+                    self._index = (idx + 1) % n
+                    slot["last_used"] = time.monotonic()
+                    return slot["key"]
+
+            # All keys cooling — force-reset the oldest
+            log.warning("GroqKeyManager: all keys cooling, force-resetting oldest")
+            oldest = min(self._slots, key=lambda s: s["last_used"])
+            oldest["available"] = True
+            oldest["last_used"] = time.monotonic()
+            return oldest["key"]
+
+    def mark_rate_limited(self, key: str) -> None:
+        """Disable a key for *cooldown_s* seconds after a 429."""
+        with self._lock:
+            slot = next((s for s in self._slots if s["key"] == key), None)
+            if not slot:
+                return
+            log.warning("GroqKeyManager: key ...%s rate-limited, cooldown %.0fs",
+                        key[-6:], self._cooldown_s)
+            slot["available"] = False
+
+        def _restore():
+            with self._lock:
+                slot["available"] = True
+                log.info("GroqKeyManager: key ...%s available again", key[-6:])
+
+        timer = threading.Timer(self._cooldown_s, _restore)
+        timer.daemon = True
+        timer.start()
+
+    @property
+    def available_count(self) -> int:
+        with self._lock:
+            return sum(1 for s in self._slots if s["available"])
+
+
+class GroqProvider:
+    """Groq API client with multi-key rotation."""
+
+    API_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+    def __init__(self, api_keys: list[str] | None = None,
+                 model: str = "meta-llama/llama-4-scout-17b-16e-instruct",
+                 pet_name: str = "Jacky"):
+        self._api_keys = [k for k in (api_keys or []) if k]
+        self._model = model
+        self._pet_name = pet_name
+        self._available: Optional[bool] = None
+        self._key_manager: Optional[GroqKeyManager] = None
+        if self._api_keys:
+            self._key_manager = GroqKeyManager(self._api_keys)
+
+    def is_available(self) -> bool:
+        self._available = self._key_manager is not None and self._key_manager.available_count > 0
+        return self._available
+
+    def _headers(self, api_key: str) -> dict:
+        return {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+    def _build_payload(self, context: str) -> dict:
+        return {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": build_system_prompt(self._pet_name)},
+                {"role": "user", "content": context},
+            ],
+            "temperature": 0.8,
+            "max_tokens": 120,
+        }
+
+    def _parse_response(self, data: dict) -> Optional[str]:
+        try:
+            msg = data["choices"][0]["message"]
+            raw = msg.get("content", "") or ""
+            text = _strip_think_tags(raw).strip()
+            return text or None
+        except (KeyError, IndexError):
+            return None
+
+    def _do_request(self, payload: dict, timeout: int = 30) -> Optional[str]:
+        """Fire a request, handle 429 with one retry on the next key."""
+        if not self._key_manager:
+            return None
+        key = self._key_manager.get_next_key()
+        try:
+            resp = requests.post(self.API_URL, headers=self._headers(key),
+                                 data=json.dumps(payload), timeout=timeout)
+            if resp.status_code == 200:
+                return self._parse_response(resp.json())
+            if resp.status_code == 429:
+                self._key_manager.mark_rate_limited(key)
+                # Retry once with next key
+                key2 = self._key_manager.get_next_key()
+                resp2 = requests.post(self.API_URL, headers=self._headers(key2),
+                                      data=json.dumps(payload), timeout=timeout)
+                if resp2.status_code == 200:
+                    return self._parse_response(resp2.json())
+                if resp2.status_code == 429:
+                    self._key_manager.mark_rate_limited(key2)
+                log.warning("Groq retry also failed (HTTP %d)", resp2.status_code)
+                return None
+            log.warning("Groq HTTP %d: %s", resp.status_code, resp.text[:200])
+            return None
+        except Exception as e:
+            log.warning("Groq request error: %s", e)
+            return None
+
+    def generate(self, context: str, callback: Callable[[Optional[str]], None]):
+        def _worker():
+            t0 = time.monotonic()
+            payload = self._build_payload(context)
+            text = self._do_request(payload)
+            elapsed = time.monotonic() - t0
+            log.debug("Groq OK %.1fs text=%r", elapsed, text[:80] if text else None)
+            callback(text)
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
+
+    def generate_sync(self, context: str) -> Optional[str]:
+        payload = self._build_payload(context)
+        return self._do_request(payload)
+
+    def generate_with_image(self, context: str, image_b64: str,
+                            callback: Callable[[Optional[str]], None]):
+        def _worker():
+            t0 = time.monotonic()
+            payload = self._build_payload(context)
+            payload["messages"][-1]["content"] = [
+                {"type": "text", "text": context},
+                {"type": "image_url", "image_url": {
+                    "url": f"data:image/png;base64,{image_b64}",
+                }},
+            ]
+            text = self._do_request(payload, timeout=60)
+            elapsed = time.monotonic() - t0
+            if text:
+                log.debug("Groq vision OK %.1fs text=%r", elapsed, text[:80] if text else None)
+                callback(text)
+            else:
+                log.warning("Groq vision failed after %.1fs — retrying text-only", elapsed)
+                self.generate(context, callback)
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
+
+
 def create_llm_provider(config: dict):
     """Factory: return the correct provider based on config['llm_provider']."""
     provider = config.get("llm_provider", "ollama")
     pet_name = config.get("pet_name", "Jacky")
+    if provider == "groq":
+        return GroqProvider(
+            api_keys=config.get("groq_api_keys", []),
+            model=config.get("groq_model", "meta-llama/llama-4-scout-17b-16e-instruct"),
+            pet_name=pet_name,
+        )
     if provider == "openrouter":
         return OpenRouterProvider(
             api_key=config.get("openrouter_api_key", ""),

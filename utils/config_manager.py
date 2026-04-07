@@ -26,6 +26,8 @@ DEFAULT_CONFIG = {
     "peer_interaction_enabled": True,
     "max_peer_instances": 5,
     "peer_check_interval": [8, 20],
+    "groq_api_keys": [],
+    "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
 }
 
 # Schema: key -> (type, min, max, choices)
@@ -45,9 +47,10 @@ _SCHEMA = {
     "window_push_enabled":        (bool,  None, None, None),
     "always_on_top":              (bool,  None, None, None),
     "bubble_timeout":             (int,   1,    60,   None),
-    "llm_provider":               (str,   None, None, ["ollama", "openrouter"]),
+    "llm_provider":               (str,   None, None, ["ollama", "openrouter", "groq"]),
     "openrouter_api_key":         (str,   None, None, None),
     "openrouter_model":           (str,   None, None, None),
+    "groq_model":                 (str,   None, None, None),
     "debug_logging":              (bool,  None, None, None),
     "silent_mode":                (bool,  None, None, None),
     "peer_interaction_enabled":   (bool,  None, None, None),
@@ -124,6 +127,15 @@ def _validate(config: dict) -> dict:
     for key in _INTERVAL_KEYS:
         if key in config:
             config[key] = _validate_interval(key, config[key], DEFAULT_CONFIG[key])
+
+    # Validate groq_api_keys: must be a list of non-empty strings
+    if "groq_api_keys" in config:
+        val = config["groq_api_keys"]
+        if not isinstance(val, list):
+            log.warning("Config 'groq_api_keys': expected list, got %s — using default", type(val).__name__)
+            config["groq_api_keys"] = []
+        else:
+            config["groq_api_keys"] = [k for k in val if isinstance(k, str) and k.strip()]
 
     # Validate permissions dict if present
     if "permissions" in config:
