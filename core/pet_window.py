@@ -25,6 +25,7 @@ from speech.dialogue import get_line
 from speech.llm_provider import create_llm_provider
 from utils.config_manager import load_config
 from utils.dwm_helpers import remove_dwm_border
+from utils.screen_capture import capture_vision_area
 
 log = logging.getLogger("pet_window")
 
@@ -429,6 +430,23 @@ class PetWindow(QWidget):
             self.pet.set_state(PetState.INTERACTING)
         self._temp_state_timer.start(2000)
 
+    # Vision trigger keywords
+    _VISION_KEYWORDS = {"mira", "observa", "ve", "pantalla", "screen", "ves",
+                        "mirá", "viendo", "mirar", "observar", "miras"}
+
+    def _needs_vision(self, text: str) -> bool:
+        """Check if the user's question contains vision trigger words."""
+        words = set(text.lower().split())
+        return bool(words & self._VISION_KEYWORDS)
+
+    def _capture_vision(self) -> str:
+        """Capture the 1024x1024 vision area centred on the pet and return base64 PNG."""
+        cx = self.x() + self._sprite_size // 2
+        cy = self.y() + self._sprite_size // 2
+        screen = self._current_screen()
+        dpi = screen.devicePixelRatio() if screen else 1.0
+        return capture_vision_area(cx, cy, dpi_scale=dpi)
+
     def on_ask(self, question: str):
         """User asked a direct question via the Preguntar dialog."""
         if not self._llm_enabled:
@@ -437,9 +455,36 @@ class PetWindow(QWidget):
             self._say("¡Espera, aún estoy pensando! >_<", force=True)
             return
         self._llm_pending = True
-        context = self._build_llm_context(f"The user asks you directly: \"{question}\"")
         self._show_thinking()
-        self._llm.generate(context, self._on_ask_response)
+
+        if self._needs_vision(question):
+            context = self._build_llm_context(
+                f'The user asks you to LOOK at the screen: "{question}". '
+                'An image of your surroundings is attached. Describe what you see briefly.'
+            )
+            image_b64 = self._capture_vision()
+            self._llm.generate_with_image(context, image_b64, self._on_ask_response)
+        else:
+            context = self._build_llm_context(f'The user asks you directly: "{question}"')
+            self._llm.generate(context, self._on_ask_response)
+
+    def on_look(self):
+        """Context-menu action: pet looks at the screen and comments on what it sees."""
+        if not self._llm_enabled:
+            self._say("No puedo ver nada sin el LLM activado... >_<", force=True)
+            return
+        if self._llm_pending:
+            self._say("¡Espera, aún estoy pensando! >_<", force=True)
+            return
+        self._llm_pending = True
+        self._show_thinking()
+        context = self._build_llm_context(
+            'Look around at your screen surroundings. '
+            'An image of what you can see is attached. '
+            'Make a short, fun comment about what you see.'
+        )
+        image_b64 = self._capture_vision()
+        self._llm.generate_with_image(context, image_b64, self._on_ask_response)
 
     def on_drag_start(self):
         """User started dragging."""

@@ -126,6 +126,40 @@ class OllamaProvider:
             pass
         return None
 
+    def generate_with_image(self, context: str, image_b64: str,
+                            callback: Callable[[Optional[str]], None]):
+        """Generate a response with an image in a background thread.
+
+        If the model doesn't support vision the request will fail; in that case
+        we automatically retry without the image (text-only fallback).
+        """
+        def _worker():
+            try:
+                payload = self._build_payload(context)
+                # Inject base64 image into the user message (Ollama multimodal format)
+                payload["messages"][-1]["images"] = [image_b64]
+                resp = requests.post(self.chat_url, json=payload, timeout=60)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    msg = data.get("message", {})
+                    raw = msg.get("content", "")
+                    text = _strip_think_tags(raw).strip()
+                    if not text:
+                        raw_think = msg.get("thinking", "")
+                        text = _strip_think_tags(raw_think).strip()
+                    callback(text if text else None)
+                else:
+                    # Vision likely unsupported — fallback to text-only
+                    log.warning("Ollama vision failed (HTTP %d), retrying text-only",
+                                resp.status_code)
+                    self.generate(context, callback)
+            except Exception as e:
+                log.warning("Ollama vision error: %s — retrying text-only", e)
+                self.generate(context, callback)
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
+
 
 class OpenRouterProvider:
     """OpenRouter API client — works with any model available on openrouter.ai."""
@@ -216,6 +250,51 @@ class OpenRouterProvider:
         except Exception:
             pass
         return None
+
+    def generate_with_image(self, context: str, image_b64: str,
+                            callback: Callable[[Optional[str]], None]):
+        """Generate a response with an image (OpenAI vision format).
+
+        If the model doesn't support vision the request will fail; in that case
+        we automatically retry without the image (text-only fallback).
+        """
+        def _worker():
+            import time
+            t0 = time.monotonic()
+            try:
+                payload = self._build_payload(context)
+                # Replace plain text content with multimodal content array
+                payload["messages"][-1]["content"] = [
+                    {"type": "text", "text": context},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/png;base64,{image_b64}",
+                    }},
+                ]
+                resp = requests.post(
+                    self.API_URL,
+                    headers=self._headers(),
+                    data=json.dumps(payload),
+                    timeout=60,
+                )
+                elapsed = time.monotonic() - t0
+                if resp.status_code == 200:
+                    text = self._parse_response(resp.json())
+                    log.debug("OpenRouter vision OK %.1fs text=%r",
+                              elapsed, text[:80] if text else None)
+                    callback(text)
+                else:
+                    # Vision likely unsupported — fallback to text-only
+                    log.warning("OpenRouter vision failed (HTTP %d after %.1fs): %s — retrying text-only",
+                                resp.status_code, elapsed, resp.text[:200])
+                    self.generate(context, callback)
+            except Exception as e:
+                elapsed = time.monotonic() - t0
+                log.warning("OpenRouter vision error after %.1fs: %s — retrying text-only",
+                            elapsed, e)
+                self.generate(context, callback)
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
 
 
 def create_llm_provider(config: dict):

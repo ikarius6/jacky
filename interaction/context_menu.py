@@ -89,6 +89,11 @@ class PetContextMenu(QMenu):
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._ask_action)
 
+        self._look_action = QAction("👁 Mirar pantalla", self)
+        self._look_action.triggered.connect(self._pet_window.on_look)
+        self._look_action.setEnabled(self._pet_window._llm_enabled)
+        self.addAction(self._look_action)
+
         self.addSeparator()
 
         settings_action = QAction("⚙️ Ajustes", self)
@@ -118,8 +123,9 @@ class PetContextMenu(QMenu):
         self._pet_window._silent_mode = checked
 
     def refresh_llm_state(self):
-        """Update the Preguntar action enabled state after config reload."""
+        """Update the Preguntar/Mirar actions enabled state after config reload."""
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
+        self._look_action.setEnabled(self._pet_window._llm_enabled)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
         self._pet_action.setText(f"🤗 Acariciar a {self._pet_name}")
 
