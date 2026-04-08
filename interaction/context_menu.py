@@ -90,6 +90,11 @@ class PetContextMenu(QMenu):
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._ask_action)
 
+        self._listen_action = QAction("Escuchar", self)
+        self._listen_action.triggered.connect(self._pet_window.on_listen_toggle)
+        self._listen_action.setEnabled(self._pet_window._llm_enabled)
+        self.addAction(self._listen_action)
+
         self._look_action = QAction(t("ui.menu_look"), self)
         self._look_action.triggered.connect(self._pet_window.on_look)
         self._look_action.setEnabled(self._pet_window._llm_enabled)
@@ -136,6 +141,7 @@ class PetContextMenu(QMenu):
         self._peers_menu.setTitle(t("ui.menu_peers"))
         self._silent_action.setText(t("ui.menu_silent"))
         self._ask_action.setText(t("ui.menu_ask"))
+        self._listen_action.setText("Escuchar")
         self._look_action.setText(t("ui.menu_look"))
         self._settings_action.setText(t("ui.menu_settings"))
         self._quit_action.setText(t("ui.menu_quit"))
@@ -639,6 +645,21 @@ class SettingsDialog(QDialog):
         self._llm_enabled.setChecked(self._config.get("llm_enabled", False))
         layout.addWidget(self._llm_enabled)
 
+        # Voice Settings
+        voice_group = QGroupBox("Voice Settings (ElevenLabs & AssemblyAI)")
+        voice_form = QFormLayout()
+        
+        self._response_mode = QComboBox()
+        self._response_mode.addItems(["text", "voice", "both"])
+        self._response_mode.setCurrentText(self._config.get("response_mode", "both"))
+        voice_form.addRow("Response Mode:", self._response_mode)
+        
+        self._listen_shortcut = QLineEdit(self._config.get("listen_shortcut", "ctrl+shift+space"))
+        voice_form.addRow("Listen Shortcut:", self._listen_shortcut)
+        
+        voice_group.setLayout(voice_form)
+        layout.addWidget(voice_group)
+
         # Provider selector
         provider_group = QGroupBox(t("ui.group_provider"))
         provider_form = QFormLayout()
@@ -868,6 +889,8 @@ class SettingsDialog(QDialog):
         self._config["groq_api_keys"] = list(self._groq_api_keys)
         self._config["groq_model"] = self._groq_model.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
+        self._config["response_mode"] = self._response_mode.currentText()
+        self._config["listen_shortcut"] = self._listen_shortcut.text().strip()
         idle_lo = self._idle_min.value()
         idle_hi = max(idle_lo, self._idle_max.value())
         self._config["idle_interval"] = [idle_lo, idle_hi]

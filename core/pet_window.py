@@ -25,6 +25,8 @@ from interaction.peer_discovery import PeerDiscovery
 from speech.bubble import SpeechBubble
 from speech.dialogue import get_line
 from speech.llm_provider import create_llm_provider
+from speech.voice import ElevenLabsTTSClient, AssemblyAISTTClient
+from interaction.hotkey import GlobalHotkey
 from utils.config_manager import load_config
 from utils.dwm_helpers import remove_dwm_border, set_topmost
 from utils.screen_capture import capture_vision_area
@@ -38,6 +40,8 @@ class PetWindow(QWidget):
 
     _llm_text_ready = pyqtSignal(str)
     _llm_ask_ready = pyqtSignal(str)
+    _voice_transcript_ready = pyqtSignal(str)
+    _voice_error_ready = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -94,6 +98,23 @@ class PetWindow(QWidget):
         self._peer_interactions = PeerInteractionHandler(self)
         self._screen_interaction = ScreenInteractionHandler(self)
         self._bubble = SpeechBubble()
+
+        # Voice and Hotkey
+        self._tts_client = ElevenLabsTTSClient(
+            api_key=self._config.get("elevenlabs_api_key", ""),
+        )
+        self._stt_client = AssemblyAISTTClient(
+            api_key=self._config.get("assemblyai_api_key", "")
+        )
+        # Use signals for thread-safe delivery from daemon STT thread to main GUI thread
+        self._voice_transcript_ready.connect(self.on_ask)
+        self._voice_error_ready.connect(lambda err: self._say(f"STT Error: {err}", force=True, skip_voice=True))
+        self._stt_client.on_transcript_callback = self._voice_transcript_ready.emit
+        self._stt_client.on_error_callback = self._voice_error_ready.emit
+        
+        self._global_hotkey = GlobalHotkey()
+        self._global_hotkey.pressed.connect(self.on_listen_toggle)
+        self._global_hotkey.start()
 
         # State tracking
         self._temp_state_timer = QTimer(self)
@@ -488,6 +509,15 @@ class PetWindow(QWidget):
         else:
             self.pet.set_state(PetState.WALKING)
 
+    def on_listen_toggle(self):
+        """Toggle microphone recording for voice STT."""
+        if getattr(self._stt_client, "_is_recording", False):
+            self._bubble.hide()
+            self._stt_client.stop_listening()
+        else:
+            self._say("* escuchando *", force=True, timeout_ms=30000, skip_voice=True)
+            self._stt_client.start_listening()
+
     def on_ask(self, question: str):
         """User asked a direct question via the Preguntar dialog."""
         if not self._llm_enabled:
@@ -678,16 +708,26 @@ class PetWindow(QWidget):
 
     # --- Speech ---
 
-    def _say(self, text: str | None, timeout_ms: int = 0, force: bool = False):
+    def _say(self, text: str | None, timeout_ms: int = 0, force: bool = False, skip_voice: bool = False):
         """Show a speech bubble with text.
 
         timeout_ms: override auto-calculated timeout (0 = auto).
         force: if True, ignore silent mode (used for direct user questions).
+        skip_voice: if True, skips Text-to-Speech playback.
         """
         if not text:
             return
         if self._silent_mode and not force:
             return
+            
+        mode = self._config.get("response_mode", "both")
+        if mode in ("voice", "both") and not skip_voice:
+            self._tts_client.play_tts(text)
+            if mode == "voice":
+                self.pet.set_state(PetState.TALKING)
+                self._talk_end_timer.start(max(3000, len(text) * 50))
+                return
+                
         log.info("SAY state=%s pos=(%d,%d) text='%s'", self.pet.state.name, self.x(), self.y(), text[:80])
         old_state = self.pet.state
         _KEEP_ANIM = (PetState.HAPPY, PetState.EATING, PetState.DRAGGED,

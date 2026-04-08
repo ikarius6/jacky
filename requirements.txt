@@ -2,3 +2,5 @@ PyQt6>=6.6.0
 pywin32>=306
 requests>=2.31.0
 mss>=9.0.0
+
+assemblyai[extras]>=0.25.0
