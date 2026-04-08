@@ -59,7 +59,7 @@ Edit `config.json` or use the in-app Settings dialog (right-click Jacky → Sett
 | `groq_api_keys` | List of Groq API keys (rotation) | `[]` |
 | `groq_model` | Groq model identifier | `meta-llama/llama-4-scout-17b-16e-instruct` |
 | `openrouter_api_key` | OpenRouter API key | *(empty)* |
-| `openrouter_model` | OpenRouter model identifier | `qwen/qwen3.6-plus:free` |
+| `openrouter_model` | OpenRouter model identifier | `google/gemma-4-26b-a4b-it:free` |
 | `window_interaction_enabled` | Enable window awareness | `true` |
 | `window_push_enabled` | Allow pushing windows | `true` |
 | `bubble_timeout` | Speech bubble duration (seconds) | `5` |

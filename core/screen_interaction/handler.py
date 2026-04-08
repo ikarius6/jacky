@@ -1,10 +1,12 @@
-import base64
+"""Main handler that orchestrates the screen interaction flow.
+
+Capture → LLM grid-locate → walk → refine → execute.
+"""
+
 import json
 import logging
-import os
 import re
 import time
-from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 from PyQt6.QtCore import QTimer, pyqtSignal, QObject
@@ -21,130 +23,18 @@ from utils.i18n import (
 from utils.screen_capture import capture_full_screen_gridded, encode_qimage_png, capture_vision_area, draw_subgrid
 from utils.win32_helpers import click_at, send_alt_f4, minimize_foreground_window
 
-log = logging.getLogger("screen_interaction")
-
-# Confidence threshold: skip refinement if above this
-_CONFIDENCE_THRESHOLD = 90
-# Safety timeout for the whole task (seconds)
-_TASK_TIMEOUT_MS = 60_000
-# Grid dimensions for coarse locate phase
-_GRID_COLS = 8
-_GRID_ROWS = 6
-# Sub-grid dimensions for precise locate phase (phase 2)
-_SUB_COLS = 8
-_SUB_ROWS = 6
-
-# ── Debug image helpers ────────────────────────────────────────────
-_DEBUG_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "debug_screens",
+from core.screen_interaction.constants import (
+    CONFIDENCE_THRESHOLD,
+    TASK_TIMEOUT_MS,
+    GRID_COLS,
+    GRID_ROWS,
+    SUB_COLS,
+    SUB_ROWS,
 )
+from core.screen_interaction.debug import save_b64, save_qimage, mark_point, mark_cell
+from core.screen_interaction.task import ScreenInteractionTask
 
-
-def _dbg_save_b64(b64_data: str, filename: str):
-    """Save a base64-encoded PNG to *_DEBUG_DIR*."""
-    os.makedirs(_DEBUG_DIR, exist_ok=True)
-    path = os.path.join(_DEBUG_DIR, filename)
-    with open(path, "wb") as f:
-        f.write(base64.b64decode(b64_data))
-    log.debug("DBG saved %s", filename)
-
-
-def _dbg_save_qimage(qimage, filename: str):
-    """Save a QImage as PNG to *_DEBUG_DIR*."""
-    os.makedirs(_DEBUG_DIR, exist_ok=True)
-    path = os.path.join(_DEBUG_DIR, filename)
-    qimage.save(path, "PNG")
-    log.debug("DBG saved %s", filename)
-
-
-def _dbg_mark_point(src_filename: str, dst_filename: str,
-                     x: float, y: float, label: str):
-    """Load *src*, draw crosshair + label at (x, y), save as *dst*."""
-    from PyQt6.QtGui import QImage, QPainter, QColor, QPen, QFont
-    from PyQt6.QtCore import Qt
-
-    src = os.path.join(_DEBUG_DIR, src_filename)
-    dst = os.path.join(_DEBUG_DIR, dst_filename)
-    img = QImage(src)
-    if img.isNull():
-        return
-
-    ix, iy = int(x), int(y)
-    painter = QPainter(img)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-    # Green crosshair
-    pen = QPen(QColor(0, 255, 0), 3)
-    painter.setPen(pen)
-    painter.drawLine(ix - 30, iy, ix + 30, iy)
-    painter.drawLine(ix, iy - 30, ix, iy + 30)
-
-    # Red circle
-    pen = QPen(QColor(255, 0, 0), 2)
-    painter.setPen(pen)
-    painter.setBrush(Qt.BrushStyle.NoBrush)
-    painter.drawEllipse(ix - 18, iy - 18, 36, 36)
-
-    # Yellow label with dark background
-    font = QFont("Arial", 14, QFont.Weight.Bold)
-    painter.setFont(font)
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(QColor(0, 0, 0, 180))
-    painter.drawRect(ix + 22, iy - 22, len(label) * 9 + 10, 24)
-    painter.setPen(QColor(255, 255, 0))
-    painter.drawText(ix + 27, iy - 3, label)
-
-    painter.end()
-    img.save(dst, "PNG")
-    log.debug("DBG marked %s -> %s at (%d,%d)", src_filename, dst_filename, ix, iy)
-
-
-def _dbg_mark_cell(src_filename: str, dst_filename: str,
-                    cell_num: int, cols: int, rows: int,
-                    cell_w: float, cell_h: float):
-    """Highlight a grid cell on a saved debug image."""
-    from PyQt6.QtGui import QImage, QPainter, QColor, QPen, QFont
-    from PyQt6.QtCore import Qt
-
-    src = os.path.join(_DEBUG_DIR, src_filename)
-    dst = os.path.join(_DEBUG_DIR, dst_filename)
-    img = QImage(src)
-    if img.isNull():
-        return
-
-    col = (cell_num - 1) % cols
-    row = (cell_num - 1) // cols
-    rx, ry = int(col * cell_w), int(row * cell_h)
-    rw, rh = int(cell_w), int(cell_h)
-
-    painter = QPainter(img)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setBrush(QColor(0, 255, 0, 50))
-    pen = QPen(QColor(0, 255, 0), 4)
-    painter.setPen(pen)
-    painter.drawRect(rx, ry, rw, rh)
-
-    font = QFont("Arial", 18, QFont.Weight.Bold)
-    painter.setFont(font)
-    painter.setPen(QColor(255, 255, 0))
-    painter.drawText(rx + 10, ry + 30, f"SELECTED: Cell {cell_num}")
-
-    painter.end()
-    img.save(dst, "PNG")
-    log.debug("DBG cell %d highlighted %s", cell_num, dst_filename)
-
-
-@dataclass
-class ScreenInteractionTask:
-    """Data class for an in-progress screen interaction task."""
-    action_type: str       # "navigate" | "click" | "close" | "minimize"
-    target_desc: str       # "el botón de Chrome", "cerrar", etc.
-    state: str = "pending" # "pending"|"locating"|"moving"|"refining"|"executing"|"done"|"failed"|"cancelled"
-    target_coords: Optional[Tuple[int, int]] = None  # (x, y) in Qt logical coords
-    confidence: int = 0    # 0-100 from LLM
-    scale_factor: float = 1.0
-    original_size: Tuple[int, int] = (1920, 1080)
+log = logging.getLogger("screen_interaction")
 
 
 class ScreenInteractionHandler(QObject):
@@ -240,7 +130,7 @@ class ScreenInteractionHandler(QObject):
         self._pet._say(line, force=True)
 
         # Start safety timer
-        self._safety_timer.start(_TASK_TIMEOUT_MS)
+        self._safety_timer.start(TASK_TIMEOUT_MS)
 
         # Begin capture and locate
         self._step_capture_and_locate()
@@ -266,7 +156,7 @@ class ScreenInteractionHandler(QObject):
         if not self.is_active or self._current_task.state != "moving":
             return
         log.info("ARRIVAL confidence=%d", self._current_task.confidence)
-        if self._current_task.confidence >= _CONFIDENCE_THRESHOLD:
+        if self._current_task.confidence >= CONFIDENCE_THRESHOLD:
             # High confidence — skip refinement, go straight to execute
             self._step_execute()
         else:
@@ -274,7 +164,7 @@ class ScreenInteractionHandler(QObject):
             self._current_task.state = "refining"
             self._step_refine()
 
-    # ── Internal steps ────────────────────────────────────────────
+    # ── Phase 1: Grid capture & locate ────────────────────────────
 
     def _step_capture_and_locate(self):
         """Phase 1: Full screen capture with numbered grid → LLM identifies which cell."""
@@ -284,14 +174,14 @@ class ScreenInteractionHandler(QObject):
         self._hide_pet_windows()
         try:
             grid_b64, clean_qimg, orig_size, scale_factor, cell_dims = \
-                capture_full_screen_gridded(cols=_GRID_COLS, rows=_GRID_ROWS)
+                capture_full_screen_gridded(cols=GRID_COLS, rows=GRID_ROWS)
             self._current_task.scale_factor = scale_factor
             self._current_task.original_size = orig_size
             self._clean_qimage = clean_qimg
             self._cell_dims = cell_dims
             # Debug: save what we send to the LLM
-            _dbg_save_b64(grid_b64, "01_grid_sent.png")
-            _dbg_save_qimage(clean_qimg, "00_clean_full.png")
+            save_b64(grid_b64, "01_grid_sent.png")
+            save_qimage(clean_qimg, "00_clean_full.png")
         except Exception as e:
             log.error("capture_full_screen_gridded failed: %s", e)
             self._show_pet_windows()
@@ -300,7 +190,7 @@ class ScreenInteractionHandler(QObject):
         finally:
             self._show_pet_windows()
 
-        total = _GRID_COLS * _GRID_ROWS
+        total = GRID_COLS * GRID_ROWS
         system_prompt = get_interact_system_prompt()
         grid_template = get_interact_grid_prompt()
         if not grid_template:
@@ -313,8 +203,8 @@ class ScreenInteractionHandler(QObject):
             )
         user_prompt = (grid_template
                        .replace("{target}", self._current_task.target_desc)
-                       .replace("{cols}", str(_GRID_COLS))
-                       .replace("{rows}", str(_GRID_ROWS))
+                       .replace("{cols}", str(GRID_COLS))
+                       .replace("{rows}", str(GRID_ROWS))
                        .replace("{total}", str(total)))
 
         self._pet._llm_pending = True
@@ -361,7 +251,7 @@ class ScreenInteractionHandler(QObject):
             self._fail("interact_not_found")
             return
 
-        total = _GRID_COLS * _GRID_ROWS
+        total = GRID_COLS * GRID_ROWS
         if cell_num < 1 or cell_num > total:
             log.warning("GRID cell=%d out of range [1,%d]", cell_num, total)
             self._pet._llm_pending = False
@@ -371,8 +261,8 @@ class ScreenInteractionHandler(QObject):
             return
 
         cell_w, cell_h = self._cell_dims
-        col = (cell_num - 1) % _GRID_COLS
-        row = (cell_num - 1) // _GRID_COLS
+        col = (cell_num - 1) % GRID_COLS
+        row = (cell_num - 1) // GRID_COLS
         center_x = col * cell_w + cell_w / 2
         center_y = row * cell_h + cell_h / 2
 
@@ -380,11 +270,13 @@ class ScreenInteractionHandler(QObject):
                  cell_num, col, row, center_x, center_y, confidence)
 
         # Debug: highlight selected cell
-        _dbg_mark_cell("01_grid_sent.png", "02_grid_result.png",
-                       cell_num, _GRID_COLS, _GRID_ROWS, cell_w, cell_h)
+        mark_cell("01_grid_sent.png", "02_grid_result.png",
+                  cell_num, GRID_COLS, GRID_ROWS, cell_w, cell_h)
 
         # Phase 2: crop around the identified cell and ask for precise coords
         self._step_crop_and_locate(center_x, center_y, cell_w, cell_h)
+
+    # ── Phase 2: Crop & sub-grid locate ───────────────────────────
 
     def _step_crop_and_locate(self, center_x: float, center_y: float,
                                cell_w: float, cell_h: float):
@@ -420,17 +312,17 @@ class ScreenInteractionHandler(QObject):
         self._clean_qimage = None  # free memory
 
         # Debug: save the clean crop (before sub-grid)
-        _dbg_save_qimage(cropped, "03_crop_sent.png")
+        save_qimage(cropped, "03_crop_sent.png")
 
         self._crop_offset = (crop_left, crop_top)
         self._crop_size = (crop_w, crop_h)
 
         # Draw sub-grid overlay for precise classification
-        sub_cols, sub_rows = _SUB_COLS, _SUB_ROWS
+        sub_cols, sub_rows = SUB_COLS, SUB_ROWS
         gridded, sub_cell_w, sub_cell_h = draw_subgrid(cropped, sub_cols, sub_rows)
         self._sub_grid_dims = (sub_cols, sub_rows, sub_cell_w, sub_cell_h)
 
-        _dbg_save_qimage(gridded, "03b_crop_gridded.png")
+        save_qimage(gridded, "03b_crop_gridded.png")
 
         crop_b64 = encode_qimage_png(gridded)
         log.debug("CROP offset=(%d,%d) size=%dx%d subgrid=%dx%d",
@@ -542,16 +434,18 @@ class ScreenInteractionHandler(QObject):
                  phys_x, phys_y, qt_x, qt_y, confidence)
 
         # Debug: mark on crop and full-screen images
-        _dbg_mark_point("03_crop_sent.png", "04_crop_result.png",
-                        crop_x, crop_y,
-                        f"sub={sub_cell} px=({crop_x:.0f},{crop_y:.0f})")
-        _dbg_mark_point("00_clean_full.png", "05_fullscreen_result.png",
-                        resized_x, resized_y,
-                        f"resized=({resized_x:.0f},{resized_y:.0f}) qt=({qt_x},{qt_y})")
+        mark_point("03_crop_sent.png", "04_crop_result.png",
+                   crop_x, crop_y,
+                   f"sub={sub_cell} px=({crop_x:.0f},{crop_y:.0f})")
+        mark_point("00_clean_full.png", "05_fullscreen_result.png",
+                   resized_x, resized_y,
+                   f"resized=({resized_x:.0f},{resized_y:.0f}) qt=({qt_x},{qt_y})")
 
         line = get_line("interact_found", self._pet.pet.name)
         self._pet._say(line, force=True)
         self._pet._move_to_screen_target(qt_x, qt_y)
+
+    # ── Phase 3: Refine ──────────────────────────────────────────
 
     def _step_refine(self):
         """Step 3 (optional): Local 1024×1024 capture → LLM refine position."""
@@ -634,6 +528,8 @@ class ScreenInteractionHandler(QObject):
 
         # No significant adjustment needed or parse failed — just execute
         self._step_execute()
+
+    # ── Phase 4: Execute ─────────────────────────────────────────
 
     def _step_execute(self):
         """Step 4: Execute the action based on action_type."""
