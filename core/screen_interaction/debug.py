@@ -13,14 +13,25 @@ from PyQt6.QtCore import Qt
 
 log = logging.getLogger("screen_interaction")
 
+# Module-level gate: when False every save/mark function is a no-op.
+_enabled = False
+
 DEBUG_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "debug_screens",
 )
 
 
+def set_enabled(flag: bool):
+    """Enable or disable debug screen recording at runtime."""
+    global _enabled
+    _enabled = flag
+
+
 def save_b64(b64_data: str, filename: str):
     """Save a base64-encoded PNG to *DEBUG_DIR*."""
+    if not _enabled:
+        return
     os.makedirs(DEBUG_DIR, exist_ok=True)
     path = os.path.join(DEBUG_DIR, filename)
     with open(path, "wb") as f:
@@ -30,6 +41,8 @@ def save_b64(b64_data: str, filename: str):
 
 def save_qimage(qimage, filename: str):
     """Save a QImage as PNG to *DEBUG_DIR*."""
+    if not _enabled:
+        return
     os.makedirs(DEBUG_DIR, exist_ok=True)
     path = os.path.join(DEBUG_DIR, filename)
     qimage.save(path, "PNG")
@@ -39,6 +52,8 @@ def save_qimage(qimage, filename: str):
 def mark_point(src_filename: str, dst_filename: str,
                x: float, y: float, label: str):
     """Load *src*, draw crosshair + label at (x, y), save as *dst*."""
+    if not _enabled:
+        return
     src = os.path.join(DEBUG_DIR, src_filename)
     dst = os.path.join(DEBUG_DIR, dst_filename)
     img = QImage(src)
@@ -79,6 +94,8 @@ def mark_cell(src_filename: str, dst_filename: str,
               cell_num: int, cols: int, rows: int,
               cell_w: float, cell_h: float):
     """Highlight a grid cell on a saved debug image."""
+    if not _enabled:
+        return
     src = os.path.join(DEBUG_DIR, src_filename)
     dst = os.path.join(DEBUG_DIR, dst_filename)
     img = QImage(src)

@@ -31,7 +31,7 @@ from core.screen_interaction.constants import (
     SUB_COLS,
     SUB_ROWS,
 )
-from core.screen_interaction.debug import save_b64, save_qimage, mark_point, mark_cell
+from core.screen_interaction.debug import save_b64, save_qimage, mark_point, mark_cell, set_enabled as _set_debug_enabled
 from core.screen_interaction.task import ScreenInteractionTask
 
 log = logging.getLogger("screen_interaction")
@@ -48,6 +48,7 @@ class ScreenInteractionHandler(QObject):
     def __init__(self, pet_window):
         super().__init__(pet_window)
         self._pet = pet_window
+        _set_debug_enabled(self._pet._config.get("debug_logging", False))
         self._current_task: Optional[ScreenInteractionTask] = None
 
         self._safety_timer = QTimer(self)

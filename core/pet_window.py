@@ -17,6 +17,7 @@ from core.system_events import SystemEventsMonitor, SystemEvent
 from core.window_interactions import WindowInteractionHandler
 from core.peer_interactions import PeerInteractionHandler
 from core.screen_interaction import ScreenInteractionHandler
+from core.screen_interaction.debug import set_enabled as _set_debug_enabled
 from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
 from interaction.window_awareness import WindowAwareness
@@ -842,6 +843,7 @@ class PetWindow(QWidget):
         for h in root.handlers:
             h.setLevel(logging.DEBUG if debug_on else logging.WARNING)
         log.info("Logging level set to %s", "DEBUG" if debug_on else "WARNING")
+        _set_debug_enabled(debug_on)
 
         # Hot-swap character if changed
         new_char = self._config.get("character", "placeholder")
