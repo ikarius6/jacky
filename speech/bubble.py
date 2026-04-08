@@ -116,6 +116,7 @@ class SpeechBubble(QWidget):
         # Flipped: bubble below the pet
         y_below = self._anchor.y() + self._pet_height
 
+        old_flipped = self._flipped
         self._flipped = y_above < 0
         y = y_below if self._flipped else y_above
 
@@ -127,6 +128,9 @@ class SpeechBubble(QWidget):
         except Exception:
             pass
         self.move(x, y)
+        
+        if old_flipped != self._flipped:
+            self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)

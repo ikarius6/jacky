@@ -3,10 +3,12 @@ import json
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 from PyQt6.QtCore import QTimer, pyqtSignal, QObject
+from PyQt6.QtWidgets import QApplication
 
 from speech.dialogue import get_line
 from utils.i18n import (
@@ -173,6 +175,22 @@ class ScreenInteractionHandler(QObject):
         self._crop_size = (0, 0)
         self._sub_grid_dims = (3, 3, 0.0, 0.0)
 
+    # ── Window visibility helpers ─────────────────────────────────
+
+    def _hide_pet_windows(self):
+        """Hide the pet sprite and speech bubble so they don't appear in captures."""
+        self._pet._bubble.hide()
+        self._pet.hide()
+        # Process events and wait so Windows repaints the area behind the widgets
+        QApplication.processEvents()
+        time.sleep(0.15)
+
+    def _show_pet_windows(self):
+        """Restore the pet sprite and speech bubble after capture."""
+        self._pet.show()
+        self._pet._remove_dwm_border()
+        self._pet._reassert_topmost()
+
     # ── Public API ────────────────────────────────────────────────
 
     @property
@@ -262,6 +280,8 @@ class ScreenInteractionHandler(QObject):
         """Phase 1: Full screen capture with numbered grid → LLM identifies which cell."""
         if not self.is_active:
             return
+        # Hide pet UI so the request text doesn't pollute the screenshot
+        self._hide_pet_windows()
         try:
             grid_b64, clean_qimg, orig_size, scale_factor, cell_dims = \
                 capture_full_screen_gridded(cols=_GRID_COLS, rows=_GRID_ROWS)
@@ -274,8 +294,11 @@ class ScreenInteractionHandler(QObject):
             _dbg_save_qimage(clean_qimg, "00_clean_full.png")
         except Exception as e:
             log.error("capture_full_screen_gridded failed: %s", e)
+            self._show_pet_windows()
             self._fail("interact_not_found")
             return
+        finally:
+            self._show_pet_windows()
 
         total = _GRID_COLS * _GRID_ROWS
         system_prompt = get_interact_system_prompt()
@@ -540,13 +563,17 @@ class ScreenInteractionHandler(QObject):
         cx = self._pet.x() + self._pet._sprite_size // 2
         cy = self._pet.y() + self._pet._sprite_size // 2
 
+        # Hide pet UI so it doesn't appear in the refinement capture
+        self._hide_pet_windows()
         try:
             image_b64 = capture_vision_area(cx, cy, dpi_scale=dpi)
         except Exception as e:
             log.error("capture_vision_area failed during refine: %s", e)
+            self._show_pet_windows()
             # Skip refine, just execute
             self._step_execute()
             return
+        self._show_pet_windows()
 
         system_prompt = get_interact_system_prompt()
         refine_template = get_interact_refine_prompt()

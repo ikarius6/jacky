@@ -163,7 +163,7 @@ class OpenRouterProvider:
 
     API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-    def __init__(self, api_key: str = "", model: str = "qwen/qwen3.6-plus:free", pet_name: str = "Jacky"):
+    def __init__(self, api_key: str = "", model: str = "google/gemma-4-26b-a4b-it:free", pet_name: str = "Jacky"):
         self._api_key = api_key
         self._model = model
         self._pet_name = pet_name
@@ -484,7 +484,7 @@ def create_llm_provider(config: dict):
     if provider == "openrouter":
         return OpenRouterProvider(
             api_key=config.get("openrouter_api_key", ""),
-            model=config.get("openrouter_model", "qwen/qwen3.6-plus:free"),
+            model=config.get("openrouter_model", "google/gemma-4-26b-a4b-it:free"),
             pet_name=pet_name,
         )
     return OllamaProvider(

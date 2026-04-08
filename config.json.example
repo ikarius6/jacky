@@ -46,7 +46,7 @@
     },
     "llm_provider": "ollama",
     "openrouter_api_key": "",
-    "openrouter_model": "qwen/qwen3.6-plus:free",
+    "openrouter_model": "google/gemma-4-26b-a4b-it:free",
     "groq_api_keys": [],
     "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
     "debug_logging": false,

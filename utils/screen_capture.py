@@ -136,8 +136,8 @@ def draw_subgrid(qimage, cols: int = 3, rows: int = 3):
     numbered badges exactly like the full-screen version.  The original is
     not modified.
 
-    Numbers are placed in the **top-left corner** of each cell with a small
-    semi-transparent badge so they don't obscure the underlying content.
+    Numbers are placed in the **center** of each cell so the LLM can
+    unambiguously associate a number with its cell.
     """
     from PyQt6.QtCore import Qt, QRect
     from PyQt6.QtGui import QPainter, QColor, QPen, QFont
@@ -152,7 +152,7 @@ def draw_subgrid(qimage, cols: int = 3, rows: int = 3):
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
     # Grid lines — semi-transparent green, 1 px
-    pen = QPen(QColor(0, 200, 0, 140), 1)
+    pen = QPen(QColor(0, 200, 0, 180), 1)
     painter.setPen(pen)
     for c in range(1, cols):
         x = int(c * cell_w)
@@ -161,24 +161,24 @@ def draw_subgrid(qimage, cols: int = 3, rows: int = 3):
         y = int(r * cell_h)
         painter.drawLine(0, y, w, y)
 
-    # Cell numbers — small badges in the top-left corner of each cell
+    # Cell numbers — badges centered in each cell
     total = cols * rows
-    font_size = max(8, 14 if total <= 9 else (11 if total <= 24 else 9))
-    radius = max(7, 12 if total <= 9 else (10 if total <= 24 else 8))
-    padding = 4
+    font_size = max(9, 14 if total <= 9 else (12 if total <= 24 else 10))
+    radius = max(9, 14 if total <= 9 else (12 if total <= 24 else 10))
     font = QFont("Arial", font_size, QFont.Weight.Bold)
     painter.setFont(font)
     for r in range(rows):
         for c in range(cols):
             num = r * cols + c + 1
-            bx = int(c * cell_w) + padding + radius
-            by = int(r * cell_h) + padding + radius
+            # Center of cell
+            bx = int(c * cell_w + cell_w / 2)
+            by = int(r * cell_h + cell_h / 2)
             # Semi-transparent background circle
-            painter.setBrush(QColor(255, 255, 255, 160))
+            painter.setBrush(QColor(0, 0, 0, 140))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(bx - radius, by - radius, radius * 2, radius * 2)
-            # Number text
-            painter.setPen(QColor(0, 140, 0, 200))
+            # Number text — white for contrast on dark badge
+            painter.setPen(QColor(255, 255, 255, 230))
             rect = QRect(bx - radius, by - radius, radius * 2, radius * 2)
             painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(num))
 
@@ -243,7 +243,7 @@ def capture_full_screen_gridded(
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
     # Grid lines — semi-transparent red, 1 px
-    pen = QPen(QColor(255, 0, 0, 140), 1)
+    pen = QPen(QColor(255, 0, 0, 180), 1)
     painter.setPen(pen)
     for c in range(1, cols):
         x = int(c * cell_w)
@@ -252,24 +252,24 @@ def capture_full_screen_gridded(
         y = int(r * cell_h)
         painter.drawLine(0, y, resized_w, y)
 
-    # Cell numbers — small badges in the top-left corner of each cell
+    # Cell numbers — badges centered in each cell
     total = cols * rows
-    font_size = max(9, 18 if total <= 12 else (13 if total <= 24 else 10))
-    radius = max(8, 16 if total <= 12 else (12 if total <= 24 else 9))
-    padding = 4
+    font_size = max(10, 18 if total <= 12 else (14 if total <= 24 else 11))
+    radius = max(10, 18 if total <= 12 else (14 if total <= 24 else 11))
     font = QFont("Arial", font_size, QFont.Weight.Bold)
     painter.setFont(font)
     for r in range(rows):
         for c in range(cols):
             num = r * cols + c + 1
-            bx = int(c * cell_w) + padding + radius
-            by = int(r * cell_h) + padding + radius
-            # Semi-transparent background circle
-            painter.setBrush(QColor(255, 255, 255, 160))
+            # Center of cell
+            bx = int(c * cell_w + cell_w / 2)
+            by = int(r * cell_h + cell_h / 2)
+            # Semi-transparent dark background circle
+            painter.setBrush(QColor(0, 0, 0, 150))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(bx - radius, by - radius, radius * 2, radius * 2)
-            # Number text
-            painter.setPen(QColor(200, 0, 0, 200))
+            # Number text — white for contrast on dark badge
+            painter.setPen(QColor(255, 255, 255, 240))
             rect = QRect(bx - radius, by - radius, radius * 2, radius * 2)
             painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(num))
 
