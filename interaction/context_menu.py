@@ -348,6 +348,7 @@ _PERMISSION_KEYS = [
     ("allow_drag",     "destructive"),
     ("allow_tidy",     "destructive"),
     ("allow_topple",   "destructive"),
+    ("allow_screen_interact", "destructive"),
 ]
 
 
@@ -369,6 +370,7 @@ def _build_permission_defs() -> list[tuple]:
 # Keep module-level references for backward compatibility (used by pet_window.py)
 PERMISSION_DEFS = _build_permission_defs()
 DEFAULT_PERMISSIONS = {p[0]: True for p in PERMISSION_DEFS}
+DEFAULT_PERMISSIONS["allow_screen_interact"] = False  # opt-in: cursor control is intrusive
 
 
 class SettingsDialog(QDialog):

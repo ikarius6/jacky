@@ -115,6 +115,37 @@ def get_vision_keywords() -> set:
     return set(kw)
 
 
+def get_interact_keywords() -> dict:
+    """Return the screen-interaction keywords for the current language.
+
+    Returns a dict like ``{"navigate": ["encuentra", ...], "click": [...], ...}``.
+    """
+    return _strings.get("interact_keywords", {})
+
+
+def get_interact_system_prompt() -> str:
+    """Return the dedicated technical system prompt for screen interaction tasks."""
+    prompt = _strings.get("interact_system_prompt", "")
+    if not prompt:
+        return "You are a computer vision assistant. Your task is to locate elements in screenshots. Respond ONLY with valid JSON."
+    return prompt
+
+
+def get_interact_grid_prompt() -> str:
+    """Return the grid-phase prompt template (contains {target}, {cols}, {rows}, {total})."""
+    return _strings.get("interact_grid_prompt", "")
+
+
+def get_interact_locate_prompt() -> str:
+    """Return the locate prompt template for screen interaction (contains {target})."""
+    return _strings.get("interact_locate_prompt", "")
+
+
+def get_interact_refine_prompt() -> str:
+    """Return the refine prompt template for screen interaction (contains {target})."""
+    return _strings.get("interact_refine_prompt", "")
+
+
 def get_system_prompt(pet_name: str = "Jacky") -> str:
     """Return the LLM system prompt with ``{name}`` filled in."""
     template = _strings.get("llm_system_prompt", "")

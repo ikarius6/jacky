@@ -55,12 +55,12 @@ class OllamaProvider:
             self._available = False
         return self._available
 
-    def _build_payload(self, context: str) -> dict:
+    def _build_payload(self, context: str, system_prompt: Optional[str] = None) -> dict:
         """Build the Ollama chat payload for the given context."""
         return {
             "model": self._model,
             "messages": [
-                {"role": "system", "content": build_system_prompt(self._pet_name)},
+                {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
                 {"role": "user", "content": context},
             ],
             "stream": False,
@@ -123,7 +123,8 @@ class OllamaProvider:
         return None
 
     def generate_with_image(self, context: str, image_b64: str,
-                            callback: Callable[[Optional[str]], None]):
+                            callback: Callable[[Optional[str]], None],
+                            system_prompt: Optional[str] = None):
         """Generate a response with an image in a background thread.
 
         If the model doesn't support vision the request will fail; in that case
@@ -131,7 +132,7 @@ class OllamaProvider:
         """
         def _worker():
             try:
-                payload = self._build_payload(context)
+                payload = self._build_payload(context, system_prompt=system_prompt)
                 # Inject base64 image into the user message (Ollama multimodal format)
                 payload["messages"][-1]["images"] = [image_b64]
                 resp = requests.post(self.chat_url, json=payload, timeout=60)
@@ -179,12 +180,12 @@ class OpenRouterProvider:
             "Content-Type": "application/json",
         }
 
-    def _build_payload(self, context: str) -> dict:
+    def _build_payload(self, context: str, system_prompt: Optional[str] = None) -> dict:
         """Build the OpenRouter chat completion payload for the given context."""
         return {
             "model": self._model,
             "messages": [
-                {"role": "system", "content": build_system_prompt(self._pet_name)},
+                {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
                 {"role": "user", "content": context},
             ],
             "temperature": 0.8,
@@ -248,7 +249,8 @@ class OpenRouterProvider:
         return None
 
     def generate_with_image(self, context: str, image_b64: str,
-                            callback: Callable[[Optional[str]], None]):
+                            callback: Callable[[Optional[str]], None],
+                            system_prompt: Optional[str] = None):
         """Generate a response with an image (OpenAI vision format).
 
         If the model doesn't support vision the request will fail; in that case
@@ -258,7 +260,7 @@ class OpenRouterProvider:
             import time
             t0 = time.monotonic()
             try:
-                payload = self._build_payload(context)
+                payload = self._build_payload(context, system_prompt=system_prompt)
                 # Replace plain text content with multimodal content array
                 payload["messages"][-1]["content"] = [
                     {"type": "text", "text": context},
@@ -380,11 +382,11 @@ class GroqProvider:
             "Content-Type": "application/json",
         }
 
-    def _build_payload(self, context: str) -> dict:
+    def _build_payload(self, context: str, system_prompt: Optional[str] = None) -> dict:
         return {
             "model": self._model,
             "messages": [
-                {"role": "system", "content": build_system_prompt(self._pet_name)},
+                {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
                 {"role": "user", "content": context},
             ],
             "temperature": 0.8,
@@ -445,10 +447,11 @@ class GroqProvider:
         return self._do_request(payload)
 
     def generate_with_image(self, context: str, image_b64: str,
-                            callback: Callable[[Optional[str]], None]):
+                            callback: Callable[[Optional[str]], None],
+                            system_prompt: Optional[str] = None):
         def _worker():
             t0 = time.monotonic()
-            payload = self._build_payload(context)
+            payload = self._build_payload(context, system_prompt=system_prompt)
             payload["messages"][-1]["content"] = [
                 {"type": "text", "text": context},
                 {"type": "image_url", "image_url": {

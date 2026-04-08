@@ -4,3 +4,4 @@ venv/*
 dist/
 build/
 config.json
+debug_screens/

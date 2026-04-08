@@ -82,3 +82,215 @@ def capture_vision_area(
         png_bytes = mss.tools.to_png(sct_img.rgb, sct_img.size)
 
     return base64.b64encode(png_bytes).decode("ascii")
+
+
+def capture_full_screen(target_width: int = 2048) -> Tuple[str, Tuple[int, int], float]:
+    """Capture the full virtual desktop, resize to *target_width* keeping aspect ratio.
+
+    Returns
+    -------
+    tuple[str, tuple[int, int], float]
+        ``(base64_png, (original_width, original_height), scale_factor)``
+        where ``scale_factor = original_width / resized_width`` so that
+        coordinates obtained from the resized image can be mapped back to
+        physical screen coordinates by multiplying by *scale_factor*.
+    """
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtGui import QImage
+
+    with mss.mss() as sct:
+        mon = sct.monitors[0]  # full virtual desktop
+        sct_img = sct.grab(mon)
+        # Use actual captured dimensions (safe with DPI scaling)
+        orig_w = sct_img.width
+        orig_h = sct_img.height
+        raw_bytes = bytes(sct_img.rgb)
+
+    # mss .rgb converts native BGRA to RGB — QImage Format_RGB888 matches directly
+    qimg = QImage(raw_bytes, orig_w, orig_h, orig_w * 3, QImage.Format.Format_RGB888)
+
+    # Resize keeping aspect ratio
+    resized = qimg.scaledToWidth(target_width, Qt.TransformationMode.SmoothTransformation)
+    resized_w = resized.width()
+    scale_factor = orig_w / resized_w
+
+    # Convert to PNG bytes via QBuffer
+
+    from PyQt6.QtCore import QBuffer, QIODevice
+    qbuf = QBuffer()
+    qbuf.open(QIODevice.OpenModeFlag.WriteOnly)
+    resized.save(qbuf, "PNG")
+    png_bytes = bytes(qbuf.data())
+    qbuf.close()
+
+    log.debug("capture_full_screen: orig=%dx%d resized=%dx%d scale=%.2f png_size=%d",
+              orig_w, orig_h, resized_w, resized.height(), scale_factor, len(png_bytes))
+
+    return base64.b64encode(png_bytes).decode("ascii"), (orig_w, orig_h), scale_factor
+
+
+def draw_subgrid(qimage, cols: int = 3, rows: int = 3):
+    """Draw a numbered grid overlay on a QImage (for sub-cell classification).
+
+    Returns ``(gridded_copy, cell_w, cell_h)`` — the copy has grid lines and
+    numbered badges exactly like the full-screen version.  The original is
+    not modified.
+
+    Numbers are placed in the **top-left corner** of each cell with a small
+    semi-transparent badge so they don't obscure the underlying content.
+    """
+    from PyQt6.QtCore import Qt, QRect
+    from PyQt6.QtGui import QPainter, QColor, QPen, QFont
+
+    gridded = qimage.copy()
+    w = gridded.width()
+    h = gridded.height()
+    cell_w = w / cols
+    cell_h = h / rows
+
+    painter = QPainter(gridded)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    # Grid lines — semi-transparent green, 1 px
+    pen = QPen(QColor(0, 200, 0, 140), 1)
+    painter.setPen(pen)
+    for c in range(1, cols):
+        x = int(c * cell_w)
+        painter.drawLine(x, 0, x, h)
+    for r in range(1, rows):
+        y = int(r * cell_h)
+        painter.drawLine(0, y, w, y)
+
+    # Cell numbers — small badges in the top-left corner of each cell
+    total = cols * rows
+    font_size = max(8, 14 if total <= 9 else (11 if total <= 24 else 9))
+    radius = max(7, 12 if total <= 9 else (10 if total <= 24 else 8))
+    padding = 4
+    font = QFont("Arial", font_size, QFont.Weight.Bold)
+    painter.setFont(font)
+    for r in range(rows):
+        for c in range(cols):
+            num = r * cols + c + 1
+            bx = int(c * cell_w) + padding + radius
+            by = int(r * cell_h) + padding + radius
+            # Semi-transparent background circle
+            painter.setBrush(QColor(255, 255, 255, 160))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(bx - radius, by - radius, radius * 2, radius * 2)
+            # Number text
+            painter.setPen(QColor(0, 140, 0, 200))
+            rect = QRect(bx - radius, by - radius, radius * 2, radius * 2)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(num))
+
+    painter.end()
+    return gridded, cell_w, cell_h
+
+
+def encode_qimage_png(qimage) -> str:
+    """Encode a ``QImage`` as a base64 PNG string (no ``data:`` prefix)."""
+    from PyQt6.QtCore import QBuffer, QIODevice
+
+    qbuf = QBuffer()
+    qbuf.open(QIODevice.OpenModeFlag.WriteOnly)
+    qimage.save(qbuf, "PNG")
+    png_bytes = bytes(qbuf.data())
+    qbuf.close()
+    return base64.b64encode(png_bytes).decode("ascii")
+
+
+def capture_full_screen_gridded(
+    target_width: int = 2048,
+    cols: int = 4,
+    rows: int = 3,
+):
+    """Capture the full virtual desktop with a numbered grid overlay.
+
+    Returns a tuple of five items:
+
+    * *grid_b64* — base64 PNG **with** grid lines & numbers (sent to the LLM).
+    * *clean_qimage* — resized ``QImage`` **without** the overlay (used to crop
+      later for the second locate phase).
+    * *(orig_w, orig_h)* — original physical screen resolution.
+    * *scale_factor* — ``orig_w / resized_w`` for mapping back.
+    * *(cell_w, cell_h)* — cell dimensions in *resized-image* pixels.
+    """
+    from PyQt6.QtCore import Qt, QBuffer, QIODevice, QRect
+    from PyQt6.QtGui import QImage, QPainter, QFont, QColor, QPen
+
+    with mss.mss() as sct:
+        mon = sct.monitors[0]
+        sct_img = sct.grab(mon)
+        orig_w = sct_img.width
+        orig_h = sct_img.height
+        raw_bytes = bytes(sct_img.rgb)
+
+    # mss .rgb converts native BGRA to RGB — QImage Format_RGB888 matches directly
+    qimg = QImage(raw_bytes, orig_w, orig_h, orig_w * 3, QImage.Format.Format_RGB888)
+
+    resized = qimg.scaledToWidth(target_width, Qt.TransformationMode.SmoothTransformation)
+    resized_w = resized.width()
+    resized_h = resized.height()
+    scale_factor = orig_w / resized_w
+
+    # Keep a clean copy before drawing the grid
+    clean = resized.copy()
+
+    # --- Draw numbered grid overlay ---
+    cell_w = resized_w / cols
+    cell_h = resized_h / rows
+
+    painter = QPainter(resized)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    # Grid lines — semi-transparent red, 1 px
+    pen = QPen(QColor(255, 0, 0, 140), 1)
+    painter.setPen(pen)
+    for c in range(1, cols):
+        x = int(c * cell_w)
+        painter.drawLine(x, 0, x, resized_h)
+    for r in range(1, rows):
+        y = int(r * cell_h)
+        painter.drawLine(0, y, resized_w, y)
+
+    # Cell numbers — small badges in the top-left corner of each cell
+    total = cols * rows
+    font_size = max(9, 18 if total <= 12 else (13 if total <= 24 else 10))
+    radius = max(8, 16 if total <= 12 else (12 if total <= 24 else 9))
+    padding = 4
+    font = QFont("Arial", font_size, QFont.Weight.Bold)
+    painter.setFont(font)
+    for r in range(rows):
+        for c in range(cols):
+            num = r * cols + c + 1
+            bx = int(c * cell_w) + padding + radius
+            by = int(r * cell_h) + padding + radius
+            # Semi-transparent background circle
+            painter.setBrush(QColor(255, 255, 255, 160))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(bx - radius, by - radius, radius * 2, radius * 2)
+            # Number text
+            painter.setPen(QColor(200, 0, 0, 200))
+            rect = QRect(bx - radius, by - radius, radius * 2, radius * 2)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(num))
+
+    painter.end()
+
+    # Encode grid image as PNG
+    qbuf = QBuffer()
+    qbuf.open(QIODevice.OpenModeFlag.WriteOnly)
+    resized.save(qbuf, "PNG")
+    grid_png = bytes(qbuf.data())
+    qbuf.close()
+
+    log.debug(
+        "capture_full_screen_gridded: orig=%dx%d resized=%dx%d scale=%.2f grid=%dx%d png=%d",
+        orig_w, orig_h, resized_w, resized_h, scale_factor, cols, rows, len(grid_png),
+    )
+
+    return (
+        base64.b64encode(grid_png).decode("ascii"),
+        clean,
+        (orig_w, orig_h),
+        scale_factor,
+        (cell_w, cell_h),
+    )

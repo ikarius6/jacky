@@ -315,6 +315,77 @@ def tile_windows(hwnds: List[int]) -> bool:
         return False
 
 
+# --- Cursor control ---
+
+_MOUSEEVENTF_LEFTDOWN = 0x0002
+_MOUSEEVENTF_LEFTUP = 0x0004
+_MOUSEEVENTF_ABSOLUTE = 0x8000
+_MOUSEEVENTF_MOVE = 0x0001
+_CURSOR_SAFETY_THRESHOLD = 20  # pixels — abort click if user moved mouse more than this
+
+
+def get_cursor_position() -> Tuple[int, int]:
+    """Return current (x, y) of system cursor in physical screen coords."""
+    point = wintypes.POINT()
+    ctypes.windll.user32.GetCursorPos(ctypes.byref(point))
+    return (point.x, point.y)
+
+
+def set_cursor_position(x: int, y: int) -> bool:
+    """Move system cursor to (x, y) physical screen coords. Returns True on success."""
+    return bool(ctypes.windll.user32.SetCursorPos(int(x), int(y)))
+
+
+def click_at(x: int, y: int, safety_check: bool = True) -> bool:
+    """Move cursor to (x, y) and perform a left click.
+
+    If *safety_check* is True, reads the cursor position after SetCursorPos
+    and aborts if it differs by more than 20px (the user moved the mouse).
+    Returns True if the click was executed, False if aborted or failed.
+    """
+    if not set_cursor_position(x, y):
+        return False
+    if safety_check:
+        time.sleep(0.05)  # small delay to let the OS update cursor
+        cx, cy = get_cursor_position()
+        dx = abs(cx - x)
+        dy = abs(cy - y)
+        if dx > _CURSOR_SAFETY_THRESHOLD or dy > _CURSOR_SAFETY_THRESHOLD:
+            return False  # user moved the mouse — abort
+    ctypes.windll.user32.mouse_event(_MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+    time.sleep(0.05)
+    ctypes.windll.user32.mouse_event(_MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+    return True
+
+
+def send_alt_f4() -> bool:
+    """Send Alt+F4 to the foreground window. Returns True on success."""
+    try:
+        VK_MENU = 0x12
+        VK_F4 = 0x73
+        KEYEVENTF_KEYUP = 0x0002
+        ctypes.windll.user32.keybd_event(VK_MENU, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(VK_F4, 0, 0, 0)
+        time.sleep(0.05)
+        ctypes.windll.user32.keybd_event(VK_F4, 0, KEYEVENTF_KEYUP, 0)
+        ctypes.windll.user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
+        return True
+    except Exception:
+        return False
+
+
+def minimize_foreground_window() -> bool:
+    """Minimize the current foreground window. Returns True on success."""
+    try:
+        hwnd = win32gui.GetForegroundWindow()
+        if hwnd:
+            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            return True
+        return False
+    except Exception:
+        return False
+
+
 # --- WinEvent hook for window create/destroy ---
 
 _user32 = ctypes.windll.user32

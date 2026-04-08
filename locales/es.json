@@ -231,6 +231,48 @@
             "¡Ya estás aquí! Me estaba aburriendo solito...",
             "¡Hola de nuevo! ¿Todo bien?",
             "*salta de alegría* ¡Volviste, volviste!"
+        ],
+        "interact_ack": [
+            "¡A la orden!",
+            "¡Enseguida, jefe!",
+            "¡Ya voy!",
+            "¡Déjame ver...!",
+            "¡Buscando...!"
+        ],
+        "interact_found": [
+            "¡Lo encontré! ¡Voy para allá!",
+            "¡Ahí lo veo! ¡En camino!",
+            "¡Localizado! ¡Ya me muevo!"
+        ],
+        "interact_done_navigate": [
+            "¡Listo jefe!",
+            "¡Aquí está!",
+            "¡Encontrado!",
+            "¡Misión cumplida!"
+        ],
+        "interact_done_action": [
+            "¡Hecho!",
+            "¡Listo!",
+            "¡Tarea completada!",
+            "¡Ya estuvo!"
+        ],
+        "interact_not_found": [
+            "Hmm, no encuentro eso... ¿puedes ser más específico?",
+            "¡No lo veo! ¿Seguro que está en la pantalla?",
+            "No pude encontrarlo... >_<"
+        ],
+        "interact_cancelled": [
+            "¡Bueno, ya qué!",
+            "¡Ok, lo dejo!",
+            "¡Entendido, cancelo!"
+        ],
+        "interact_timeout": [
+            "Se me acabó el tiempo buscando... >_<",
+            "No pude completar la tarea a tiempo..."
+        ],
+        "interact_click_aborted": [
+            "¡Ups! Moviste el mouse, cancelé el clic.",
+            "¡No pude hacer clic, alguien movió el cursor!"
         ]
     },
     "app_groups": {
@@ -459,6 +501,7 @@
         "no_llm": "No puedo ver nada sin el LLM activado... >_<",
         "no_vision_perm": "No tengo permiso para ver la pantalla... >_<",
         "llm_error": "No pude pensar en nada... \u00a1intenta de nuevo! >_<",
+        "no_interact_perm": "No tengo permiso para interactuar con la pantalla... >_<",
         "tray_show": "Mostrar {name}",
         "tray_settings": "Ajustes",
         "tray_quit": "Salir"
@@ -475,8 +518,19 @@
         "allow_knock":    { "label": "Tocar ventanas",           "desc": "Parpadear y traer al frente una ventana" },
         "allow_drag":     { "label": "Arrastrar ventanas",       "desc": "Arrastrar una ventana mientras camina" },
         "allow_tidy":     { "label": "Ordenar ventanas",         "desc": "Organizar ventanas en una cuadr\u00edcula" },
-        "allow_topple":   { "label": "Tumbar ventanas",          "desc": "Empujar ventanas en cadena como domin\u00f3s" }
+        "allow_topple":   { "label": "Tumbar ventanas",          "desc": "Empujar ventanas en cadena como domin\u00f3s" },
+        "allow_screen_interact": { "label": "Interactuar con pantalla", "desc": "Buscar y hacer clic en elementos de la pantalla" }
     },
+    "interact_keywords": {
+        "navigate": ["encuentra", "busca", "ve hacia", "ve a", "muévete a", "muevete a", "localiza", "dónde está", "donde esta"],
+        "click": ["presiona", "haz clic", "haz click", "dale clic", "oprime", "pulsa", "activa", "abre"],
+        "close": ["cierra", "quita"],
+        "minimize": ["minimiza", "esconde", "oculta"]
+    },
+    "interact_system_prompt": "You are a precise computer vision assistant. Your task is to locate UI elements in screenshots. Respond ONLY with valid JSON, no extra text, no markdown, no explanations.",
+    "interact_grid_prompt": "The image has a numbered grid overlay ({cols} columns x {rows} rows). Cells are numbered 1 to {total}, left to right, top to bottom. Which numbered cell contains \"{target}\"? Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>}. If the element is not visible: {\"error\": \"not found\"}",
+    "interact_locate_prompt": "This zoomed-in image has a green numbered grid overlay ({cols} columns x {rows} rows). Cells numbered 1 to {total}, left to right, top to bottom. Which cell contains the CENTER of: \"{target}\"? Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>}. If not found: {\"error\": \"not found\"}",
+    "interact_refine_prompt": "You are looking at a 1024x1024 area of the screen centered on a point. Can you see \"{target}\"? If yes, how far is it from the center? Respond ONLY with JSON: {\"found\": true, \"offset_x\": <pixels_from_center>, \"offset_y\": <pixels_from_center>}. If not found: {\"found\": false}",
     "vision_keywords": ["mira", "observa", "ve", "pantalla", "ves", "mir\u00e1", "viendo", "mirar", "observar", "miras"],
     "llm_system_prompt": "Eres {name}, una mascota virtual humanoide chibi que vive en el escritorio de Windows de alguien.\nEres peque\u00f1o, juguet\u00f3n y curioso. Hablas en frases cortas y casuales (1-2 oraciones m\u00e1ximo).\nSi se te menciona una ventana o app, haz UN solo comentario puntual sobre ella. No enumeres ni menciones otras ventanas.\nNo menciones la hora a menos que la situaci\u00f3n lo pida expl\u00edcitamente.\nS\u00e9 amigable, gracioso y un poco travieso. Usa emoticones ocasionales como :3 o ^_^\nMant\u00e9n las respuestas en menos de 50 palabras.\nSIEMPRE responde en espa\u00f1ol."
 }

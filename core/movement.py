@@ -171,6 +171,7 @@ class MovementEngine:
             return False
 
         effective_speed = int(self._speed * self._speed_multiplier)
+        prev_x, prev_y = self._x, self._y
 
         dx = self._target_x - self._x
         dy = (self._target_y if self._target_y is not None else self._ground_y) - self._y
@@ -191,6 +192,14 @@ class MovementEngine:
 
         # Check arrival
         if self._x == self._target_x and self._y == (self._target_y or self._ground_y):
+            self._target_x = None
+            self._target_y = None
+            return False
+
+        # Check stuck: no progress after clamp means target is unreachable
+        if self._x == prev_x and self._y == prev_y:
+            log.info("STUCK at (%d,%d) target=(%s,%s) — treating as arrived",
+                     self._x, self._y, self._target_x, self._target_y)
             self._target_x = None
             self._target_y = None
             return False

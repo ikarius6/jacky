@@ -1,6 +1,26 @@
 import ctypes
 
 
+def set_topmost(hwnd: int):
+    """Force a window to the TOPMOST z-order using Win32 SetWindowPos.
+
+    This should be called periodically because Windows can silently
+    revoke the topmost flag when other applications claim it.
+    """
+    try:
+        user32 = ctypes.windll.user32
+        HWND_TOPMOST = -1
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOACTIVATE = 0x0010
+        user32.SetWindowPos(
+            hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+    except Exception:
+        pass
+
+
 def remove_dwm_border(hwnd: int):
     """Use Windows DWM API to remove the shadow/border around a window."""
     try:

@@ -16,6 +16,7 @@ from core.scheduler import Scheduler
 from core.system_events import SystemEventsMonitor, SystemEvent
 from core.window_interactions import WindowInteractionHandler
 from core.peer_interactions import PeerInteractionHandler
+from core.screen_interaction import ScreenInteractionHandler
 from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
 from interaction.window_awareness import WindowAwareness
@@ -24,7 +25,7 @@ from speech.bubble import SpeechBubble
 from speech.dialogue import get_line
 from speech.llm_provider import create_llm_provider
 from utils.config_manager import load_config
-from utils.dwm_helpers import remove_dwm_border
+from utils.dwm_helpers import remove_dwm_border, set_topmost
 from utils.screen_capture import capture_vision_area
 from utils.i18n import load_language, t, get_vision_keywords, current_language
 
@@ -90,6 +91,7 @@ class PetWindow(QWidget):
         self._window_interactions = WindowInteractionHandler(self)
         self._peer_discovery = PeerDiscovery(self)
         self._peer_interactions = PeerInteractionHandler(self)
+        self._screen_interaction = ScreenInteractionHandler(self)
         self._bubble = SpeechBubble()
 
         # State tracking
@@ -116,6 +118,11 @@ class PetWindow(QWidget):
         self._move_timer = QTimer(self)
         self._move_timer.timeout.connect(self._on_move_tick)
         self._move_timer.start(33)
+
+        # Topmost reassertion timer — Windows can revoke the topmost flag
+        self._topmost_timer = QTimer(self)
+        self._topmost_timer.timeout.connect(self._reassert_topmost)
+        self._topmost_timer.start(5000)  # every 5 seconds
 
         # Throttle for _refresh_screen_bounds (avoid querying geometry every 33ms)
         self._BOUNDS_REFRESH_INTERVAL_S = 2.0
@@ -381,6 +388,16 @@ class PetWindow(QWidget):
     def _bring_to_front(self):
         self.show()
         self.raise_()
+        self._reassert_topmost()
+
+    def _reassert_topmost(self):
+        """Re-assert HWND_TOPMOST via Win32 — guards against z-order demotion."""
+        try:
+            self.raise_()
+            hwnd = int(self.winId())
+            set_topmost(hwnd)
+        except Exception:
+            pass
 
     # --- Paint ---
 
@@ -409,6 +426,9 @@ class PetWindow(QWidget):
 
     def on_pet_clicked(self):
         """Left-click: pet reaction."""
+        if self._screen_interaction.is_active:
+            self._screen_interaction.cancel()
+            return
         log.info("ACTION on_pet_clicked pos=(%d,%d)", self.x(), self.y())
         self.pet.set_state(PetState.HAPPY)
         self._say(get_line("petted", self.pet.name))
@@ -416,6 +436,8 @@ class PetWindow(QWidget):
 
     def on_feed(self):
         """Feed from context menu."""
+        if self._screen_interaction.is_active:
+            self._screen_interaction.cancel()
         log.info("ACTION on_feed pos=(%d,%d)", self.x(), self.y())
         self.pet.set_state(PetState.EATING)
         self._say(get_line("fed", self.pet.name))
@@ -423,6 +445,8 @@ class PetWindow(QWidget):
 
     def on_attack(self):
         """Attack from context menu: shooting if available, else slashing."""
+        if self._screen_interaction.is_active:
+            self._screen_interaction.cancel()
         log.info("ACTION on_attack pos=(%d,%d)", self.x(), self.y())
         if "shooting" in self.animation.available_states:
             self.pet.set_state(PetState.SHOOTING)
@@ -445,10 +469,46 @@ class PetWindow(QWidget):
         dpi = screen.devicePixelRatio() if screen else 1.0
         return capture_vision_area(cx, cy, dpi_scale=dpi)
 
+    def _move_to_screen_target(self, qt_x: int, qt_y: int):
+        """Run the pet toward a screen-interaction target (Qt logical coords)."""
+        # Offset so the pet's center lands on the target
+        target_x = qt_x - self._sprite_size // 2
+        target_y = qt_y - self._sprite_size // 2
+        # Clamp to reachable screen bounds (click still uses unclamped task.target_coords)
+        bounds = self.movement._get_bounds()
+        target_x = max(bounds[0], min(target_x, bounds[2] - self._sprite_size))
+        target_y = max(bounds[1], min(target_y, bounds[3] - self._sprite_size))
+        self.movement._target_x = target_x
+        self.movement._target_y = target_y
+        self.movement._direction = 1 if target_x > self.movement._x else -1
+        # Use RUNNING for speed; fall back to WALKING if run animation unavailable
+        if {"run_right", "run_left"} & set(self.animation.available_states):
+            self.pet.set_state(PetState.RUNNING)
+        else:
+            self.pet.set_state(PetState.WALKING)
+
     def on_ask(self, question: str):
         """User asked a direct question via the Preguntar dialog."""
         if not self._llm_enabled:
             return
+
+        # Check screen interaction FIRST (before busy check — cancel old task if needed)
+        parsed = self._screen_interaction.try_parse_interaction(question)
+        if parsed:
+            action_type, target_desc = parsed
+            if not self._perm("allow_vision"):
+                self._say(t("ui.no_vision_perm"), force=True)
+                return
+            if action_type != "navigate" and not self._perm("allow_screen_interact"):
+                self._say(t("ui.no_interact_perm"), force=True)
+                return
+            if self._screen_interaction.is_active:
+                self._screen_interaction.cancel(say_line=False)
+            if self._llm_pending:
+                self._llm_pending = False
+            self._screen_interaction.start_task(action_type, target_desc)
+            return
+
         if self._llm_pending:
             self._say(t("ui.busy"), force=True)
             return
@@ -489,6 +549,8 @@ class PetWindow(QWidget):
 
     def on_drag_start(self):
         """User started dragging."""
+        if self._screen_interaction.is_active:
+            self._screen_interaction.cancel()
         log.info("ACTION on_drag_start pos=(%d,%d)", self.x(), self.y())
         self.pet.set_state(PetState.DRAGGED)
         self.scheduler.pause_all()
@@ -542,7 +604,12 @@ class PetWindow(QWidget):
             self._maybe_refresh_screen_bounds()
 
             if self.pet.state in (PetState.WALKING, PetState.RUNNING):
-                self.movement.speed_multiplier = 2.0 if self.pet.state == PetState.RUNNING else 1.0
+                if self._screen_interaction.is_active:
+                    self.movement.speed_multiplier = 4.0  # fast traverse for interaction tasks
+                elif self.pet.state == PetState.RUNNING:
+                    self.movement.speed_multiplier = 2.0
+                else:
+                    self.movement.speed_multiplier = 1.0
                 still_moving = self.movement.tick()
                 self.move(self.movement.x, self.movement.y)
                 self.pet.direction = self.movement.direction
@@ -559,7 +626,10 @@ class PetWindow(QWidget):
                     self.movement.speed_multiplier = 1.0
                     self._window_interactions.dragging_window_hwnd = None
                     log.debug("WALK_DONE pos=(%d,%d)", self.x(), self.y())
-                    self.pet.set_state(PetState.IDLE)
+                    if self._screen_interaction.is_active:
+                        self._screen_interaction.on_arrival()
+                    else:
+                        self.pet.set_state(PetState.IDLE)
 
                 # Check if walking toward a peer
                 self._peer_interactions.check_peer_arrival()
@@ -622,7 +692,7 @@ class PetWindow(QWidget):
         _KEEP_ANIM = (PetState.HAPPY, PetState.EATING, PetState.DRAGGED,
                      PetState.SHOOTING, PetState.SLASHING, PetState.THROWING,
                      PetState.SLIDING, PetState.INTERACTING, PetState.HURT,
-                     PetState.DYING)
+                     PetState.DYING, PetState.WALKING, PetState.RUNNING)
         if old_state not in _KEEP_ANIM:
             self.pet.set_state(PetState.TALKING)
 
@@ -634,6 +704,9 @@ class PetWindow(QWidget):
             timeout_ms = max(min_timeout, int(word_count * 400))
         self._bubble.show_message(text, anchor_x, anchor_y, timeout_ms=timeout_ms,
                                   pet_height=self._sprite_size)
+        
+        # When bubble is shown, bring pet to the exact same top z-order
+        self._reassert_topmost()
 
         # Return to IDLE after bubble hides — never restore transient states
         # that could leave the pet stuck (PEEKING, FALLING, INTERACTING, etc.)
@@ -656,6 +729,7 @@ class PetWindow(QWidget):
         anchor_x = self.x() + self._sprite_size // 2
         anchor_y = self.y()
         self._bubble.show_thinking(anchor_x, anchor_y, pet_height=self._sprite_size)
+        self._reassert_topmost()
 
     def _update_bubble_pos(self):
         if self._bubble.isVisible():
