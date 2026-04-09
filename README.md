@@ -1,6 +1,6 @@
 # Jacky — Desktop Virtual Pet
 
-A Windows desktop pet application. Jacky is a cute chibi character who walks around your screen, interacts with windows, talks to you, and can even *see* your screen.
+A Windows desktop pet application. Jacky is a cute chibi character who walks around your screen, interacts with windows, interacts with other Jackys, listens to your voice, talks back to you, can *see* your screen, and follows simple instructions.
 
 ## Try it now!
 
@@ -16,6 +16,8 @@ A Windows desktop pet application. Jacky is a cute chibi character who walks aro
 - **Transparent frameless window** — only the pet sprite is visible
 - **Autonomous walking** — Jacky walks along the screen bottom and window title bars
 - **Click interactions** — left-click to pet, right-click for context menu, drag to reposition
+- **Voice interaction (STT & TTS)** — press a hotkey  to speak to Jacky, and hear spoken responses
+- **Screen interaction** — Jacky can follow simple instructions to click on things on your screen
 - **Speech bubbles** — contextual dialogue with predefined lines
 - **Window awareness** — detects open windows, reads titles, pushes windows, peeks from edges
 - **Vision** — Jacky can capture and analyze what's on your screen using multimodal LLM models (DPI-aware, multi-monitor)
@@ -83,6 +85,17 @@ When LLM is enabled, Jacky can "look" at your screen:
 - Triggered manually via the context menu
 - Captures a 1024×1024 area around the pet, DPI-aware and multi-monitor safe
 - The screenshot is sent to the LLM as a base64 image for analysis
+
+### Screen Interaction
+
+When instructed, Jacky can take action on your screen! Tell Jacky to "click on the start button", or "close the browser window". Jacky will intelligently partition the screen, use vision to identify the target, and perform actual mouse clicks.
+
+### Voice Interaction (STT & TTS)
+
+Jacky can listen to your voice and talk back!
+- Enable voice transcription via AssemblyAI. Press `Ctrl+Alt+Space` to toggle voice recording.
+- Enable voice synthesis via ElevenLabs. Jacky's responses will be spoken aloud!
+- Configure API keys, models, and voices directly in the Settings dialog (Voice tab).
 
 ### Multi-instance & Peer Interactions
 
