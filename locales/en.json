@@ -535,7 +535,8 @@
         "allow_drag":     { "label": "Drag windows",            "desc": "Drag a window while walking" },
         "allow_tidy":     { "label": "Tidy windows",            "desc": "Organize windows in a grid" },
         "allow_topple":   { "label": "Topple windows",          "desc": "Push windows in a chain like dominoes" },
-        "allow_screen_interact": { "label": "Interact with screen", "desc": "Find and click on screen elements" }
+        "allow_screen_interact": { "label": "Interact with screen", "desc": "Find and click on screen elements" },
+        "allow_cache":           { "label": "Allow voice cache",    "desc": "Save text-to-speech audio files for future use" }
     },
     "llm_prompts": {
         "sys_battery_low": "The laptop battery is low ({pct}%). React worried.",

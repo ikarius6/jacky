@@ -535,7 +535,8 @@
         "allow_drag":     { "label": "Arrastrar ventanas",       "desc": "Arrastrar una ventana mientras camina" },
         "allow_tidy":     { "label": "Ordenar ventanas",         "desc": "Organizar ventanas en una cuadr\u00edcula" },
         "allow_topple":   { "label": "Tumbar ventanas",          "desc": "Empujar ventanas en cadena como domin\u00f3s" },
-        "allow_screen_interact": { "label": "Interactuar con pantalla", "desc": "Buscar y hacer clic en elementos de la pantalla" }
+        "allow_screen_interact": { "label": "Interactuar con pantalla", "desc": "Buscar y hacer clic en elementos de la pantalla" },
+        "allow_cache":           { "label": "Permitir caché de voz",   "desc": "Guardar archivos de texto a voz para uso futuro" }
     },
     "llm_prompts": {
         "sys_battery_low": "La batería de la laptop está baja ({pct}%). Reacciona preocupado.",
