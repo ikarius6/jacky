@@ -442,6 +442,7 @@
         "menu_peers": "\ud83d\udc65 Compañeros",
         "menu_silent": "\ud83d\udd07 Modo silencioso",
         "menu_ask": "\ud83d\udcac Preguntar",
+        "menu_listen": "\ud83c\udfa4 Escuchar",
         "menu_look": "\ud83d\udc41 Mirar pantalla",
         "menu_settings": "\u2699\ufe0f Ajustes",
         "menu_quit": "\ud83d\udc4b Salir",
@@ -497,6 +498,7 @@
         "group_destructive": "Destructivo (modifica ventanas)",
         "label_language": "Idioma:",
         "thinking": "Pensando",
+        "listening": "* Escuchando *",
         "busy": "\u00a1Espera, a\u00fan estoy pensando! >_<",
         "no_llm": "No puedo ver nada sin el LLM activado... >_<",
         "no_vision_perm": "No tengo permiso para ver la pantalla... >_<",
@@ -520,6 +522,18 @@
         "allow_tidy":     { "label": "Ordenar ventanas",         "desc": "Organizar ventanas en una cuadr\u00edcula" },
         "allow_topple":   { "label": "Tumbar ventanas",          "desc": "Empujar ventanas en cadena como domin\u00f3s" },
         "allow_screen_interact": { "label": "Interactuar con pantalla", "desc": "Buscar y hacer clic en elementos de la pantalla" }
+    },
+    "llm_prompts": {
+        "sys_battery_low": "La batería de la laptop está baja ({pct}%). Reacciona preocupado.",
+        "sys_battery_critical": "¡La batería de la laptop es CRÍTICA ({pct}%)! ¡Entra en pánico!",
+        "sys_battery_charging": "La laptop se acaba de conectar para cargar. Reacciona feliz/aliviado.",
+        "sys_battery_discharging": "La laptop se acaba de desconectar de la corriente. Reacciona un poco preocupado.",
+        "sys_battery_full": "La batería de la laptop acaba de llegar al 100%. Celébralo brevemente.",
+        "sys_user_returned": "El usuario acaba de regresar después de estar ausente por un rato. Dale la bienvenida.",
+        "ask_vision": "El usuario te pide que MIRES la pantalla: \"{question}\". Se adjunta una imagen de tu entorno. Describe brevemente lo que ves.",
+        "ask_direct": "El usuario te pregunta directamente: \"{question}\"",
+        "action_look": "Mira a tu alrededor en el entorno de tu pantalla. Se adjunta una imagen de lo que puedes ver. Haz un comentario breve y divertido sobre lo que ves.",
+        "idle_chat": "charla casual"
     },
     "interact_keywords": {
         "navigate": ["encuentra", "busca", "ve hacia", "ve a", "muévete a", "muevete a", "localiza", "dónde está", "donde esta"],

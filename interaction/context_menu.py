@@ -90,7 +90,7 @@ class PetContextMenu(QMenu):
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._ask_action)
 
-        self._listen_action = QAction("Escuchar", self)
+        self._listen_action = QAction(t("ui.menu_listen"), self)
         self._listen_action.triggered.connect(self._pet_window.on_listen_toggle)
         self._listen_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._listen_action)
@@ -141,7 +141,7 @@ class PetContextMenu(QMenu):
         self._peers_menu.setTitle(t("ui.menu_peers"))
         self._silent_action.setText(t("ui.menu_silent"))
         self._ask_action.setText(t("ui.menu_ask"))
-        self._listen_action.setText("Escuchar")
+        self._listen_action.setText(t("ui.menu_listen"))
         self._look_action.setText(t("ui.menu_look"))
         self._settings_action.setText(t("ui.menu_settings"))
         self._quit_action.setText(t("ui.menu_quit"))

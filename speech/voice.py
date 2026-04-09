@@ -41,6 +41,16 @@ class ElevenLabsTTSClient(QObject):
             self.playback_finished.emit()
             return
             
+        # Clean up text for TTS: remove common text emoticons the pet uses
+        emoticons = [
+            ":3", "^_^", ":)", ":(", ":D", ":P", ":O", ";)", "T_T", 
+            "-_-", "o_o", "O_O", "UwU", "uwu", "OwO", "owo", "<3", "~_~", "u_u"
+        ]
+        clean_text = text
+        for e in emoticons:
+            clean_text = clean_text.replace(e, "")
+        clean_text = clean_text.strip()
+            
         def _worker():
             try:
                 url = f"https://api.elevenlabs.io/v1/text-to-speech/{self._voice_id}/stream"
@@ -50,12 +60,12 @@ class ElevenLabsTTSClient(QObject):
                     "accept": "audio/mpeg"
                 }
                 payload = {
-                    "text": text,
+                    "text": clean_text,
                     "model_id": self._model_id,
                     "output_format": "mp3_44100_128",
                 }
                 
-                log.debug(f"Requesting TTS from ElevenLabs for text: {text[:30]}...")
+                log.debug(f"Requesting TTS from ElevenLabs for text: {clean_text[:30]}...")
                 response = requests.post(url, json=payload, headers=headers, stream=True, timeout=10)
                 
                 if response.status_code == 200:

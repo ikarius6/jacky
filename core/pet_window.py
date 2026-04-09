@@ -317,17 +317,17 @@ class PetWindow(QWidget):
             pct = data.get("pct", "?")
             _LLM_PROMPTS = {
                 SystemEvent.BATTERY_LOW:
-                    f"The laptop battery is low ({pct}%). React worried.",
+                    t("llm_prompts.sys_battery_low", pct=pct),
                 SystemEvent.BATTERY_CRITICAL:
-                    f"The laptop battery is CRITICAL ({pct}%)! Panic!",
+                    t("llm_prompts.sys_battery_critical", pct=pct),
                 SystemEvent.BATTERY_CHARGING:
-                    "The laptop was just plugged in to charge. React happy/relieved.",
+                    t("llm_prompts.sys_battery_charging"),
                 SystemEvent.BATTERY_DISCHARGING:
-                    "The laptop was just unplugged from power. React slightly concerned.",
+                    t("llm_prompts.sys_battery_discharging"),
                 SystemEvent.BATTERY_FULL:
-                    "The laptop battery just reached 100%. Celebrate briefly.",
+                    t("llm_prompts.sys_battery_full"),
                 SystemEvent.USER_RETURNED:
-                    "The user just came back after being away for a while. Welcome them.",
+                    t("llm_prompts.sys_user_returned"),
             }
             prompt = _LLM_PROMPTS.get(event)
             if prompt:
@@ -515,7 +515,7 @@ class PetWindow(QWidget):
             self._bubble.hide()
             self._stt_client.stop_listening()
         else:
-            self._say("* escuchando *", force=True, timeout_ms=30000, skip_voice=True)
+            self._say(t("ui.listening"), force=True, timeout_ms=30000, skip_voice=True)
             self._stt_client.start_listening()
 
     def on_ask(self, question: str):
@@ -547,14 +547,11 @@ class PetWindow(QWidget):
         self._show_thinking()
 
         if self._needs_vision(question) and self._perm("allow_vision"):
-            context = self._build_llm_context(
-                f'The user asks you to LOOK at the screen: "{question}". '
-                'An image of your surroundings is attached. Describe what you see briefly.'
-            )
+            context = self._build_llm_context(t("llm_prompts.ask_vision", question=question))
             image_b64 = self._capture_vision()
             self._llm.generate_with_image(context, image_b64, self._on_ask_response)
         else:
-            context = self._build_llm_context(f'The user asks you directly: "{question}"')
+            context = self._build_llm_context(t("llm_prompts.ask_direct", question=question))
             self._llm.generate(context, self._on_ask_response)
 
     def on_look(self):
@@ -570,11 +567,7 @@ class PetWindow(QWidget):
             return
         self._llm_pending = True
         self._show_thinking()
-        context = self._build_llm_context(
-            'Look around at your screen surroundings. '
-            'An image of what you can see is attached. '
-            'Make a short, fun comment about what you see.'
-        )
+        context = self._build_llm_context(t("llm_prompts.action_look"))
         image_b64 = self._capture_vision()
         self._llm.generate_with_image(context, image_b64, self._on_ask_response)
 
@@ -701,7 +694,7 @@ class PetWindow(QWidget):
                 log.debug("SCHED chat skipped — LLM request already pending")
                 return
             self._llm_pending = True
-            context = self._build_llm_context("idle chatter")
+            context = self._build_llm_context(t("llm_prompts.idle_chat"))
             self._llm.generate(context, self._on_llm_response)
         else:
             self._say(get_line("idle", self.pet.name))

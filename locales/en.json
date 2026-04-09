@@ -442,6 +442,7 @@
         "menu_peers": "\ud83d\udc65 Companions",
         "menu_silent": "\ud83d\udd07 Silent mode",
         "menu_ask": "\ud83d\udcac Ask",
+        "menu_listen": "\ud83c\udfa4 Listen",
         "menu_look": "\ud83d\udc41 Look at screen",
         "menu_settings": "\u2699\ufe0f Settings",
         "menu_quit": "\ud83d\udc4b Quit",
@@ -497,6 +498,7 @@
         "group_destructive": "Destructive (modifies windows)",
         "label_language": "Language:",
         "thinking": "Thinking",
+        "listening": "* Listening *",
         "busy": "Wait, I'm still thinking! >_<",
         "no_llm": "I can't see anything without LLM enabled... >_<",
         "no_vision_perm": "I don't have permission to see the screen... >_<",
@@ -520,6 +522,18 @@
         "allow_tidy":     { "label": "Tidy windows",            "desc": "Organize windows in a grid" },
         "allow_topple":   { "label": "Topple windows",          "desc": "Push windows in a chain like dominoes" },
         "allow_screen_interact": { "label": "Interact with screen", "desc": "Find and click on screen elements" }
+    },
+    "llm_prompts": {
+        "sys_battery_low": "The laptop battery is low ({pct}%). React worried.",
+        "sys_battery_critical": "The laptop battery is CRITICAL ({pct}%)! Panic!",
+        "sys_battery_charging": "The laptop was just plugged in to charge. React happy/relieved.",
+        "sys_battery_discharging": "The laptop was just unplugged from power. React slightly concerned.",
+        "sys_battery_full": "The laptop battery just reached 100%. Celebrate briefly.",
+        "sys_user_returned": "The user just came back after being away for a while. Welcome them.",
+        "ask_vision": "The user asks you to LOOK at the screen: \"{question}\". An image of your surroundings is attached. Describe what you see briefly.",
+        "ask_direct": "The user asks you directly: \"{question}\"",
+        "action_look": "Look around at your screen surroundings. An image of what you can see is attached. Make a short, fun comment about what you see.",
+        "idle_chat": "idle chatter"
     },
     "interact_keywords": {
         "navigate": ["find", "search", "go to", "move to", "locate", "where is", "look for"],
