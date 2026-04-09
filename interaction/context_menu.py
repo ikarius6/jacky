@@ -688,6 +688,12 @@ class SettingsDialog(QDialog):
         self._or_api_key.setEchoMode(QLineEdit.EchoMode.Password)
         self._or_api_key.setPlaceholderText("sk-or-...")
         or_form.addRow(t("ui.label_apikey"), self._or_api_key)
+        
+        or_hint = QLabel(t("ui.label_get_apikey", url="https://openrouter.ai/keys", name="OpenRouter"))
+        or_hint.setOpenExternalLinks(True)
+        or_hint.setStyleSheet("font-size: 9pt;")
+        or_form.addRow("", or_hint)
+        
         self._or_model = QLineEdit(self._config.get("openrouter_model", "google/gemma-4-26b-a4b-it:free"))
         self._or_model.setPlaceholderText("google/gemma-4-26b-a4b-it:free")
         or_form.addRow(t("ui.label_model"), self._or_model)
@@ -725,6 +731,12 @@ class SettingsDialog(QDialog):
         keys_layout.setSpacing(4)
         keys_layout.addWidget(self._groq_keys_list)
         keys_layout.addLayout(keys_btn_layout)
+        
+        groq_hint = QLabel(t("ui.label_get_apikey", url="https://console.groq.com/keys", name="Groq"))
+        groq_hint.setOpenExternalLinks(True)
+        groq_hint.setStyleSheet("font-size: 9pt;")
+        keys_layout.addWidget(groq_hint)
+        
         groq_form.addRow(t("ui.label_apikeys"), keys_layout)
 
         self._groq_model = QLineEdit(
@@ -769,10 +781,20 @@ class SettingsDialog(QDialog):
         aai_group = QGroupBox(t("ui.group_assemblyai"))
         aai_form = QFormLayout()
         
+        aai_desc = QLabel(t("ui.desc_assemblyai"))
+        aai_desc.setWordWrap(True)
+        aai_desc.setStyleSheet("font-size: 9pt; padding-bottom: 4px;")
+        aai_form.addRow(aai_desc)
+        
         self._aai_api_key = QLineEdit(self._config.get("assemblyai_api_key", ""))
         self._aai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
         self._aai_api_key.setPlaceholderText(t("ui.placeholder_apikey"))
         aai_form.addRow(t("ui.label_apikey"), self._aai_api_key)
+        
+        aai_hint = QLabel(t("ui.label_get_apikey", url="https://www.assemblyai.com/", name="AssemblyAI"))
+        aai_hint.setOpenExternalLinks(True)
+        aai_hint.setStyleSheet("font-size: 9pt;")
+        aai_form.addRow("", aai_hint)
         
         self._aai_model = QLineEdit(self._config.get("assemblyai_model", "u3-rt-pro"))
         aai_form.addRow(t("ui.label_model"), self._aai_model)
@@ -784,10 +806,20 @@ class SettingsDialog(QDialog):
         el_group = QGroupBox(t("ui.group_elevenlabs"))
         el_form = QFormLayout()
         
+        el_desc = QLabel(t("ui.desc_elevenlabs"))
+        el_desc.setWordWrap(True)
+        el_desc.setStyleSheet("font-size: 9pt; padding-bottom: 4px;")
+        el_form.addRow(el_desc)
+        
         self._el_api_key = QLineEdit(self._config.get("elevenlabs_api_key", ""))
         self._el_api_key.setEchoMode(QLineEdit.EchoMode.Password)
         self._el_api_key.setPlaceholderText(t("ui.placeholder_apikey"))
         el_form.addRow(t("ui.label_apikey"), self._el_api_key)
+        
+        el_hint = QLabel(t("ui.label_get_apikey", url="https://elevenlabs.io/", name="ElevenLabs"))
+        el_hint.setOpenExternalLinks(True)
+        el_hint.setStyleSheet("font-size: 9pt;")
+        el_form.addRow("", el_hint)
         
         self._el_voice_id = QLineEdit(self._config.get("elevenlabs_voice_id", "U0W3edavfdI8ibPeeteQ"))
         el_form.addRow(t("ui.label_voice_id"), self._el_voice_id)
