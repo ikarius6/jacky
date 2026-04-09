@@ -5,6 +5,7 @@ import logging
 import tempfile
 import threading
 import hashlib
+import json
 from typing import Callable, Optional
 
 import requests
@@ -37,6 +38,30 @@ class ElevenLabsTTSClient(QObject):
         
         self._cache_dir = os.path.join(tempfile.gettempdir(), "jacky_tts_cache")
         os.makedirs(self._cache_dir, exist_ok=True)
+        self._usage_file = os.path.join(self._cache_dir, "usage.json")
+        self._usage_lock = threading.Lock()
+
+    def _update_usage_record(self, filename: str):
+        with self._usage_lock:
+            try:
+                usage = {}
+                if os.path.exists(self._usage_file):
+                    with open(self._usage_file, 'r', encoding='utf-8') as f:
+                        usage = json.load(f)
+            except Exception:
+                usage = {}
+                
+            if filename not in usage:
+                usage[filename] = {"count": 0, "last_accessed": time.time()}
+                
+            usage[filename]["count"] += 1
+            usage[filename]["last_accessed"] = time.time()
+            
+            try:
+                 with open(self._usage_file, 'w', encoding='utf-8') as f:
+                     json.dump(usage, f)
+            except Exception as e:
+                 log.warning(f"Failed to update usage record: {e}")
 
     def play_tts(self, text: str):
         """Fetch TTS in a background thread and play it."""
@@ -58,11 +83,12 @@ class ElevenLabsTTSClient(QObject):
         def _worker():
             try:
                 text_hash = hashlib.md5(clean_text.encode('utf-8')).hexdigest()
-                cache_key = f"{self._voice_id}_{self._model_id}_{text_hash}"
-                cache_path = os.path.join(self._cache_dir, f"{cache_key}.mp3")
+                filename = f"{self._voice_id}_{self._model_id}_{text_hash}.mp3"
+                cache_path = os.path.join(self._cache_dir, filename)
 
                 if os.path.exists(cache_path):
                     log.debug(f"Using cached TTS audio for text: {clean_text[:30]}...")
+                    self._update_usage_record(filename)
                     self._playback_ready.emit(cache_path)
                     return
 
@@ -87,6 +113,9 @@ class ElevenLabsTTSClient(QObject):
                             if chunk:
                                 f.write(chunk)
                     
+                    self._update_usage_record(filename)
+                    self._enforce_cache_limit()
+                    
                     # Safely emit signal to transition to the main GUI thread
                     self._playback_ready.emit(cache_path)
                 else:
@@ -110,6 +139,61 @@ class ElevenLabsTTSClient(QObject):
         if status == QMediaPlayer.MediaStatus.EndOfMedia or status == QMediaPlayer.MediaStatus.InvalidMedia:
             self._cleanup()
             self.playback_finished.emit()
+
+    def _enforce_cache_limit(self):
+        """Enforces a 100MB cache limit by deleting least frequently used (LFU) files."""
+        max_bytes = 100 * 1024 * 1024  # 100 MB
+        target_bytes = 90 * 1024 * 1024  # Target 90 MB when cleaning up
+        
+        with self._usage_lock:
+            try:
+                usage = {}
+                if os.path.exists(self._usage_file):
+                    with open(self._usage_file, 'r', encoding='utf-8') as f:
+                        usage = json.load(f)
+            except Exception:
+                usage = {}
+                
+            try:
+                files = []
+                total_size = 0
+                for filename in os.listdir(self._cache_dir):
+                    if filename == "usage.json":
+                        continue
+                    path = os.path.join(self._cache_dir, filename)
+                    if os.path.isfile(path) and filename.endswith(".mp3"):
+                        stat = os.stat(path)
+                        file_usage = usage.get(filename, {"count": 1, "last_accessed": stat.st_atime})
+                        files.append((path, filename, stat.st_size, file_usage["count"], file_usage["last_accessed"]))
+                        total_size += stat.st_size
+                        
+                if total_size > max_bytes:
+                    # Sort primarily by access count (ascending), then by last access (ascending)
+                    files.sort(key=lambda x: (x[3], x[4]))
+                    
+                    for path, filename, size, count, _ in files:
+                        try:
+                            # Skip if it is the currently playing file
+                            if path == self._current_temp_file:
+                                continue
+                            os.remove(path)
+                            total_size -= size
+                            if filename in usage:
+                                del usage[filename]
+                            log.debug(f"Cache Eviction (LFU): deleted {path} ({size} bytes, usage count: {count})")
+                            if total_size <= target_bytes:
+                                break
+                        except Exception as e:
+                            log.warning(f"Failed to delete cached file {path}: {e}")
+                            
+                    # Save the cleaned up usage back
+                    try:
+                        with open(self._usage_file, 'w', encoding='utf-8') as f:
+                            json.dump(usage, f)
+                    except Exception:
+                        pass
+            except Exception as e:
+                log.error(f"Error enforcing cache limit: {e}")
 
     def _cleanup(self):
         """Stop player and release the file handle."""
