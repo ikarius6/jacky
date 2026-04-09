@@ -42,7 +42,9 @@
         "allow_drag": true,
         "allow_tidy": true,
         "allow_topple": true,
-        "allow_vision": true
+        "allow_vision": true,
+        "allow_screen_interact": true,
+        "allow_cache": true
     },
     "llm_provider": "ollama",
     "openrouter_api_key": "",

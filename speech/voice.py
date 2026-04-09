@@ -24,11 +24,12 @@ class ElevenLabsTTSClient(QObject):
     # Internal signal to safely transition from worker thread to main thread
     _playback_ready = pyqtSignal(str)
 
-    def __init__(self, api_key: str, voice_id: str = "U0W3edavfdI8ibPeeteQ", model_id: str = "eleven_flash_v2_5"):
+    def __init__(self, api_key: str, voice_id: str = "U0W3edavfdI8ibPeeteQ", model_id: str = "eleven_flash_v2_5", allow_cache_func: Optional[Callable[[], bool]] = None):
         super().__init__()
         self._api_key = api_key
         self._voice_id = voice_id
         self._model_id = model_id
+        self._allow_cache_func = allow_cache_func
         self._player = QMediaPlayer()
         self._audio_output = QAudioOutput()
         self._player.setAudioOutput(self._audio_output)
@@ -37,7 +38,6 @@ class ElevenLabsTTSClient(QObject):
         self._current_temp_file: Optional[str] = None
         
         self._cache_dir = os.path.join(tempfile.gettempdir(), "jacky_tts_cache")
-        os.makedirs(self._cache_dir, exist_ok=True)
         self._usage_file = os.path.join(self._cache_dir, "usage.json")
         self._usage_lock = threading.Lock()
 
@@ -82,15 +82,20 @@ class ElevenLabsTTSClient(QObject):
             
         def _worker():
             try:
+                allow_cache = self._allow_cache_func() if self._allow_cache_func else True
                 text_hash = hashlib.md5(clean_text.encode('utf-8')).hexdigest()
                 filename = f"{self._voice_id}_{self._model_id}_{text_hash}.mp3"
-                cache_path = os.path.join(self._cache_dir, filename)
-
-                if os.path.exists(cache_path):
-                    log.debug(f"Using cached TTS audio for text: {clean_text[:30]}...")
-                    self._update_usage_record(filename)
-                    self._playback_ready.emit(cache_path)
-                    return
+                
+                if allow_cache:
+                    os.makedirs(self._cache_dir, exist_ok=True)
+                    output_path = os.path.join(self._cache_dir, filename)
+                    if os.path.exists(output_path):
+                        log.debug(f"Using cached TTS audio for text: {clean_text[:30]}...")
+                        self._update_usage_record(filename)
+                        self._playback_ready.emit(output_path)
+                        return
+                else:
+                    output_path = os.path.join(tempfile.gettempdir(), f"temp_{filename}")
 
                 url = f"https://api.elevenlabs.io/v1/text-to-speech/{self._voice_id}/stream"
                 headers = {
@@ -108,16 +113,17 @@ class ElevenLabsTTSClient(QObject):
                 response = requests.post(url, json=payload, headers=headers, stream=True, timeout=10)
                 
                 if response.status_code == 200:
-                    with open(cache_path, 'wb') as f:
+                    with open(output_path, 'wb') as f:
                         for chunk in response.iter_content(chunk_size=4096):
                             if chunk:
                                 f.write(chunk)
                     
-                    self._update_usage_record(filename)
-                    self._enforce_cache_limit()
+                    if allow_cache:
+                        self._update_usage_record(filename)
+                        self._enforce_cache_limit()
                     
                     # Safely emit signal to transition to the main GUI thread
-                    self._playback_ready.emit(cache_path)
+                    self._playback_ready.emit(output_path)
                 else:
                     log.error(f"ElevenLabs TTS failed with HTTP {response.status_code}: {response.text}")
                     self.playback_finished.emit()
@@ -201,6 +207,12 @@ class ElevenLabsTTSClient(QObject):
             try:
                 self._player.stop()
                 self._player.setSource(QUrl())
+                allow_cache = self._allow_cache_func() if self._allow_cache_func else True
+                if not allow_cache and os.path.exists(self._current_temp_file):
+                    try:
+                        os.remove(self._current_temp_file)
+                    except Exception:
+                        pass
                 self._current_temp_file = None
             except Exception as e:
                 log.warning(f"Error cleaning up TTS media player: {e}")

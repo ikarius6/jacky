@@ -104,6 +104,7 @@ class PetWindow(QWidget):
             api_key=self._config.get("elevenlabs_api_key", ""),
             voice_id=self._config.get("elevenlabs_voice_id", "U0W3edavfdI8ibPeeteQ"),
             model_id=self._config.get("elevenlabs_model", "eleven_flash_v2_5"),
+            allow_cache_func=lambda: self._perm("allow_cache"),
         )
         self._stt_client = AssemblyAISTTClient(
             api_key=self._config.get("assemblyai_api_key", ""),

@@ -356,6 +356,7 @@ _PERMISSION_KEYS = [
     ("allow_tidy",     "destructive"),
     ("allow_topple",   "destructive"),
     ("allow_screen_interact", "destructive"),
+    ("allow_cache",    "observe"),
 ]
 
 
