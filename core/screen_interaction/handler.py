@@ -91,9 +91,27 @@ class ScreenInteractionHandler(QObject):
             return False
         return self._current_task.state not in ("done", "failed", "cancelled")
 
+    def _get_prep_pattern(self) -> re.Pattern:
+        from utils.i18n import current_language, get_interact_prefixes
+        
+        lang = current_language()
+        if getattr(self, "_last_lang", None) == lang and getattr(self, "_cached_prep_pattern", None) is not None:
+            return self._cached_prep_pattern
+            
+        prefixes = get_interact_prefixes()
+        if not prefixes:
+            self._cached_prep_pattern = re.compile(r"^")
+        else:
+            sorted_prefixes = sorted(prefixes, key=len, reverse=True)
+            escaped = [re.escape(p) for p in sorted_prefixes]
+            pattern_str = r"^(?:(?:" + r"|".join(escaped) + r")\s+)+"
+            self._cached_prep_pattern = re.compile(pattern_str, re.IGNORECASE)
+            
+        self._last_lang = lang
+        return self._cached_prep_pattern
+
     def try_parse_interaction(self, text: str) -> Optional[Tuple[str, str]]:
         """Parse user text for interaction keywords from i18n.
-
         Returns ``(action_type, target_description)`` or ``None``.
         Priority order: close > minimize > click > navigate (most specific first).
         """
@@ -102,20 +120,29 @@ class ScreenInteractionHandler(QObject):
         if not kw_map:
             return None
 
-        # Check in priority order: close > minimize > click > navigate
+        prep_pattern = self._get_prep_pattern()
+
         for action_type in ("close", "minimize", "click", "navigate"):
             keywords = kw_map.get(action_type, [])
-            for kw in sorted(keywords, key=len, reverse=True):  # longest first
-                if lower.startswith(kw):
-                    target = text[len(kw):].strip().strip("\"'").strip()
+            # Sort: longest first so "pícale a" beats "pícale"
+            for kw in sorted(keywords, key=len, reverse=True):
+                kw_lower = kw.lower()
+
+                # --- Match at start of text ---
+                if lower.startswith(kw_lower):
+                    raw_target = text[len(kw):].strip().strip("\"'").strip()
+                    target = prep_pattern.sub("", raw_target).strip()
                     if target:
                         return (action_type, target)
-                elif kw in lower:
-                    # keyword is somewhere in the text — extract target
-                    idx = lower.index(kw)
-                    target = text[idx + len(kw):].strip().strip("\"'").strip()
+
+                # --- Match anywhere in text ---
+                idx = lower.find(kw_lower)
+                if idx != -1:
+                    raw_target = text[idx + len(kw):].strip().strip("\"'").strip()
+                    target = prep_pattern.sub("", raw_target).strip()
                     if target:
                         return (action_type, target)
+
         return None
 
     def start_task(self, action_type: str, target_desc: str):

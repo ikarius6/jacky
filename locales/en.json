@@ -550,11 +550,27 @@
         "idle_chat": "idle chatter"
     },
     "interact_keywords": {
-        "navigate": ["find", "search", "go to", "move to", "locate", "where is", "look for"],
-        "click": ["press", "click", "tap", "push", "activate", "open", "hit"],
-        "close": ["close", "quit", "exit"],
-        "minimize": ["minimize", "hide"]
+        "navigate": [
+            "find", "search", "go to", "move to", "locate", "where is", "look for",
+            "run to", "head to", "head towards", "walk to", "walk towards",
+            "navigate to", "point to", "take me to", "position on"
+        ],
+        "click": [
+            "press", "click", "tap", "push", "activate", "open", "hit",
+            "select", "choose", "pick", "click on", "tap on", "press on",
+            "trigger", "fire", "pull"
+        ],
+        "close": [
+            "close", "quit", "exit", "remove", "delete", "get rid of",
+            "kill", "x out", "dismiss"
+        ],
+        "minimize": [
+            "minimize", "hide", "shrink", "reduce", "send down", "put away"
+        ]
     },
+    "interact_prefixes": [
+        "to", "on", "in", "at", "towards", "for", "with", "the", "a", "an", "into", "onto"
+    ],
     "interact_system_prompt": "You are a precise computer vision assistant. Your ONLY job is to locate UI elements in screenshots using a numbered grid overlay. Each cell has a dark circular badge with a white number centered inside it. Respond ONLY with valid JSON — no extra text, no markdown, no explanations whatsoever.",
     "interact_grid_prompt": "The screenshot has a red numbered grid overlay with {cols} columns and {rows} rows, giving {total} cells total. Each cell has a dark circle with a white number centered inside it. Cells are numbered 1 to {total}, left to right, top to bottom (cell 1 = top-left, cell {cols} = top-right, cell {total} = bottom-right). Identify which single cell's number badge is closest to the CENTER of: \"{target}\". Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>}. If the element is not visible anywhere: {\"error\": \"not found\"}",
     "interact_locate_prompt": "This is a zoomed-in region of the screen with a green numbered grid overlay: {cols} columns x {rows} rows = {total} cells total. Each cell has a dark circle badge with a white number centered in it. Cells numbered 1 to {total}, left to right, top to bottom. Find \"{target}\" and identify which cell number badge is nearest to its CENTER (the clickable point). Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>}. If not found: {\"error\": \"not found\"}",

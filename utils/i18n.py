@@ -123,6 +123,14 @@ def get_interact_keywords() -> dict:
     return _strings.get("interact_keywords", {})
 
 
+def get_interact_prefixes() -> list[str]:
+    """Return the screen-interaction prefixes (articles, prepositions) to strip.
+
+    Returns a list of strings like ["a", "la", "el", "en", "sobre"].
+    """
+    return _strings.get("interact_prefixes", [])
+
+
 def get_interact_system_prompt() -> str:
     """Return the dedicated technical system prompt for screen interaction tasks."""
     prompt = _strings.get("interact_system_prompt", "")

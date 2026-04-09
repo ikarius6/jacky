@@ -220,8 +220,9 @@ class AssemblyAISTTClient:
         
         self._is_recording = False
         self._should_record_audio = False
-        self._current_text = ""
+        self._finalized_turns = []
         self._active_turn_text = ""
+        self._pending_unformatted_turn: Optional[str] = None  # end_of_turn received, awaiting is_formatted
 
     def start_listening(self):
         if not self._api_key:
@@ -233,13 +234,22 @@ class AssemblyAISTTClient:
         if self._is_recording:
             return
             
-        self._current_text = ""
+        self._finalized_turns = []
         self._active_turn_text = ""
+        self._pending_unformatted_turn = None
         self._is_recording = True
         self._should_record_audio = True
         
         def _worker():
-            url = f"wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&encoding=pcm_s16le&format_turns=true&speech_model={self._model}"
+            url = (
+                f"wss://streaming.assemblyai.com/v3/ws"
+                f"?sample_rate=16000"
+                f"&encoding=pcm_s16le"
+                f"&format_turns=true"
+                f"&speech_model={self._model}"
+                f"&end_of_turn_confidence_threshold=0.85"   # default ~0.7; higher = less eager to split turns
+                f"&min_end_of_turn_silence_when_confident=500"  # ms of silence required (default 160ms)
+            )
             headers = {"Authorization": self._api_key}
             
             try:
@@ -270,8 +280,23 @@ class AssemblyAISTTClient:
                                     if not text:
                                         continue
 
-                                    if end_of_turn or is_formatted:
-                                        self._current_text += text + " "
+                                    if is_formatted:
+                                        # Canonical final for this turn.
+                                        # If there was a pending unformatted end_of_turn we replace it;
+                                        # otherwise just append.  Either way, guard against consecutive
+                                        # identical turns produced by AssemblyAI's overeager segmentation
+                                        # (e.g. the user pauses mid-sentence and the same phrase ends up
+                                        # as two back-to-back turns).
+                                        self._pending_unformatted_turn = None
+                                        if self._finalized_turns and self._finalized_turns[-1] == text:
+                                            log.debug(f"STT: dropping consecutive duplicate turn: '{text}'")
+                                        else:
+                                            self._finalized_turns.append(text)
+                                        self._active_turn_text = ""
+                                    elif end_of_turn:
+                                        # Unformatted boundary — hold it until the formatted version
+                                        # arrives (or until we finalize without a formatted follow-up).
+                                        self._pending_unformatted_turn = text
                                         self._active_turn_text = ""
                                     else:
                                         self._active_turn_text = text
@@ -310,7 +335,15 @@ class AssemblyAISTTClient:
                         p.terminate()
                         self._is_recording = False
                         
-                        final_text = (self._current_text.strip() + " " + self._active_turn_text.strip()).strip()
+                        final_text = " ".join(self._finalized_turns)
+                        # If a turn ended but no formatted message arrived before termination,
+                        # fall back to the pending unformatted text.
+                        if self._pending_unformatted_turn:
+                            if not self._finalized_turns or self._finalized_turns[-1] != self._pending_unformatted_turn:
+                                final_text += (" " if final_text else "") + self._pending_unformatted_turn
+                        elif self._active_turn_text:
+                            final_text += (" " if final_text else "") + self._active_turn_text
+                        final_text = final_text.strip()
                         log.info(f"STT final transcript: '{final_text}'")
                         if final_text and self.on_transcript_callback:
                             self.on_transcript_callback(final_text)
