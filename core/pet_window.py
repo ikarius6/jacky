@@ -723,6 +723,7 @@ class PetWindow(QWidget):
         if mode in ("voice", "both") and not skip_voice:
             self._tts_client.play_tts(text)
             if mode == "voice":
+                self._bubble.hide()
                 self.pet.set_state(PetState.TALKING)
                 self._talk_end_timer.start(max(3000, len(text) * 50))
                 return

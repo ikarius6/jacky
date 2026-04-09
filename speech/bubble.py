@@ -60,6 +60,13 @@ class SpeechBubble(QWidget):
         self._hide_timer.stop()
         self._think_timer.start()
 
+    def hide(self):
+        """Hide the bubble and ensure any running timers are stopped."""
+        self._think_timer.stop()
+        self._thinking = False
+        super().hide()
+
+
     def _on_think_tick(self):
         """Advance the thinking animation."""
         self._think_index = (self._think_index + 1) % len(self._think_frames)
