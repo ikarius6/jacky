@@ -9,7 +9,7 @@
         15
     ],
     "chat_interval": [
-        20,
+        30,
         60
     ],
     "window_check_interval": [
@@ -27,7 +27,7 @@
     "peer_interaction_enabled": true,
     "max_peer_instances": 5,
     "peer_check_interval": [
-        8,
+        10,
         20
     ],
     "permissions": {
@@ -49,6 +49,13 @@
     "openrouter_model": "google/gemma-4-26b-a4b-it:free",
     "groq_api_keys": [],
     "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "response_mode": "both",
+    "listen_shortcut": "ctrl+shift+space",
+    "assemblyai_api_key": "",
+    "assemblyai_model": "u3-rt-pro",
+    "elevenlabs_api_key": "",
+    "elevenlabs_voice_id": "U0W3edavfdI8ibPeeteQ",
+    "elevenlabs_model": "eleven_flash_v2_5",
     "debug_logging": false,
     "language": "es"
 }

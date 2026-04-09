@@ -92,7 +92,7 @@ class PetContextMenu(QMenu):
 
         self._listen_action = QAction(t("ui.menu_listen"), self)
         self._listen_action.triggered.connect(self._pet_window.on_listen_toggle)
-        self._listen_action.setEnabled(self._pet_window._llm_enabled)
+        self._listen_action.setEnabled(self._pet_window._llm_enabled and bool(self._pet_window._config.get("assemblyai_api_key", "").strip()))
         self.addAction(self._listen_action)
 
         self._look_action = QAction(t("ui.menu_look"), self)
@@ -131,6 +131,7 @@ class PetContextMenu(QMenu):
     def refresh_llm_state(self):
         """Update the Preguntar/Mirar actions enabled state after config reload."""
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
+        self._listen_action.setEnabled(self._pet_window._llm_enabled and bool(self._pet_window._config.get("assemblyai_api_key", "").strip()))
         vision_allowed = self._pet_window._perm("allow_vision")
         self._look_action.setVisible(self._pet_window._llm_enabled and vision_allowed)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
@@ -478,6 +479,7 @@ class SettingsDialog(QDialog):
         tabs.addTab(self._build_character_tab(), t("ui.tab_character"))
         tabs.addTab(self._build_settings_tab(), t("ui.tab_settings"))
         tabs.addTab(self._build_llm_tab(), t("ui.tab_llm"))
+        tabs.addTab(self._build_voice_tab(), t("ui.tab_voice"))
         tabs.addTab(self._build_permissions_tab(), t("ui.tab_permissions"))
         layout.addWidget(tabs)
 
@@ -645,21 +647,6 @@ class SettingsDialog(QDialog):
         self._llm_enabled.setChecked(self._config.get("llm_enabled", False))
         layout.addWidget(self._llm_enabled)
 
-        # Voice Settings
-        voice_group = QGroupBox("Voice Settings (ElevenLabs & AssemblyAI)")
-        voice_form = QFormLayout()
-        
-        self._response_mode = QComboBox()
-        self._response_mode.addItems(["text", "voice", "both"])
-        self._response_mode.setCurrentText(self._config.get("response_mode", "both"))
-        voice_form.addRow("Response Mode:", self._response_mode)
-        
-        self._listen_shortcut = QLineEdit(self._config.get("listen_shortcut", "ctrl+shift+space"))
-        voice_form.addRow("Listen Shortcut:", self._listen_shortcut)
-        
-        voice_group.setLayout(voice_form)
-        layout.addWidget(voice_group)
-
         # Provider selector
         provider_group = QGroupBox(t("ui.group_provider"))
         provider_form = QFormLayout()
@@ -750,6 +737,67 @@ class SettingsDialog(QDialog):
         # Show/hide the right fields for current provider
         self._on_provider_changed(current_provider)
 
+        layout.addStretch()
+        return tab
+
+    def _build_voice_tab(self) -> QWidget:
+        """Build the Voice / STT / TTS configuration tab."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        
+        # General Voice Settings
+        gen_group = QGroupBox(t("ui.group_voice_general"))
+        gen_form = QFormLayout()
+        
+        self._response_mode = QComboBox()
+        self._response_mode.addItem(t("ui.mode_text"), "text")
+        self._response_mode.addItem(t("ui.mode_voice"), "voice")
+        self._response_mode.addItem(t("ui.mode_both"), "both")
+        current_mode = self._config.get("response_mode", "both")
+        idx = self._response_mode.findData(current_mode)
+        if idx >= 0:
+            self._response_mode.setCurrentIndex(idx)
+        gen_form.addRow(t("ui.label_response_mode"), self._response_mode)
+        
+        self._listen_shortcut = QLineEdit(self._config.get("listen_shortcut", "ctrl+shift+space"))
+        gen_form.addRow(t("ui.label_listen_shortcut"), self._listen_shortcut)
+        
+        gen_group.setLayout(gen_form)
+        layout.addWidget(gen_group)
+        
+        # AssemblyAI (STT) Settings
+        aai_group = QGroupBox(t("ui.group_assemblyai"))
+        aai_form = QFormLayout()
+        
+        self._aai_api_key = QLineEdit(self._config.get("assemblyai_api_key", ""))
+        self._aai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
+        self._aai_api_key.setPlaceholderText(t("ui.placeholder_apikey"))
+        aai_form.addRow(t("ui.label_apikey"), self._aai_api_key)
+        
+        self._aai_model = QLineEdit(self._config.get("assemblyai_model", "u3-rt-pro"))
+        aai_form.addRow(t("ui.label_model"), self._aai_model)
+        
+        aai_group.setLayout(aai_form)
+        layout.addWidget(aai_group)
+        
+        # ElevenLabs (TTS) Settings
+        el_group = QGroupBox(t("ui.group_elevenlabs"))
+        el_form = QFormLayout()
+        
+        self._el_api_key = QLineEdit(self._config.get("elevenlabs_api_key", ""))
+        self._el_api_key.setEchoMode(QLineEdit.EchoMode.Password)
+        self._el_api_key.setPlaceholderText(t("ui.placeholder_apikey"))
+        el_form.addRow(t("ui.label_apikey"), self._el_api_key)
+        
+        self._el_voice_id = QLineEdit(self._config.get("elevenlabs_voice_id", "U0W3edavfdI8ibPeeteQ"))
+        el_form.addRow(t("ui.label_voice_id"), self._el_voice_id)
+        
+        self._el_model = QLineEdit(self._config.get("elevenlabs_model", "eleven_flash_v2_5"))
+        el_form.addRow(t("ui.label_model"), self._el_model)
+        
+        el_group.setLayout(el_form)
+        layout.addWidget(el_group)
+        
         layout.addStretch()
         return tab
 
@@ -889,8 +937,13 @@ class SettingsDialog(QDialog):
         self._config["groq_api_keys"] = list(self._groq_api_keys)
         self._config["groq_model"] = self._groq_model.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
-        self._config["response_mode"] = self._response_mode.currentText()
+        self._config["response_mode"] = self._response_mode.currentData()
         self._config["listen_shortcut"] = self._listen_shortcut.text().strip()
+        self._config["assemblyai_api_key"] = self._aai_api_key.text().strip()
+        self._config["assemblyai_model"] = self._aai_model.text().strip()
+        self._config["elevenlabs_api_key"] = self._el_api_key.text().strip()
+        self._config["elevenlabs_voice_id"] = self._el_voice_id.text().strip()
+        self._config["elevenlabs_model"] = self._el_model.text().strip()
         idle_lo = self._idle_min.value()
         idle_hi = max(idle_lo, self._idle_max.value())
         self._config["idle_interval"] = [idle_lo, idle_hi]

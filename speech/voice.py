@@ -4,6 +4,7 @@ import time
 import logging
 import tempfile
 import threading
+import hashlib
 from typing import Callable, Optional
 
 import requests
@@ -33,6 +34,9 @@ class ElevenLabsTTSClient(QObject):
         self._player.mediaStatusChanged.connect(self._on_media_status_changed)
         self._playback_ready.connect(self._start_playback)
         self._current_temp_file: Optional[str] = None
+        
+        self._cache_dir = os.path.join(tempfile.gettempdir(), "jacky_tts_cache")
+        os.makedirs(self._cache_dir, exist_ok=True)
 
     def play_tts(self, text: str):
         """Fetch TTS in a background thread and play it."""
@@ -53,6 +57,15 @@ class ElevenLabsTTSClient(QObject):
             
         def _worker():
             try:
+                text_hash = hashlib.md5(clean_text.encode('utf-8')).hexdigest()
+                cache_key = f"{self._voice_id}_{self._model_id}_{text_hash}"
+                cache_path = os.path.join(self._cache_dir, f"{cache_key}.mp3")
+
+                if os.path.exists(cache_path):
+                    log.debug(f"Using cached TTS audio for text: {clean_text[:30]}...")
+                    self._playback_ready.emit(cache_path)
+                    return
+
                 url = f"https://api.elevenlabs.io/v1/text-to-speech/{self._voice_id}/stream"
                 headers = {
                     "xi-api-key": self._api_key,
@@ -69,14 +82,13 @@ class ElevenLabsTTSClient(QObject):
                 response = requests.post(url, json=payload, headers=headers, stream=True, timeout=10)
                 
                 if response.status_code == 200:
-                    fd, temp_path = tempfile.mkstemp(suffix=".mp3")
-                    with os.fdopen(fd, 'wb') as f:
+                    with open(cache_path, 'wb') as f:
                         for chunk in response.iter_content(chunk_size=4096):
                             if chunk:
                                 f.write(chunk)
                     
                     # Safely emit signal to transition to the main GUI thread
-                    self._playback_ready.emit(temp_path)
+                    self._playback_ready.emit(cache_path)
                 else:
                     log.error(f"ElevenLabs TTS failed with HTTP {response.status_code}: {response.text}")
                     self.playback_finished.emit()
@@ -87,7 +99,7 @@ class ElevenLabsTTSClient(QObject):
         threading.Thread(target=_worker, daemon=True).start()
 
     def _start_playback(self, file_path: str):
-        # Clean up previous temp file if it exists
+        # Stop previous playback if any
         self._cleanup()
         self._current_temp_file = file_path
         
@@ -100,16 +112,14 @@ class ElevenLabsTTSClient(QObject):
             self.playback_finished.emit()
 
     def _cleanup(self):
-        """Delete the current temp file if it exists."""
-        if self._current_temp_file and os.path.exists(self._current_temp_file):
+        """Stop player and release the file handle."""
+        if self._current_temp_file:
             try:
-                # Stop player to release file handle just in case
                 self._player.stop()
                 self._player.setSource(QUrl())
-                os.remove(self._current_temp_file)
                 self._current_temp_file = None
             except Exception as e:
-                log.warning(f"Could not delete temp TTS file {self._current_temp_file}: {e}")
+                log.warning(f"Error cleaning up TTS media player: {e}")
 
 import json
 import pyaudio
@@ -118,8 +128,9 @@ import websockets.sync.client
 class AssemblyAISTTClient:
     """Client for AssemblyAI Realtime STT using v3 websockets."""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, model: str = "u3-rt-pro"):
         self._api_key = api_key
+        self._model = model
         self.on_transcript_callback: Optional[Callable[[str], None]] = None
         self.on_error_callback: Optional[Callable[[str], None]] = None
         
@@ -144,7 +155,7 @@ class AssemblyAISTTClient:
         self._should_record_audio = True
         
         def _worker():
-            url = "wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&encoding=pcm_s16le&format_turns=true&speech_model=u3-rt-pro"
+            url = f"wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&encoding=pcm_s16le&format_turns=true&speech_model={self._model}"
             headers = {"Authorization": self._api_key}
             
             try:

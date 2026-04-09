@@ -102,9 +102,12 @@ class PetWindow(QWidget):
         # Voice and Hotkey
         self._tts_client = ElevenLabsTTSClient(
             api_key=self._config.get("elevenlabs_api_key", ""),
+            voice_id=self._config.get("elevenlabs_voice_id", "U0W3edavfdI8ibPeeteQ"),
+            model_id=self._config.get("elevenlabs_model", "eleven_flash_v2_5"),
         )
         self._stt_client = AssemblyAISTTClient(
-            api_key=self._config.get("assemblyai_api_key", "")
+            api_key=self._config.get("assemblyai_api_key", ""),
+            model=self._config.get("assemblyai_model", "u3-rt-pro")
         )
         # Use signals for thread-safe delivery from daemon STT thread to main GUI thread
         self._voice_transcript_ready.connect(self.on_ask)
@@ -511,6 +514,9 @@ class PetWindow(QWidget):
 
     def on_listen_toggle(self):
         """Toggle microphone recording for voice STT."""
+        if not self._config.get("assemblyai_api_key", "").strip():
+            return
+
         if getattr(self._stt_client, "_is_recording", False):
             self._bubble.hide()
             self._stt_client.stop_listening()
