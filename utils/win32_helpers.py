@@ -220,6 +220,20 @@ def set_window_pos(hwnd: int, x: int, y: int) -> bool:
         return False
 
 
+def set_window_click_through(hwnd: int, click_through: bool) -> bool:
+    """Make a window click-through (transparent to mouse events) or solid. Returns True on success."""
+    try:
+        exstyle = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+        if click_through:
+            exstyle |= win32con.WS_EX_TRANSPARENT
+        else:
+            exstyle &= ~win32con.WS_EX_TRANSPARENT
+        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, exstyle)
+        return True
+    except Exception:
+        return False
+
+
 def resize_window(hwnd: int, dw: int, dh: int) -> bool:
     """Resize a window by (dw, dh) pixels. Returns True on success."""
     try:

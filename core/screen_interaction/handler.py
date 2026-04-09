@@ -571,8 +571,12 @@ class ScreenInteractionHandler(QObject):
         phys_x = int(qt_x * dpi)
         phys_y = int(qt_y * dpi)
 
+        # Make the pet transparent to clicks so it doesn't click itself
+        self._pet.set_click_through(True)
+
         if task.action_type == "click":
             success = click_at(phys_x, phys_y, safety_check=True)
+            self._pet.set_click_through(False)
             if success:
                 self._complete("interact_done_action")
             else:
@@ -586,11 +590,13 @@ class ScreenInteractionHandler(QObject):
         elif task.action_type == "close":
             # Click to bring window to foreground, then Alt+F4
             click_at(phys_x, phys_y, safety_check=True)
+            self._pet.set_click_through(False)
             QTimer.singleShot(300, self._do_close)
 
         elif task.action_type == "minimize":
             # Click to bring window to foreground, then minimize
             click_at(phys_x, phys_y, safety_check=True)
+            self._pet.set_click_through(False)
             QTimer.singleShot(300, self._do_minimize)
 
     def _do_close(self):

@@ -424,6 +424,15 @@ class PetWindow(QWidget):
         except Exception:
             pass
 
+    def set_click_through(self, click_through: bool):
+        """Temporarily make the pet window and its speech bubble transparent to mouse clicks."""
+        from utils.win32_helpers import set_window_click_through
+        set_window_click_through(int(self.winId()), click_through)
+        if self._bubble:
+            set_window_click_through(int(self._bubble.winId()), click_through)
+        # Process events so Windows can update the exstyle immediately
+        QApplication.processEvents()
+
     # --- Paint ---
 
     def paintEvent(self, event):
