@@ -19,6 +19,8 @@ class ElevenLabsTTSClient(QObject):
 
     # Signal to notify when playback finishes (or errors)
     playback_finished = pyqtSignal()
+    # Internal signal to safely transition from worker thread to main thread
+    _playback_ready = pyqtSignal(str)
 
     def __init__(self, api_key: str, voice_id: str = "U0W3edavfdI8ibPeeteQ", model_id: str = "eleven_flash_v2_5"):
         super().__init__()
@@ -29,6 +31,7 @@ class ElevenLabsTTSClient(QObject):
         self._audio_output = QAudioOutput()
         self._player.setAudioOutput(self._audio_output)
         self._player.mediaStatusChanged.connect(self._on_media_status_changed)
+        self._playback_ready.connect(self._start_playback)
         self._current_temp_file: Optional[str] = None
 
     def play_tts(self, text: str):
@@ -62,15 +65,14 @@ class ElevenLabsTTSClient(QObject):
                             if chunk:
                                 f.write(chunk)
                     
-                    # Playback must be initiated on the main thread
-                    # QTimer.singleShot is thread-safe in PyQt6 for invoking across threads
-                    QTimer.singleShot(0, lambda: self._start_playback(temp_path))
+                    # Safely emit signal to transition to the main GUI thread
+                    self._playback_ready.emit(temp_path)
                 else:
                     log.error(f"ElevenLabs TTS failed with HTTP {response.status_code}: {response.text}")
-                    QTimer.singleShot(0, self.playback_finished.emit)
+                    self.playback_finished.emit()
             except Exception as e:
                 log.error(f"Error calling ElevenLabs API: {e}")
-                QTimer.singleShot(0, self.playback_finished.emit)
+                self.playback_finished.emit()
 
         threading.Thread(target=_worker, daemon=True).start()
 
