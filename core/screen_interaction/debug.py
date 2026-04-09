@@ -10,16 +10,14 @@ import os
 
 from PyQt6.QtGui import QImage, QPainter, QColor, QPen, QFont
 from PyQt6.QtCore import Qt
+from utils.paths import get_config_dir
 
 log = logging.getLogger("screen_interaction")
 
 # Module-level gate: when False every save/mark function is a no-op.
 _enabled = False
 
-DEBUG_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "debug_screens",
-)
+DEBUG_DIR = os.path.join(get_config_dir(), "debug_screens")
 
 
 def set_enabled(flag: bool):
