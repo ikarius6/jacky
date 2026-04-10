@@ -116,7 +116,9 @@ class PetWindow(QWidget):
         self._stt_client.on_transcript_callback = self._voice_transcript_ready.emit
         self._stt_client.on_error_callback = self._voice_error_ready.emit
         
-        self._global_hotkey = GlobalHotkey()
+        self._global_hotkey = GlobalHotkey(
+            shortcut=self._config.get("listen_shortcut", "ctrl+shift+space")
+        )
         self._global_hotkey.pressed.connect(self.on_listen_toggle)
         self._global_hotkey.start()
 
@@ -882,6 +884,10 @@ class PetWindow(QWidget):
             self._config.get("window_push_enabled", True) and any_destructive
         )
         self._context_menu.refresh_llm_state()
+
+        # Re-register global hotkey if shortcut changed
+        new_shortcut = self._config.get("listen_shortcut", "ctrl+shift+space")
+        self._global_hotkey.update_shortcut(new_shortcut)
 
         # Re-apply scheduler intervals (register handles cleanup of old timers)
         self._setup_scheduler()

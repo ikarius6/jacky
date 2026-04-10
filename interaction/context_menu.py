@@ -12,6 +12,7 @@ from utils.config_manager import load_config, save_config
 from utils.i18n import t, get_permission_defs, available_languages, current_language
 from core.character import get_character_names, get_character_preview
 from speech.llm_provider import fetch_ollama_models
+from interaction.key_binding_input import KeyBindingInput
 
 
 class PetContextMenu(QMenu):
@@ -772,7 +773,8 @@ class SettingsDialog(QDialog):
             self._response_mode.setCurrentIndex(idx)
         gen_form.addRow(t("ui.label_response_mode"), self._response_mode)
         
-        self._listen_shortcut = QLineEdit(self._config.get("listen_shortcut", "ctrl+shift+space"))
+        self._listen_shortcut = KeyBindingInput()
+        self._listen_shortcut.set_shortcut(self._config.get("listen_shortcut", "ctrl+shift+space"))
         gen_form.addRow(t("ui.label_listen_shortcut"), self._listen_shortcut)
         
         gen_group.setLayout(gen_form)
@@ -971,7 +973,8 @@ class SettingsDialog(QDialog):
         self._config["groq_model"] = self._groq_model.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
         self._config["response_mode"] = self._response_mode.currentData()
-        self._config["listen_shortcut"] = self._listen_shortcut.text().strip()
+        shortcut_val = self._listen_shortcut.shortcut_config_string()
+        self._config["listen_shortcut"] = shortcut_val if shortcut_val else "ctrl+shift+space"
         self._config["assemblyai_api_key"] = self._aai_api_key.text().strip()
         self._config["assemblyai_model"] = self._aai_model.text().strip()
         self._config["elevenlabs_api_key"] = self._el_api_key.text().strip()
