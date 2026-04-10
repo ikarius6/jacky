@@ -134,6 +134,7 @@ class PetContextMenu(QMenu):
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self._listen_action.setEnabled(self._pet_window._llm_enabled and bool(self._pet_window._config.get("assemblyai_api_key", "").strip()))
         vision_allowed = self._pet_window._perm("allow_vision")
+        self._look_action.setEnabled(self._pet_window._llm_enabled)
         self._look_action.setVisible(self._pet_window._llm_enabled and vision_allowed)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
         # Refresh all labels for current language
