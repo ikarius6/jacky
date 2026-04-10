@@ -474,6 +474,7 @@
         "label_chat": "Hablar (chat):",
         "label_wincheck": "Interacci\u00f3n ventanas:",
         "group_window": "Interacci\u00f3n con ventanas",
+        "check_always_on_top": "Siempre visible (encima de otras ventanas)",
         "check_window_detect": "Activar detecci\u00f3n de ventanas",
         "check_window_push": "Permitir empujar ventanas",
         "group_debug": "Depuraci\u00f3n",

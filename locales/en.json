@@ -474,6 +474,7 @@
         "label_chat": "Talk (chat):",
         "label_wincheck": "Window interaction:",
         "group_window": "Window interaction",
+        "check_always_on_top": "Always on top (above other windows)",
         "check_window_detect": "Enable window detection",
         "check_window_push": "Allow pushing windows",
         "group_debug": "Debug",

@@ -48,13 +48,16 @@ class PetWindow(QWidget):
         self._config = load_config()
         load_language(self._config.get("language", "es"))
         self._sprite_size = self._config.get("sprite_size", 128)
+        self._always_on_top = self._config.get("always_on_top", True)
 
         # Window setup — fully transparent, no border, no shadow
-        self.setWindowFlags(
+        flags = (
             Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool
         )
+        if self._always_on_top:
+            flags |= Qt.WindowType.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
@@ -150,7 +153,8 @@ class PetWindow(QWidget):
         # Topmost reassertion timer — Windows can revoke the topmost flag
         self._topmost_timer = QTimer(self)
         self._topmost_timer.timeout.connect(self._reassert_topmost)
-        self._topmost_timer.start(5000)  # every 5 seconds
+        if self._always_on_top:
+            self._topmost_timer.start(5000)  # every 5 seconds
 
         # Throttle for _refresh_screen_bounds (avoid querying geometry every 33ms)
         self._BOUNDS_REFRESH_INTERVAL_S = 2.0
@@ -420,6 +424,8 @@ class PetWindow(QWidget):
 
     def _reassert_topmost(self):
         """Re-assert HWND_TOPMOST via Win32 — guards against z-order demotion."""
+        if not self._always_on_top:
+            return
         try:
             self.raise_()
             hwnd = int(self.winId())
@@ -873,6 +879,29 @@ class PetWindow(QWidget):
         if new_lang != current_language():
             load_language(new_lang)
         self._llm = create_llm_provider(self._config)
+        # Apply always_on_top at runtime
+        new_on_top = self._config.get("always_on_top", True)
+        if new_on_top != self._always_on_top:
+            self._always_on_top = new_on_top
+            flags = (
+                Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.Tool
+            )
+            if self._always_on_top:
+                flags |= Qt.WindowType.WindowStaysOnTopHint
+            self.setWindowFlags(flags)
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+            self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+            self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+            self.setStyleSheet("background:transparent;")
+            self.show()  # re-show after setWindowFlags hides the widget
+            self._remove_dwm_border()
+            if self._always_on_top:
+                self._topmost_timer.start(5000)
+                self._reassert_topmost()
+            else:
+                self._topmost_timer.stop()
+
         self._window_awareness.set_enabled(self._config.get("window_interaction_enabled", True))
         perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
         any_destructive = any(

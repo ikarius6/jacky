@@ -619,6 +619,9 @@ class SettingsDialog(QDialog):
         # Window interaction group
         win_group = QGroupBox(t("ui.group_window"))
         win_form = QFormLayout()
+        self._always_on_top = QCheckBox(t("ui.check_always_on_top"))
+        self._always_on_top.setChecked(self._config.get("always_on_top", True))
+        win_form.addRow(self._always_on_top)
         self._win_enabled = QCheckBox(t("ui.check_window_detect"))
         self._win_enabled.setChecked(self._config.get("window_interaction_enabled", True))
         win_form.addRow(self._win_enabled)
@@ -961,6 +964,7 @@ class SettingsDialog(QDialog):
         self._config["language"] = self._lang_combo.currentData()
         self._config["character"] = self._selected_char
         self._config["movement_speed"] = self._speed_spin.value()
+        self._config["always_on_top"] = self._always_on_top.isChecked()
         self._config["window_interaction_enabled"] = self._win_enabled.isChecked()
         self._config["window_push_enabled"] = self._win_push.isChecked()
         self._config["llm_enabled"] = self._llm_enabled.isChecked()
