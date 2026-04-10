@@ -225,8 +225,10 @@ class ScreenInteractionHandler(QObject):
             grid_template = (
                 'The image has a numbered grid overlay ({cols} columns x {rows} rows). '
                 'Cells numbered 1 to {total}, left to right, top to bottom. '
-                'Which cell contains: "{target}"? '
-                'Respond ONLY with JSON: {{"cell": <number>, "confidence": <0_to_100>}}. '
+                'Which cell contains: "{target}"? Also identify the second-best candidate '
+                'cell if the target is near a cell boundary. '
+                'Respond ONLY with JSON: {{"cell": <number>, "confidence": <0_to_100>, '
+                '"alt_cell": <second_best_number_or_null>}}. '
                 'If not visible: {{"error": "not found"}}'
             )
         user_prompt = (grid_template
@@ -288,31 +290,50 @@ class ScreenInteractionHandler(QObject):
             self._fail("interact_not_found")
             return
 
+        # Persist Phase 1 confidence for dynamic crop sizing in Phase 2
+        self._current_task.confidence = confidence
+
+        # Parse optional alternative cell candidate
+        alt_cell_num = None
+        try:
+            raw_alt = parsed.get("alt_cell")
+            if raw_alt is not None:
+                alt_cell_num = int(raw_alt)
+                if alt_cell_num < 1 or alt_cell_num > total:
+                    alt_cell_num = None
+        except (ValueError, TypeError):
+            alt_cell_num = None
+
         cell_w, cell_h = self._cell_dims
         col = (cell_num - 1) % GRID_COLS
         row = (cell_num - 1) // GRID_COLS
         center_x = col * cell_w + cell_w / 2
         center_y = row * cell_h + cell_h / 2
 
-        log.info("GRID cell=%d col=%d row=%d center=(%.0f,%.0f) conf=%d",
-                 cell_num, col, row, center_x, center_y, confidence)
+        log.info("GRID cell=%d col=%d row=%d center=(%.0f,%.0f) conf=%d alt=%s",
+                 cell_num, col, row, center_x, center_y, confidence, alt_cell_num)
 
         # Debug: highlight selected cell
         mark_cell("01_grid_sent.png", "02_grid_result.png",
                   cell_num, GRID_COLS, GRID_ROWS, cell_w, cell_h)
 
         # Phase 2: crop around the identified cell and ask for precise coords
-        self._step_crop_and_locate(center_x, center_y, cell_w, cell_h)
+        self._step_crop_and_locate(center_x, center_y, cell_w, cell_h, alt_cell_num)
 
     # ── Phase 2: Crop & sub-grid locate ───────────────────────────
 
     def _step_crop_and_locate(self, center_x: float, center_y: float,
-                               cell_w: float, cell_h: float):
+                               cell_w: float, cell_h: float,
+                               alt_cell_num: int = None):
         """Phase 2: Crop around identified cell, overlay a sub-grid → LLM picks sub-cell.
 
         Uses the **same grid-classification approach** as Phase 1 (which cell
         contains the target?) rather than asking for coordinates — LLMs are
         reliable at classification but terrible at coordinate estimation.
+
+        Dynamic crop sizing: the padding factor grows when Phase 1 confidence
+        is low, and the crop center shifts toward the midpoint between the
+        primary and alternative cells when they are adjacent.
         """
         if self._clean_qimage is None:
             self._pet._llm_pending = False
@@ -324,11 +345,43 @@ class ScreenInteractionHandler(QObject):
         img_w = clean.width()
         img_h = clean.height()
 
-        # Crop 2× cell size to give the LLM surrounding context
-        crop_w = int(cell_w * 2)
-        crop_h = int(cell_h * 2)
-        crop_left = max(0, int(center_x - crop_w / 2))
-        crop_top = max(0, int(center_y - crop_h / 2))
+        # Dynamic crop: wider context when Phase 1 confidence is low
+        confidence = self._current_task.confidence
+        if confidence < 50:
+            padding_factor = 3.0   # include ±1 adjacent cells
+        elif confidence < 60:
+            padding_factor = 2.5
+        else:
+            padding_factor = 2.0
+
+        # If the LLM provided an adjacent alt_cell, shift crop center
+        # toward the midpoint between the two candidates
+        crop_center_x = center_x
+        crop_center_y = center_y
+        if alt_cell_num is not None and confidence < 80:
+            alt_col = (alt_cell_num - 1) % GRID_COLS
+            alt_row = (alt_cell_num - 1) // GRID_COLS
+            alt_cx = alt_col * cell_w + cell_w / 2
+            alt_cy = alt_row * cell_h + cell_h / 2
+            # Check adjacency: ≤ 1 cell apart in both axes
+            if abs(alt_col - (int(center_x // cell_w))) <= 1 and \
+               abs(alt_row - (int(center_y // cell_h))) <= 1:
+                # Shift center 30% toward alt candidate (bias toward primary)
+                crop_center_x = center_x * 0.7 + alt_cx * 0.3
+                crop_center_y = center_y * 0.7 + alt_cy * 0.3
+                # Ensure crop is wide enough to cover both cells
+                padding_factor = max(padding_factor, 2.5)
+                log.info("CROP alt_cell=%d adjacent, center shifted "
+                         "(%.0f,%.0f)->(%.0f,%.0f) pad=%.1f",
+                         alt_cell_num, center_x, center_y,
+                         crop_center_x, crop_center_y, padding_factor)
+
+        log.info("CROP padding=%.1fx conf=%d", padding_factor, confidence)
+
+        crop_w = int(cell_w * padding_factor)
+        crop_h = int(cell_h * padding_factor)
+        crop_left = max(0, int(crop_center_x - crop_w / 2))
+        crop_top = max(0, int(crop_center_y - crop_h / 2))
         if crop_left + crop_w > img_w:
             crop_left = max(0, img_w - crop_w)
         if crop_top + crop_h > img_h:
