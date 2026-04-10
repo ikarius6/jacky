@@ -6,10 +6,16 @@ A Windows desktop pet application. Jacky is a cute chibi character who walks aro
 
 [⬇ Download](https://github.com/ikarius6/jacky/releases/latest)
 
+## Demo
+
+<video src="demo.mp4" controls width="600"></video>
+
 ## Screenshots
 
 ![Jacky](screens/1.jpg)
 ![Skins](screens/2.jpg)
+![Vision](screens/3.jpg)
+![Multiple Jackys](screens/4.gif)
 
 ## Features
 
