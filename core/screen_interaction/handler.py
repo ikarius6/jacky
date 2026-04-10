@@ -365,6 +365,7 @@ class ScreenInteractionHandler(QObject):
                 'This zoomed-in image has a green numbered grid overlay '
                 '({cols} columns x {rows} rows). Cells numbered 1 to {total}, '
                 'left to right, top to bottom. '
+                'First, describe in one sentence what you see in the image. '
                 'Which cell contains the CENTER of: "{target}"? '
                 'Respond ONLY with JSON: {{"cell": <number>, "confidence": <0_to_100>}}. '
                 'If not found: {{"error": "not found"}}'

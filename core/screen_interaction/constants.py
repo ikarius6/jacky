@@ -13,3 +13,6 @@ GRID_ROWS = 6
 # Sub-grid dimensions for precise locate phase (phase 2)
 SUB_COLS = 8
 SUB_ROWS = 6
+
+# Minimum LLM confidence to trust an intent classification result
+INTENT_CONFIDENCE_THRESHOLD = 70

@@ -149,6 +149,11 @@ def get_interact_locate_prompt() -> str:
     return _strings.get("interact_locate_prompt", "")
 
 
+def get_intent_classify_prompt() -> str:
+    """Return the intent classification prompt template (contains {question})."""
+    return _strings.get("intent_classify_prompt", "")
+
+
 def get_interact_refine_prompt() -> str:
     """Return the refine prompt template for screen interaction (contains {target})."""
     return _strings.get("interact_refine_prompt", "")

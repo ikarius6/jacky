@@ -17,6 +17,8 @@ from core.system_events import SystemEventsMonitor, SystemEvent
 from core.window_interactions import WindowInteractionHandler
 from core.peer_interactions import PeerInteractionHandler
 from core.screen_interaction import ScreenInteractionHandler
+from core.screen_interaction.intent_classifier import classify_intent, IntentResult
+from core.screen_interaction.constants import INTENT_CONFIDENCE_THRESHOLD
 from core.screen_interaction.debug import set_enabled as _set_debug_enabled
 from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
@@ -40,6 +42,7 @@ class PetWindow(QWidget):
 
     _llm_text_ready = pyqtSignal(str)
     _llm_ask_ready = pyqtSignal(str)
+    _intent_ready = pyqtSignal(object)  # IntentResult or None
     _voice_transcript_ready = pyqtSignal(str)
     _voice_error_ready = pyqtSignal(str)
 
@@ -89,8 +92,10 @@ class PetWindow(QWidget):
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._silent_mode = self._config.get("silent_mode", False)
         self._llm_pending = False
+        self._pending_question = ""  # stashed for intent classification callback
         self._llm_text_ready.connect(self._say)
         self._llm_ask_ready.connect(self._say_forced)
+        self._intent_ready.connect(self._on_intent_classified)
 
         # Interaction components
         self._click_handler = ClickHandler(self)
@@ -542,34 +547,22 @@ class PetWindow(QWidget):
             self._say(t("ui.listening"), force=True, timeout_ms=30000, skip_voice=True)
             self._stt_client.start_listening()
 
-    def on_ask(self, question: str):
-        """User asked a direct question via the Preguntar dialog."""
-        if not self._llm_enabled:
+    def _start_screen_task(self, action_type: str, target_desc: str):
+        """Validate permissions and start a screen interaction task."""
+        if not self._perm("allow_vision"):
+            self._say(t("ui.no_vision_perm"), force=True)
             return
-
-        # Check screen interaction FIRST (before busy check — cancel old task if needed)
-        parsed = self._screen_interaction.try_parse_interaction(question)
-        if parsed:
-            action_type, target_desc = parsed
-            if not self._perm("allow_vision"):
-                self._say(t("ui.no_vision_perm"), force=True)
-                return
-            if action_type != "navigate" and not self._perm("allow_screen_interact"):
-                self._say(t("ui.no_interact_perm"), force=True)
-                return
-            if self._screen_interaction.is_active:
-                self._screen_interaction.cancel(say_line=False)
-            if self._llm_pending:
-                self._llm_pending = False
-            self._screen_interaction.start_task(action_type, target_desc)
+        if action_type != "navigate" and not self._perm("allow_screen_interact"):
+            self._say(t("ui.no_interact_perm"), force=True)
             return
-
+        if self._screen_interaction.is_active:
+            self._screen_interaction.cancel(say_line=False)
         if self._llm_pending:
-            self._say(t("ui.busy"), force=True)
-            return
-        self._llm_pending = True
-        self._show_thinking()
+            self._llm_pending = False
+        self._screen_interaction.start_task(action_type, target_desc)
 
+    def _ask_direct_or_vision(self, question: str):
+        """Send the question to the LLM using vision or text based on keywords/permissions."""
         if self._needs_vision(question) and self._perm("allow_vision"):
             context = self._build_llm_context(t("llm_prompts.ask_vision", question=question))
             image_b64 = self._capture_vision()
@@ -577,6 +570,69 @@ class PetWindow(QWidget):
         else:
             context = self._build_llm_context(t("llm_prompts.ask_direct", question=question))
             self._llm.generate(context, self._on_ask_response)
+
+    def on_ask(self, question: str):
+        """User asked a direct question via the Preguntar dialog.
+
+        Flow:
+        1. Fast path — keyword matching (no LLM call)
+        2. Fallback — LLM intent classification
+        3. Based on LLM result → screen interaction, vision, or chat
+        """
+        if not self._llm_enabled:
+            return
+
+        # ── Fast path: keyword matching ──
+        parsed = self._screen_interaction.try_parse_interaction(question)
+        if parsed:
+            action_type, target_desc = parsed
+            self._start_screen_task(action_type, target_desc)
+            return
+
+        if self._llm_pending:
+            self._say(t("ui.busy"), force=True)
+            return
+        self._llm_pending = True
+        self._pending_question = question
+        self._show_thinking()
+
+        # ── Fallback: LLM intent classification ──
+        def _on_result(result):
+            # Emit signal for thread-safe delivery to main thread
+            self._intent_ready.emit(result)
+
+        classify_intent(question, self._llm, _on_result)
+
+    def _on_intent_classified(self, result):
+        """Handle the LLM intent classification result (runs on main thread via signal)."""
+        question = self._pending_question
+        self._pending_question = ""
+
+        # If classification failed or is low confidence → fall through to chat
+        if result is None or result.confidence < INTENT_CONFIDENCE_THRESHOLD:
+            log.info("INTENT fallback to chat (result=%s)", result)
+            self._ask_direct_or_vision(question)
+            return
+
+        log.info("INTENT classified: %s conf=%d target=%r",
+                 result.intent, result.confidence, result.target)
+
+        if result.is_interaction and result.target:
+            # High-confidence interaction intent
+            self._llm_pending = False
+            self._bubble.hide()
+            self._start_screen_task(result.intent, result.target)
+        elif result.intent == "vision":
+            # Vision intent — use the vision flow with the original question
+            if self._perm("allow_vision"):
+                context = self._build_llm_context(t("llm_prompts.ask_vision", question=question))
+                image_b64 = self._capture_vision()
+                self._llm.generate_with_image(context, image_b64, self._on_ask_response)
+            else:
+                self._ask_direct_or_vision(question)
+        else:
+            # Chat or interaction without target → ask directly
+            self._ask_direct_or_vision(question)
 
     def on_look(self):
         """Context-menu action: pet looks at the screen and comments on what it sees."""
