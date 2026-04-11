@@ -25,6 +25,10 @@ class AnimationController:
         self._frames: Dict[str, List[QPixmap]] = {}
         self._current_state: str = "idle"
         self._frame_index: int = 0
+        # Runtime facing direction — True means the pet is looking left.
+        # States already in _flip_states have their pixmaps pre-baked as
+        # left-facing, so they must NOT be flipped again.
+        self._facing_left: bool = False
         self._load_all_sprites()
 
     def _load_all_sprites(self):
@@ -111,20 +115,42 @@ class AnimationController:
             self._current_state = state_name
             self._frame_index = 0
 
+    def set_facing(self, facing_left: bool) -> None:
+        """Update the direction the pet is facing.
+
+        States that are already stored as left-facing variants (i.e. they are
+        in ``_flip_states``) will NOT be flipped again — their pixmaps are
+        pre-baked at load time.  All other states will be horizontally mirrored
+        on the fly when ``facing_left`` is True.
+        """
+        self._facing_left = facing_left
+
+    def _maybe_flip(self, pixmap: QPixmap) -> QPixmap:
+        """Return a horizontally flipped copy of *pixmap* if needed.
+
+        The flip is applied only when:
+        - The pet is facing left (``_facing_left`` is True), AND
+        - The current state is NOT one of the pre-baked left-facing variants
+          (those already have their pixels reversed at load time).
+        """
+        if self._facing_left and self._current_state not in self._flip_states:
+            return pixmap.transformed(QTransform().scale(-1, 1))
+        return pixmap
+
     def tick(self) -> Optional[QPixmap]:
         """Advance to next frame and return current pixmap."""
         frames = self._frames.get(self._current_state)
         if not frames:
             return None
         self._frame_index = (self._frame_index + 1) % len(frames)
-        return frames[self._frame_index]
+        return self._maybe_flip(frames[self._frame_index])
 
     def current_frame(self) -> Optional[QPixmap]:
         """Return current frame without advancing."""
         frames = self._frames.get(self._current_state)
         if not frames:
             return None
-        return frames[self._frame_index % len(frames)]
+        return self._maybe_flip(frames[self._frame_index % len(frames)])
 
     @property
     def frame_interval_ms(self) -> int:

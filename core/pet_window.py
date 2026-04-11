@@ -696,6 +696,9 @@ class PetWindow(QWidget):
         if anim_name not in self.animation.available_states:
             log.warning("ANIM_MISS state='%s' not in available=%s pos=(%d,%d)",
                         anim_name, self.animation.available_states, self.x(), self.y())
+        # Keep the controller aware of the current facing direction so every
+        # animation (idle, talk, hurt, jump…) mirrors correctly when facing left.
+        self.animation.set_facing(self.pet.direction < 0)
         self.animation.set_state(anim_name)
         self.animation.tick()
         self.update()
