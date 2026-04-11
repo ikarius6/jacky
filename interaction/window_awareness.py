@@ -19,6 +19,15 @@ _JUNK_PATTERNS = (
     "softwareupdatenotification", "progman", "workerw",
 )
 
+# Executables whose windows are always junk regardless of title
+_JUNK_PROCESSES = (
+    "applicationframehost.exe",
+    "python.exe",
+    "pythonw.exe",
+    "python3.exe",
+    "conhost.exe",
+)
+
 
 def _is_junk_window(title: str, process_name: str) -> bool:
     """Return True if a window looks like system noise rather than a real user window."""
@@ -30,8 +39,11 @@ def _is_junk_window(title: str, process_name: str) -> bool:
     # Internal/system window names
     if t.startswith("_"):
         return True
-    # Known system junk patterns
-    if any(pat in t for pat in _JUNK_PATTERNS):
+    # Known system junk patterns — check both title and process name
+    if any(pat in t or pat in p for pat in _JUNK_PATTERNS):
+        return True
+    # Executables that are always junk
+    if any(p == proc for proc in _JUNK_PROCESSES):
         return True
     # Very short generic title (likely internal)
     if len(t) < 3:
