@@ -14,20 +14,16 @@ class AnimationController:
     """
 
     def __init__(self, sprites_dir: str, sprite_size: int = 128, fps: int = 6,
-                 layout: str = "flat", state_map: Dict[str, str] | None = None,
-                 flip_states: List[str] | None = None):
+                 layout: str = "flat", state_map: Dict[str, str] | None = None):
         self._sprites_dir = sprites_dir
         self._sprite_size = sprite_size
         self._fps = fps
         self._layout = layout
         self._state_map = state_map or {}
-        self._flip_states = set(flip_states or [])
         self._frames: Dict[str, List[QPixmap]] = {}
         self._current_state: str = "idle"
         self._frame_index: int = 0
         # Runtime facing direction — True means the pet is looking left.
-        # States already in _flip_states have their pixmaps pre-baked as
-        # left-facing, so they must NOT be flipped again.
         self._facing_left: bool = False
         self._load_all_sprites()
 
@@ -57,24 +53,23 @@ class AnimationController:
 
     def _load_sequence_dirs(self):
         """Load from subdirectories, using state_map to assign animation names."""
-        # Build reverse map: directory name -> list of (state_name, flip)
-        dir_to_states: Dict[str, List[tuple]] = {}
+        # Build reverse map: directory name -> list of state_names
+        dir_to_states: Dict[str, List[str]] = {}
         for anim_name, dir_name in self._state_map.items():
-            flip = anim_name in self._flip_states
-            dir_to_states.setdefault(dir_name, []).append((anim_name, flip))
+            dir_to_states.setdefault(dir_name, []).append(anim_name)
 
-        for dir_name, state_entries in dir_to_states.items():
+        for dir_name, state_names in dir_to_states.items():
             dir_path = os.path.join(self._sprites_dir, dir_name)
             if not os.path.isdir(dir_path):
                 continue
             files = sorted(os.listdir(dir_path))
             png_files = [f for f in files if f.lower().endswith(".png")]
-            for anim_name, flip in state_entries:
+            for anim_name in state_names:
                 for fname in png_files:
-                    self._load_frame(anim_name, os.path.join(dir_path, fname), flip=flip)
+                    self._load_frame(anim_name, os.path.join(dir_path, fname))
 
-    def _load_frame(self, state_name: str, path: str, flip: bool = False):
-        """Load a single frame, scale it, optionally flip, and store it."""
+    def _load_frame(self, state_name: str, path: str):
+        """Load a single frame, scale it, and store it."""
         pixmap = QPixmap(path)
         if pixmap.isNull():
             return
@@ -83,8 +78,6 @@ class AnimationController:
             aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio,
             transformMode=Qt.TransformationMode.SmoothTransformation,
         )
-        if flip:
-            pixmap = pixmap.transformed(QTransform().scale(-1, 1))
         if state_name not in self._frames:
             self._frames[state_name] = []
         self._frames[state_name].append(pixmap)
@@ -118,22 +111,14 @@ class AnimationController:
     def set_facing(self, facing_left: bool) -> None:
         """Update the direction the pet is facing.
 
-        States that are already stored as left-facing variants (i.e. they are
-        in ``_flip_states``) will NOT be flipped again — their pixmaps are
-        pre-baked at load time.  All other states will be horizontally mirrored
-        on the fly when ``facing_left`` is True.
+        When ``facing_left`` is True, all frames returned by ``tick()`` and
+        ``current_frame()`` are horizontally mirrored on the fly.
         """
         self._facing_left = facing_left
 
     def _maybe_flip(self, pixmap: QPixmap) -> QPixmap:
-        """Return a horizontally flipped copy of *pixmap* if needed.
-
-        The flip is applied only when:
-        - The pet is facing left (``_facing_left`` is True), AND
-        - The current state is NOT one of the pre-baked left-facing variants
-          (those already have their pixels reversed at load time).
-        """
-        if self._facing_left and self._current_state not in self._flip_states:
+        """Return a horizontally flipped copy of *pixmap* if the pet faces left."""
+        if self._facing_left:
             return pixmap.transformed(QTransform().scale(-1, 1))
         return pixmap
 

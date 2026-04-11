@@ -96,7 +96,7 @@ class PeerInteractionHandler:
         self._chase_timer.start(300)
 
         # Force movement state AFTER _say so it overrides any TALKING state.
-        if {"run_right", "run_left"} & set(pw.animation.available_states):
+        if "run" in pw.animation.available_states:
             pw.pet.set_state(PetState.RUNNING)
         else:
             pw.pet.set_state(PetState.WALKING)
@@ -142,7 +142,7 @@ class PeerInteractionHandler:
         pw.movement._target_y = target_y
         pw.movement._direction = 1 if target_x > pw.movement.x else -1
         pw.pet.direction = pw.movement._direction
-        if {"run_right", "run_left"} & set(pw.animation.available_states):
+        if "run" in pw.animation.available_states:
             pw.pet.set_state(PetState.RUNNING)
         else:
             pw.pet.set_state(PetState.WALKING)
@@ -238,7 +238,7 @@ class PeerInteractionHandler:
         # movement.tick().  This keeps the chaser actually running.
         if pw.pet.state not in (PetState.RUNNING, PetState.WALKING,
                                 PetState.DRAGGED, PetState.FALLING):
-            if {"run_right", "run_left"} & set(pw.animation.available_states):
+            if "run" in pw.animation.available_states:
                 pw.pet.set_state(PetState.RUNNING)
             else:
                 pw.pet.set_state(PetState.WALKING)
@@ -418,7 +418,7 @@ class PeerInteractionHandler:
                 pw.movement._direction = flee_dir
                 break
 
-        if {"run_right", "run_left"} & set(pw.animation.available_states):
+        if "run" in pw.animation.available_states:
             pw.pet.set_state(PetState.RUNNING)
         else:
             pw.pet.set_state(PetState.WALKING)

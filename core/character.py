@@ -9,9 +9,9 @@ Each sprite pack needs a small ``character.json`` next to its frames::
         "fps": 10
     }
 
-For ``sequence_dirs`` packs the state_map and flip_states are **auto-detected**
-from the subdirectory names using DIR_TO_STATES.  You can still supply explicit
-``state_map`` / ``flip_states`` / ``type`` in the JSON to override.
+For ``sequence_dirs`` packs the state_map is **auto-detected** from the
+subdirectory names using DIR_TO_STATES.  You can still supply an explicit
+``state_map`` / ``type`` in the JSON to override.
 
 For ``flat`` packs (like placeholder) set ``"type": "flat"`` in the JSON.
 """
@@ -32,8 +32,8 @@ SPRITES_ROOT = os.path.join(BASE_DIR, "sprites")
 DIR_TO_STATES: dict[str, list[str]] = {
     "Idle":                 ["idle"],
     "Idle Blinking":        ["idle_blink", "talk"],
-    "Walking":              ["walk_right", "walk_left"],
-    "Running":              ["run_right", "run_left"],
+    "Walking":              ["walk"],
+    "Running":              ["run"],
     "Hurt":                 ["hurt", "drag"],
     "Kicking":              ["kick", "happy"],
     "Dying":                ["dying"],
@@ -52,10 +52,6 @@ DIR_TO_STATES: dict[str, list[str]] = {
     "Run Slashing":         ["run_slashing"],
 }
 
-# States that should be horizontally flipped (auto-added when their dir exists)
-AUTO_FLIP = {"walk_left", "run_left"}
-
-
 # ── auto-detection helpers ──────────────────────────────────────────────
 
 def _build_state_map(sprite_dir: str) -> dict[str, str]:
@@ -72,11 +68,6 @@ def _build_state_map(sprite_dir: str) -> dict[str, str]:
             for state in states:
                 state_map[state] = dir_name
     return state_map
-
-
-def _build_flip_states(state_map: dict[str, str]) -> list[str]:
-    """Return flip_states list based on which auto-flip states are present."""
-    return [s for s in sorted(AUTO_FLIP) if s in state_map]
 
 
 # ── discovery ───────────────────────────────────────────────────────────
@@ -108,10 +99,8 @@ def _load_characters() -> dict[str, dict]:
         if char_type == "sequence_dirs" and "state_map" not in data:
             abs_sprite_dir = os.path.join(SPRITES_ROOT, folder)
             state_map = _build_state_map(abs_sprite_dir)
-            flip_states = _build_flip_states(state_map)
         else:
             state_map = data.get("state_map", {})
-            flip_states = data.get("flip_states", [])
 
         characters[name] = {
             "type": char_type,
@@ -119,7 +108,6 @@ def _load_characters() -> dict[str, dict]:
             "sprite_size": data.get("sprite_size", 128),
             "fps": data.get("fps", 8),
             "state_map": state_map,
-            "flip_states": flip_states,
         }
 
     return characters
@@ -143,7 +131,7 @@ def get_character(name: str) -> dict:
     if fallback:
         return CHARACTERS[fallback]
     return {"type": "flat", "path": "sprites/placeholder", "sprite_size": 128,
-            "fps": 6, "state_map": {}, "flip_states": []}
+            "fps": 6, "state_map": {}}
 
 
 def get_sprites_dir(name: str) -> str:

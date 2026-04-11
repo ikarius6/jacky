@@ -78,7 +78,6 @@ class PetWindow(QWidget):
             fps=self._char_cfg.get("fps", 6),
             layout=self._char_cfg.get("type", "flat"),
             state_map=self._char_cfg.get("state_map"),
-            flip_states=self._char_cfg.get("flip_states"),
         )
         self.movement = MovementEngine(
             sprite_size=self._sprite_size,
@@ -530,7 +529,7 @@ class PetWindow(QWidget):
         self.movement._target_y = target_y
         self.movement._direction = 1 if target_x > self.movement._x else -1
         # Use RUNNING for speed; fall back to WALKING if run animation unavailable
-        if {"run_right", "run_left"} & set(self.animation.available_states):
+        if "run" in self.animation.available_states:
             self.pet.set_state(PetState.RUNNING)
         else:
             self.pet.set_state(PetState.WALKING)
@@ -754,7 +753,7 @@ class PetWindow(QWidget):
         log.info("SCHED walk from pos=(%d,%d)", self.x(), self.y())
         self.movement.pick_random_target()
         # 30% chance to run instead of walk (if character supports it)
-        if random.random() < 0.3 and {"run_right", "run_left"} & set(self.animation.available_states):
+        if random.random() < 0.3 and "run" in self.animation.available_states:
             self.pet.set_state(PetState.RUNNING)
         else:
             self.pet.set_state(PetState.WALKING)
@@ -1002,7 +1001,6 @@ class PetWindow(QWidget):
                 fps=self._char_cfg.get("fps", 6),
                 layout=self._char_cfg.get("type", "flat"),
                 state_map=self._char_cfg.get("state_map"),
-                flip_states=self._char_cfg.get("flip_states"),
             )
             self._anim_timer.setInterval(self.animation.frame_interval_ms)
             self._update_tray_icon()

@@ -28,14 +28,14 @@ class PetState(Enum):
 # Maps pet states to animation state names (sprite prefixes)
 STATE_ANIMATION_MAP = {
     PetState.IDLE: "idle",
-    PetState.WALKING: "walk_right",  # overridden by direction
+    PetState.WALKING: "walk",
     PetState.TALKING: "talk",
     PetState.DRAGGED: "drag",
     PetState.INTERACTING: "kick",
     PetState.PEEKING: "idle",
     PetState.HAPPY: "happy",
     PetState.EATING: "happy",
-    PetState.RUNNING: "run_right",  # overridden by direction
+    PetState.RUNNING: "run",
     PetState.JUMPING: "jump_loop",
     PetState.FALLING: "falling",
     PetState.HURT: "hurt",
@@ -92,11 +92,11 @@ class Pet:
             cb(old, new_state)
 
     def get_animation_name(self) -> str:
-        """Return the animation state name for the current pet state."""
-        if self._state == PetState.WALKING:
-            return "walk_right" if self._direction > 0 else "walk_left"
-        if self._state == PetState.RUNNING:
-            return "run_right" if self._direction > 0 else "run_left"
+        """Return the animation state name for the current pet state.
+
+        Direction is handled externally via AnimationController.set_facing(),
+        so only a single state name is needed for walking and running.
+        """
         return STATE_ANIMATION_MAP.get(self._state, "idle")
 
     def resume_previous(self):

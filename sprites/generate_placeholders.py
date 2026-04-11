@@ -165,19 +165,12 @@ def generate():
             f"idle_{i}.png"
         )
 
-    # WALK RIGHT frames (4): alternating legs
+    # WALK frames (4): alternating legs
     leg_offsets = [0, 4, 0, -4]
     for i, lo in enumerate(leg_offsets):
         _create_frame(
             lambda p, lo=lo: _draw_chibi_base(p, eye_state="open", mouth_state="closed", leg_offset=lo),
-            f"walk_right_{i}.png"
-        )
-
-    # WALK LEFT frames (4): mirrored (we'll just flip at load time; for now same as right)
-    for i, lo in enumerate(leg_offsets):
-        _create_frame(
-            lambda p, lo=lo: _draw_chibi_base(p, eye_state="open", mouth_state="closed", leg_offset=-lo),
-            f"walk_left_{i}.png"
+            f"walk_{i}.png"
         )
 
     # TALK frames (2): mouth open/closed
