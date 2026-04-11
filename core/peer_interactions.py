@@ -80,8 +80,10 @@ class PeerInteractionHandler:
     def do_chase(self, target: PeerInfo):
         """Continuously chase the peer for ~5 seconds."""
         pw = self._pw
-        pw._say(get_line("peer_chase", pw.pet.name, peer_name=target.display_name))
+        # Send the event and say the line, but set movement state AFTER _say so
+        # we win over the TALKING state that _say may apply internally.
         pw._peer_discovery.send_event(target.pid, "chase")
+        pw._say(get_line("peer_chase", pw.pet.name, peer_name=target.display_name))
 
         # Start chasing: update target position every 300ms
         self._chase_target_pid = target.pid
@@ -93,6 +95,7 @@ class PeerInteractionHandler:
         self._chase_timer.timeout.connect(self._chase_tick)
         self._chase_timer.start(300)
 
+        # Force movement state AFTER _say so it overrides any TALKING state.
         if {"run_right", "run_left"} & set(pw.animation.available_states):
             pw.pet.set_state(PetState.RUNNING)
         else:
@@ -229,6 +232,16 @@ class PeerInteractionHandler:
         pw.movement._target_y = target.y
         pw.movement._direction = 1 if target.x > pw.movement.x else -1
         pw.pet.direction = pw.movement._direction
+
+        # Re-assert movement state every tick: the talk-end timer or other events
+        # may have reset the pet to IDLE, which stops _on_move_tick from calling
+        # movement.tick().  This keeps the chaser actually running.
+        if pw.pet.state not in (PetState.RUNNING, PetState.WALKING,
+                                PetState.DRAGGED, PetState.FALLING):
+            if {"run_right", "run_left"} & set(pw.animation.available_states):
+                pw.pet.set_state(PetState.RUNNING)
+            else:
+                pw.pet.set_state(PetState.WALKING)
 
     def _stop_chase(self):
         """Stop the chase."""
