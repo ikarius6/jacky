@@ -6,6 +6,7 @@ import tempfile
 import threading
 import hashlib
 import json
+from collections import deque
 from typing import Callable, Optional
 
 import requests
@@ -224,7 +225,7 @@ import websockets.sync.client
 class AssemblyAISTTClient:
     """Client for AssemblyAI Realtime STT using v3 websockets."""
     
-    def __init__(self, api_key: str, model: str = "u3-rt-pro"):
+    def __init__(self, api_key: str, model: str = "universal-streaming-multilingual"):
         self._api_key = api_key
         self._model = model
         self.on_transcript_callback: Optional[Callable[[str], None]] = None
@@ -253,22 +254,53 @@ class AssemblyAISTTClient:
         self._should_record_audio = True
         
         def _worker():
+            _RATE = 16000
+            _VAD_MS = 30  # webrtcvad requires 10/20/30 ms frames
+            _VAD_FRAMES = int(_RATE * _VAD_MS / 1000)  # 480 samples
+            _PRE_ROLL = 33  # ~1 s of audio at 30 ms/frame
+            _SEND_BYTES = int(_RATE * 2 * 240 / 1000)  # 7680 — ~240 ms batch for WS
+            _MIN_SEND_BYTES = int(_RATE * 2 * 50 / 1000)  # 1600 — 50 ms floor (API minimum)
+
             url = (
                 f"wss://streaming.assemblyai.com/v3/ws"
-                f"?sample_rate=16000"
+                f"?sample_rate={_RATE}"
                 f"&encoding=pcm_s16le"
                 f"&format_turns=true"
                 f"&speech_model={self._model}"
-                f"&end_of_turn_confidence_threshold=0.85"   # default ~0.7; higher = less eager to split turns
-                f"&min_end_of_turn_silence_when_confident=500"  # ms of silence required (default 160ms)
+                f"&end_of_turn_confidence_threshold=0.85"
+                f"&min_end_of_turn_silence_when_confident=500"
             )
             headers = {"Authorization": self._api_key}
-            
+
+            p = pyaudio.PyAudio()
+            stream = p.open(
+                format=pyaudio.paInt16, channels=1,
+                rate=_RATE, input=True,
+                frames_per_buffer=_VAD_FRAMES,
+            )
+
             try:
+                # --- VAD pre-gate: buffer locally, connect only on speech ---
+                pre_data = b""
+                try:
+                    import webrtcvad
+                    vad = webrtcvad.Vad(2)  # aggressiveness 0-3
+                    ring = deque(maxlen=_PRE_ROLL)
+                    while self._should_record_audio:
+                        frame = stream.read(_VAD_FRAMES, exception_on_overflow=False)
+                        ring.append(frame)
+                        if vad.is_speech(frame, _RATE):
+                            break
+                    if not self._should_record_audio:
+                        return  # cancelled before speech — no WS opened, no billing
+                    pre_data = b"".join(ring)
+                    log.debug("VAD pre-gate: speech detected, buffered %d bytes", len(pre_data))
+                except ImportError:
+                    log.debug("webrtcvad not installed; connecting immediately (no pre-gate)")
+
+                # --- Stream via WS ---
                 with websockets.sync.client.connect(url, additional_headers=headers) as ws:
-                    p = pyaudio.PyAudio()
-                    stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=4000)
-                    
+
                     def _receive():
                         try:
                             for message in ws:
@@ -327,9 +359,15 @@ class AssemblyAISTTClient:
                     recv_thread.start()
                     
                     try:
+                        buf = pre_data  # seed with VAD pre-buffer (may be empty)
                         while self._should_record_audio:
-                            data = stream.read(4000, exception_on_overflow=False)
-                            ws.send(data)
+                            data = stream.read(_VAD_FRAMES, exception_on_overflow=False)
+                            buf += data
+                            if len(buf) >= _SEND_BYTES:
+                                ws.send(buf)
+                                buf = b""
+                        if len(buf) >= _MIN_SEND_BYTES:
+                            ws.send(buf)
                     except Exception as e:
                         log.debug(f"Audio read error: {e}")
                     finally:
@@ -342,9 +380,6 @@ class AssemblyAISTTClient:
                                 time.sleep(0.1)
                             ws.send(json.dumps({"type": "Terminate"}))
                         except: pass
-                        stream.stop_stream()
-                        stream.close()
-                        p.terminate()
                         self._is_recording = False
                         
                         final_text = " ".join(self._finalized_turns)
@@ -363,9 +398,16 @@ class AssemblyAISTTClient:
                             log.warning("STT finished with empty transcript")
             except Exception as e:
                 log.error(f"Failed to start AssemblyAI STT: {e}")
-                self._is_recording = False
                 if self.on_error_callback:
                     self.on_error_callback(str(e))
+            finally:
+                try:
+                    stream.stop_stream()
+                    stream.close()
+                except Exception:
+                    pass
+                p.terminate()
+                self._is_recording = False
         
         threading.Thread(target=_worker, daemon=True).start()
 

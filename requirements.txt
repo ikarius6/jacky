@@ -4,3 +4,4 @@ requests>=2.31.0
 mss>=9.0.0
 
 assemblyai[extras]>=0.25.0
+webrtcvad>=2.0.10

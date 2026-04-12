@@ -115,7 +115,7 @@ class PetWindow(QWidget):
         )
         self._stt_client = AssemblyAISTTClient(
             api_key=self._config.get("assemblyai_api_key", ""),
-            model=self._config.get("assemblyai_model", "u3-rt-pro")
+            model=self._config.get("assemblyai_model", "universal-streaming-multilingual")
         )
         # Use signals for thread-safe delivery from daemon STT thread to main GUI thread
         self._voice_transcript_ready.connect(self.on_ask)

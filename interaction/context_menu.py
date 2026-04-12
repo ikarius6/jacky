@@ -803,7 +803,7 @@ class SettingsDialog(QDialog):
         aai_hint.setStyleSheet("font-size: 9pt;")
         aai_form.addRow("", aai_hint)
         
-        self._aai_model = QLineEdit(self._config.get("assemblyai_model", "u3-rt-pro"))
+        self._aai_model = QLineEdit(self._config.get("assemblyai_model", "universal-streaming-multilingual"))
         aai_form.addRow(t("ui.label_model"), self._aai_model)
         
         aai_group.setLayout(aai_form)

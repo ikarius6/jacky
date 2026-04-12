@@ -54,7 +54,7 @@
     "response_mode": "text",
     "listen_shortcut": "ctrl+shift+space",
     "assemblyai_api_key": "",
-    "assemblyai_model": "u3-rt-pro",
+    "assemblyai_model": "universal-streaming-multilingual",
     "elevenlabs_api_key": "",
     "elevenlabs_voice_id": "U0W3edavfdI8ibPeeteQ",
     "elevenlabs_model": "eleven_flash_v2_5",
