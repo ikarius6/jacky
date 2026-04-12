@@ -324,25 +324,30 @@ class AssemblyAISTTClient:
                                     if not text:
                                         continue
 
-                                    if is_formatted:
-                                        # Canonical final for this turn.
-                                        # If there was a pending unformatted end_of_turn we replace it;
-                                        # otherwise just append.  Either way, guard against consecutive
-                                        # identical turns produced by AssemblyAI's overeager segmentation
-                                        # (e.g. the user pauses mid-sentence and the same phrase ends up
-                                        # as two back-to-back turns).
+                                    if end_of_turn:
+                                        if is_formatted:
+                                            # Canonical final for this turn.
+                                            self._pending_unformatted_turn = None
+                                            if self._finalized_turns and self._finalized_turns[-1] == text:
+                                                log.debug(f"STT: dropping consecutive duplicate turn: '{text}'")
+                                            else:
+                                                self._finalized_turns.append(text)
+                                            self._active_turn_text = ""
+                                        else:
+                                            # Unformatted boundary — hold it until the formatted version
+                                            # arrives (or until we finalize without a formatted follow-up).
+                                            self._pending_unformatted_turn = text
+                                            self._active_turn_text = ""
+                                    elif is_formatted and self._pending_unformatted_turn:
+                                        # Formatted version of a previously ended unformatted turn.
                                         self._pending_unformatted_turn = None
                                         if self._finalized_turns and self._finalized_turns[-1] == text:
                                             log.debug(f"STT: dropping consecutive duplicate turn: '{text}'")
                                         else:
                                             self._finalized_turns.append(text)
                                         self._active_turn_text = ""
-                                    elif end_of_turn:
-                                        # Unformatted boundary — hold it until the formatted version
-                                        # arrives (or until we finalize without a formatted follow-up).
-                                        self._pending_unformatted_turn = text
-                                        self._active_turn_text = ""
                                     else:
+                                        # Intermediate progressive update — just track it.
                                         self._active_turn_text = text
 
                                     # If user stopped recording and we just got the final turn output, we are done
