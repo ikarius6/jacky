@@ -546,7 +546,8 @@ class PetWindow(QWidget):
             self._say(t("ui.listening"), force=True, timeout_ms=30000, skip_voice=True)
             self._stt_client.start_listening()
 
-    def _start_screen_task(self, action_type: str, target_desc: str):
+    def _start_screen_task(self, action_type: str, target_desc: str,
+                            type_text_content: str = None):
         """Validate permissions and start a screen interaction task."""
         if not self._perm("allow_vision"):
             self._say(t("ui.no_vision_perm"), force=True)
@@ -558,7 +559,8 @@ class PetWindow(QWidget):
             self._screen_interaction.cancel(say_line=False)
         if self._llm_pending:
             self._llm_pending = False
-        self._screen_interaction.start_task(action_type, target_desc)
+        self._screen_interaction.start_task(action_type, target_desc,
+                                            type_text_content=type_text_content)
 
     def _ask_direct_or_vision(self, question: str):
         """Send the question to the LLM using vision or text based on keywords/permissions."""
@@ -584,8 +586,9 @@ class PetWindow(QWidget):
         # ── Fast path: keyword matching ──
         parsed = self._screen_interaction.try_parse_interaction(question)
         if parsed:
-            action_type, target_desc = parsed
-            self._start_screen_task(action_type, target_desc)
+            action_type, target_desc, type_text_content = parsed
+            self._start_screen_task(action_type, target_desc,
+                                    type_text_content=type_text_content)
             return
 
         if self._llm_pending:
@@ -620,7 +623,8 @@ class PetWindow(QWidget):
             # High-confidence interaction intent
             self._llm_pending = False
             self._bubble.hide()
-            self._start_screen_task(result.intent, result.target)
+            self._start_screen_task(result.intent, result.target,
+                                    type_text_content=result.type_text or None)
         elif result.intent == "vision":
             # Vision intent — use the vision flow with the original question
             if self._perm("allow_vision"):

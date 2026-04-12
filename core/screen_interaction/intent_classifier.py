@@ -15,8 +15,8 @@ from utils.i18n import get_intent_classify_prompt
 log = logging.getLogger("intent_classifier")
 
 # Valid interaction intents (ones that trigger screen interaction)
-_INTERACTION_INTENTS = frozenset({"click", "close", "minimize", "navigate"})
-_ALL_VALID_INTENTS = frozenset({"click", "close", "minimize", "navigate", "vision", "chat"})
+_INTERACTION_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type"})
+_ALL_VALID_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type", "vision", "chat"})
 
 # Fallback prompt in case the locale file doesn't have one
 _FALLBACK_PROMPT = (
@@ -26,11 +26,13 @@ _FALLBACK_PROMPT = (
     '- "close": close/quit/exit a window or app\n'
     '- "minimize": minimize/hide a window\n'
     '- "navigate": find/go to/locate something on screen\n'
+    '- "type": write/type text into a UI element (input field, search bar, etc.)\n'
     '- "vision": look at or describe the screen\n'
     '- "chat": general conversation or question\n\n'
     'User message: "{question}"\n\n'
     'Respond ONLY with JSON: {{"intent": "<type>", "confidence": <0_to_100>, '
-    '"target": "<element description if interaction, else empty string>"}}'
+    '"target": "<element description if interaction, else empty string>", '
+    '"text": "<text to type if intent is type, else empty string>"}}'
 )
 
 _SYSTEM_PROMPT = (
@@ -43,9 +45,10 @@ _SYSTEM_PROMPT = (
 @dataclass
 class IntentResult:
     """Structured result from LLM intent classification."""
-    intent: str          # click | close | minimize | navigate | vision | chat
+    intent: str          # click | close | minimize | navigate | type | vision | chat
     confidence: int      # 0-100
     target: str          # target description (for interaction intents)
+    type_text: str = ""  # text to type (only when intent="type")
 
     @property
     def is_interaction(self) -> bool:
@@ -123,8 +126,9 @@ def parse_intent_response(raw_text: str) -> Optional[IntentResult]:
     confidence = max(0, min(100, confidence))
 
     target = str(parsed.get("target", "")).strip()
+    type_text = str(parsed.get("text", "")).strip()
 
-    return IntentResult(intent=intent, confidence=confidence, target=target)
+    return IntentResult(intent=intent, confidence=confidence, target=target, type_text=type_text)
 
 
 def _parse_json(raw_text: str) -> Optional[dict]:

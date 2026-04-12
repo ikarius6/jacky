@@ -131,6 +131,16 @@ def get_interact_prefixes() -> list[str]:
     return _strings.get("interact_prefixes", [])
 
 
+def get_type_separators() -> list[str]:
+    """Return separator words used to split text-to-type from the target element.
+
+    Returns a list sorted by length (longest first) like
+    ``["dentro de", "en el", "en la", "en"]``.
+    """
+    seps = _strings.get("type_separators", [])
+    return sorted(seps, key=len, reverse=True)
+
+
 def get_interact_system_prompt() -> str:
     """Return the dedicated technical system prompt for screen interaction tasks."""
     prompt = _strings.get("interact_system_prompt", "")

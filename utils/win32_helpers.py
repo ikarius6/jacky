@@ -400,6 +400,92 @@ def minimize_foreground_window() -> bool:
         return False
 
 
+# --- Keyboard typing ---
+
+class _KEYBDINPUT(ctypes.Structure):
+    _fields_ = [
+        ("wVk", wintypes.WORD),
+        ("wScan", wintypes.WORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+    ]
+
+
+class _MOUSEINPUT(ctypes.Structure):
+    _fields_ = [
+        ("dx", ctypes.c_long),
+        ("dy", ctypes.c_long),
+        ("mouseData", wintypes.DWORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+    ]
+
+
+class _HARDWAREINPUT(ctypes.Structure):
+    _fields_ = [
+        ("uMsg", wintypes.DWORD),
+        ("wParamL", wintypes.WORD),
+        ("wParamH", wintypes.WORD),
+    ]
+
+
+class _INPUT_UNION(ctypes.Union):
+    _fields_ = [
+        ("ki", _KEYBDINPUT),
+        ("mi", _MOUSEINPUT),
+        ("hi", _HARDWAREINPUT),
+    ]
+
+
+class _INPUT(ctypes.Structure):
+    _fields_ = [
+        ("type", wintypes.DWORD),
+        ("u", _INPUT_UNION),
+    ]
+
+
+_INPUT_KEYBOARD = 1
+_KEYEVENTF_UNICODE = 0x0004
+_KEYEVENTF_KEYUP = 0x0002
+
+
+def type_text(text: str, char_delay: float = 0.02) -> bool:
+    """Type a string at the current keyboard focus using SendInput with Unicode.
+
+    Each character is sent as a KEYEVENTF_UNICODE key-down / key-up pair,
+    which works for any character including accented letters, CJK, emoji, etc.
+    *char_delay* adds a small pause between characters for reliability.
+    Returns True on success, False on empty input or failure.
+    """
+    if not text:
+        return False
+    try:
+        for char in text:
+            code = ord(char)
+            inputs = (_INPUT * 2)()
+            # Key down
+            inputs[0].type = _INPUT_KEYBOARD
+            inputs[0].u.ki.wVk = 0
+            inputs[0].u.ki.wScan = code
+            inputs[0].u.ki.dwFlags = _KEYEVENTF_UNICODE
+            # Key up
+            inputs[1].type = _INPUT_KEYBOARD
+            inputs[1].u.ki.wVk = 0
+            inputs[1].u.ki.wScan = code
+            inputs[1].u.ki.dwFlags = _KEYEVENTF_UNICODE | _KEYEVENTF_KEYUP
+
+            ctypes.windll.user32.SendInput(
+                2, ctypes.byref(inputs), ctypes.sizeof(_INPUT)
+            )
+            if char_delay > 0:
+                time.sleep(char_delay)
+        return True
+    except Exception:
+        return False
+
+
 # --- WinEvent hook for window create/destroy ---
 
 _user32 = ctypes.windll.user32

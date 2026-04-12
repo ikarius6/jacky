@@ -19,9 +19,10 @@ from utils.i18n import (
     get_interact_grid_prompt,
     get_interact_locate_prompt,
     get_interact_refine_prompt,
+    get_type_separators,
 )
 from utils.screen_capture import capture_full_screen_gridded, encode_qimage_png, capture_vision_area, draw_subgrid
-from utils.win32_helpers import click_at, send_alt_f4, minimize_foreground_window
+from utils.win32_helpers import click_at, send_alt_f4, minimize_foreground_window, type_text
 
 from core.screen_interaction.constants import (
     CONFIDENCE_THRESHOLD,
@@ -110,10 +111,12 @@ class ScreenInteractionHandler(QObject):
         self._last_lang = lang
         return self._cached_prep_pattern
 
-    def try_parse_interaction(self, text: str) -> Optional[Tuple[str, str]]:
+    def try_parse_interaction(self, text: str) -> Optional[Tuple[str, str, Optional[str]]]:
         """Parse user text for interaction keywords from i18n.
-        Returns ``(action_type, target_description)`` or ``None``.
-        Priority order: close > minimize > click > navigate (most specific first).
+
+        Returns ``(action_type, target_description, type_text)`` or ``None``.
+        *type_text* is ``None`` for all actions except ``"type"``.
+        Priority order: close > minimize > type > click > navigate.
         """
         lower = text.lower().strip()
         kw_map = get_interact_keywords()
@@ -122,36 +125,117 @@ class ScreenInteractionHandler(QObject):
 
         prep_pattern = self._get_prep_pattern()
 
-        for action_type in ("close", "minimize", "click", "navigate"):
+        for action_type in ("close", "minimize", "type", "click", "navigate"):
             keywords = kw_map.get(action_type, [])
-            # Sort: longest first so "pícale a" beats "pícale"
             for kw in sorted(keywords, key=len, reverse=True):
                 kw_lower = kw.lower()
 
                 # --- Match at start of text ---
                 if lower.startswith(kw_lower):
-                    raw_target = text[len(kw):].strip().strip("\"'").strip()
-                    target = prep_pattern.sub("", raw_target).strip()
-                    if target:
-                        return (action_type, target)
+                    remainder = text[len(kw):].strip()
+                    if action_type == "type":
+                        result = self._parse_type_remainder(remainder)
+                        if result:
+                            return ("type", result[1], result[0])
+                    else:
+                        raw_target = remainder.strip("\"'").strip()
+                        target = prep_pattern.sub("", raw_target).strip()
+                        if target:
+                            return (action_type, target, None)
 
                 # --- Match anywhere in text ---
                 idx = lower.find(kw_lower)
                 if idx != -1:
-                    raw_target = text[idx + len(kw):].strip().strip("\"'").strip()
-                    target = prep_pattern.sub("", raw_target).strip()
-                    if target:
-                        return (action_type, target)
+                    remainder = text[idx + len(kw):].strip()
+                    if action_type == "type":
+                        result = self._parse_type_remainder(remainder)
+                        if result:
+                            return ("type", result[1], result[0])
+                    else:
+                        raw_target = remainder.strip("\"'").strip()
+                        target = prep_pattern.sub("", raw_target).strip()
+                        if target:
+                            return (action_type, target, None)
 
         return None
 
-    def start_task(self, action_type: str, target_desc: str):
+    def _parse_type_remainder(self, remainder: str) -> Optional[Tuple[str, str]]:
+        """Extract (text_to_type, target) from the text after a 'type' keyword.
+
+        Supports two formats:
+        1. Quoted text: ``'"hello world" in the search bar'``
+        2. Unquoted text: ``'hello world in the search bar'``
+           → splits on the **last** occurrence of a separator word.
+
+        Returns ``(text_to_type, target)`` or ``None`` if unparseable.
+        """
+        prep_pattern = self._get_prep_pattern()
+        separators = get_type_separators()
+
+        # 1. Try quoted text: "..." or '...'
+        quote_match = re.match(r'''["'](.+?)["']\s*(.*)''', remainder)
+        if quote_match:
+            text_to_type = quote_match.group(1).strip()
+            after_quote = quote_match.group(2).strip()
+            if text_to_type and after_quote:
+                # Strip separator from the start of after_quote to get target
+                target = self._strip_leading_separator(after_quote, separators)
+                target = prep_pattern.sub("", target).strip()
+                if target:
+                    return (text_to_type, target)
+
+        # 2. Unquoted text — find the LAST separator to split
+        lower_rem = remainder.lower()
+        best_pos = -1
+        best_sep_len = 0
+        for sep in separators:
+            sep_lower = sep.lower()
+            # Find as whole word (space-bounded or at end)
+            search_start = 0
+            while True:
+                pos = lower_rem.find(sep_lower, search_start)
+                if pos == -1:
+                    break
+                # Ensure word boundary: preceded by space (or start) and followed by space (or end)
+                before_ok = (pos == 0 or lower_rem[pos - 1] == ' ')
+                after_end = pos + len(sep_lower)
+                after_ok = (after_end >= len(lower_rem) or lower_rem[after_end] == ' ')
+                if before_ok and after_ok and pos > best_pos:
+                    best_pos = pos
+                    best_sep_len = len(sep_lower)
+                search_start = pos + 1
+
+        if best_pos > 0:
+            text_to_type = remainder[:best_pos].strip().strip("\"'").strip()
+            target = remainder[best_pos + best_sep_len:].strip()
+            target = prep_pattern.sub("", target).strip()
+            if text_to_type and target:
+                return (text_to_type, target)
+
+        return None
+
+    @staticmethod
+    def _strip_leading_separator(text: str, separators: list) -> str:
+        """Remove a single leading separator word from *text*."""
+        lower = text.lower()
+        for sep in separators:  # already sorted longest-first
+            sep_lower = sep.lower()
+            if lower.startswith(sep_lower):
+                after = text[len(sep_lower):]
+                if not after or after[0] == ' ':
+                    return after.strip()
+        return text
+
+    def start_task(self, action_type: str, target_desc: str,
+                    type_text_content: Optional[str] = None):
         """Begin the full interaction sequence."""
-        log.info("START_TASK action=%s target=%r", action_type, target_desc)
+        log.info("START_TASK action=%s target=%r type_text=%r",
+                 action_type, target_desc, type_text_content[:60] if type_text_content else None)
         self._current_task = ScreenInteractionTask(
             action_type=action_type,
             target_desc=target_desc,
             state="locating",
+            type_text=type_text_content,
         )
         # Say acknowledgment
         line = get_line("interact_ack", self._pet.pet.name)
@@ -626,7 +710,7 @@ class ScreenInteractionHandler(QObject):
             self._complete("interact_done_navigate")
             return
 
-        # For click/close/minimize — need to do the actual action
+        # For click/close/minimize/type — need to do the actual action
         # Play attack animation first
         from core.pet import PetState
         if "shooting" in self._pet.animation.available_states:
@@ -680,6 +764,21 @@ class ScreenInteractionHandler(QObject):
             self._pet.set_click_through(False)
             QTimer.singleShot(300, self._do_minimize)
 
+        elif task.action_type == "type":
+            # Click to focus the target element, then type the text
+            success = click_at(phys_x, phys_y, safety_check=True)
+            self._pet.set_click_through(False)
+            if success:
+                # Small delay for the element to gain focus before typing
+                QTimer.singleShot(400, self._do_type)
+            else:
+                log.warning("type: click_at aborted (safety check)")
+                line = get_line("interact_click_aborted", self._pet.pet.name)
+                self._pet._say(line, force=True)
+                self._current_task.state = "failed"
+                from core.pet import PetState
+                self._pet.pet.set_state(PetState.IDLE)
+
     def _do_close(self):
         """Send Alt+F4 after clicking on the target."""
         send_alt_f4()
@@ -689,6 +788,15 @@ class ScreenInteractionHandler(QObject):
         """Minimize the foreground window after clicking on the target."""
         minimize_foreground_window()
         self._complete("interact_done_action")
+
+    def _do_type(self):
+        """Type the stored text after the target element has been clicked/focused."""
+        if not self.is_active or self._current_task.state != "executing":
+            return
+        text = self._current_task.type_text
+        if text:
+            type_text(text)
+        self._complete("interact_done_type")
 
     # ── Helpers ───────────────────────────────────────────────────
 

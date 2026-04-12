@@ -273,6 +273,12 @@
         "interact_click_aborted": [
             "¡Ups! Moviste el mouse, cancelé el clic.",
             "¡No pude hacer clic, alguien movió el cursor!"
+        ],
+        "interact_done_type": [
+            "¡Listo! Ya lo escribí.",
+            "¡Ahí está! Ya escribí lo que pediste.",
+            "¡Escrito! *sopla los dedos*",
+            "¡Mensaje enviado! Bueno, escrito :3"
         ]
     },
     "app_groups": {
@@ -595,8 +601,20 @@
             "reduce", "reduce el", "reduce la",
             "mándalo abajo", "mandalo abajo",
             "escóndelo", "escondelo", "escóndela", "escondela"
+        ],
+        "type": [
+            "escribe", "teclea", "pon", "tipea", "redacta",
+            "escríbele", "escribele",
+            "escribe en", "teclea en", "pon en", "tipea en",
+            "mete", "mete en", "ingresa", "ingresa en",
+            "anota", "anota en", "ponle"
         ]
     },
+    "type_separators": [
+        "dentro de", "en el", "en la", "en los", "en las", "en",
+        "sobre el", "sobre la", "sobre",
+        "al", "a la", "a el"
+    ],
     "interact_prefixes": [
         "a", "al", "en", "hacia", "hasta", "sobre", "con", "de", "del", "el", "la", "los", "las", "un", "una", "unos", "unas"
     ],
@@ -604,7 +622,7 @@
     "interact_grid_prompt": "The screenshot has a red numbered grid overlay with {cols} columns and {rows} rows, giving {total} cells total. Each cell has a dark circle with a white number centered inside it. Cells are numbered 1 to {total}, left to right, top to bottom (cell 1 = top-left, cell {cols} = top-right, cell {total} = bottom-right). Identify which single cell's number badge is closest to the CENTER of: \"{target}\". Also identify the second-best candidate cell if the target is near a cell boundary. Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>, \"alt_cell\": <second_best_number_or_null>}. If the element is not visible anywhere: {\"error\": \"not found\"}",
     "interact_locate_prompt": "This is a zoomed-in region of the screen with a green numbered grid overlay: {cols} columns x {rows} rows = {total} cells total. Each cell has a dark circle badge with a white number centered in it. Cells numbered 1 to {total}, left to right, top to bottom. First, describe in one sentence what you see in the image. Find \"{target}\" and identify which cell number badge is nearest to its CENTER (the clickable point). Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>}. If not found: {\"error\": \"not found\"}",
     "interact_refine_prompt": "This image shows a 1024x1024 px area of the screen. The exact center of the image is at coordinates (512, 512). Look for \"{target}\" and estimate how many pixels it is from the center. Positive offset_x = right of center, negative = left. Positive offset_y = below center, negative = above. Respond ONLY with JSON: {\"found\": true, \"offset_x\": <pixels>, \"offset_y\": <pixels>}. If not found: {\"found\": false}",
-    "intent_classify_prompt": "Classify the user's intent from the following message. The user may be asking to interact with something on their screen, asking to look at the screen, or just chatting.\n\nSupported interaction types:\n- \"click\": press/click/tap/open/activate a UI element\n- \"close\": close/quit/exit/kill a window or app\n- \"minimize\": minimize/hide/shrink a window\n- \"navigate\": find/go to/locate/walk to something on screen\n- \"vision\": the user wants you to look at or describe what is on the screen\n- \"chat\": general conversation, questions, or anything that is NOT a screen interaction or vision request\n\nUser message: \"{question}\"\n\nRespond ONLY with valid JSON, no extra text:\n{\"intent\": \"<type>\", \"confidence\": <0_to_100>, \"target\": \"<element description if interaction, else empty string>\"}",
+    "intent_classify_prompt": "Classify the user's intent from the following message. The user may be asking to interact with something on their screen, asking to look at the screen, or just chatting.\n\nSupported interaction types:\n- \"click\": press/click/tap/open/activate a UI element\n- \"close\": close/quit/exit/kill a window or app\n- \"minimize\": minimize/hide/shrink a window\n- \"navigate\": find/go to/locate/walk to something on screen\n- \"type\": write/type/enter text into a UI element (input field, search bar, text box, etc.). Extract BOTH the target element AND the text to type.\n- \"vision\": the user wants you to look at or describe what is on the screen\n- \"chat\": general conversation, questions, or anything that is NOT a screen interaction or vision request\n\nUser message: \"{question}\"\n\nRespond ONLY with valid JSON, no extra text:\n{\"intent\": \"<type>\", \"confidence\": <0_to_100>, \"target\": \"<element description if interaction, else empty string>\", \"text\": \"<text to type if intent is type, else empty string>\"}",
     "vision_keywords": ["mira", "observa", "ve", "pantalla", "ves", "mir\u00e1", "viendo", "mirar", "observar", "miras"],
     "llm_system_prompt": "Eres {name}, una mascota virtual humanoide chibi que vive en el escritorio de Windows de alguien.\nEres peque\u00f1o, juguet\u00f3n y curioso. Hablas en frases cortas y casuales (1-2 oraciones m\u00e1ximo).\nSi se te menciona una ventana o app, haz UN solo comentario puntual sobre ella. No enumeres ni menciones otras ventanas.\nNo menciones la hora a menos que la situaci\u00f3n lo pida expl\u00edcitamente.\nS\u00e9 amigable, gracioso y un poco travieso. Usa emoticones ocasionales como :3 o ^_^\nMant\u00e9n las respuestas en menos de 50 palabras.\nSIEMPRE responde en espa\u00f1ol."
 }
