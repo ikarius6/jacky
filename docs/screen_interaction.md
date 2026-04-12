@@ -1,6 +1,6 @@
 # Screen Interaction — Technical Deep Dive
 
-Jacky can follow voice or text instructions to **find**, **navigate to**, **click**, **close**, and **minimize** elements on your screen. This document describes the complete flow from user input to physical action.
+Jacky can follow voice or text instructions to **find**, **navigate to**, **click**, **close**, **minimize**, and **type text into** elements on your screen. This document describes the complete flow from user input to physical action.
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@ When a user says _"haz clic en el botón de Chrome"_ (click the Chrome button), 
 5. **Asks the LLM again** which sub-cell contains the target (Phase 2)
 6. **Walks the pet** to the computed screen coordinates
 7. **Optionally refines** with a local 1024×1024 capture (Phase 4)
-8. **Executes the action** — click, Alt+F4, or minimize
+8. **Executes the action** — click, Alt+F4, minimize, or type text
 
 The entire flow uses **exactly 2 LLM vision calls** in the happy path (grid + sub-grid), with an optional 3rd (refine) when confidence is low.
 
@@ -71,7 +71,7 @@ User input
      └────────────────┘
            ▼
 ┌─────────────────────┐
-│  Phase 5: Execute    │  Click / Alt+F4 / Minimize
+│  Phase 5: Execute    │  Click / Alt+F4 / Minimize / Type text
 └─────────────────────┘
 ```
 
@@ -94,7 +94,7 @@ Supporting modules:
 | Module | Responsibility |
 |--------|---------------|
 | `utils/screen_capture.py` | Screen capture, grid overlay drawing, base64 encoding |
-| `utils/win32_helpers.py` | Low-level Win32 calls — `click_at`, `send_alt_f4`, `minimize_foreground_window` |
+| `utils/win32_helpers.py` | Low-level Win32 calls — `click_at`, `send_alt_f4`, `minimize_foreground_window`, `type_text` |
 | `core/pet_window.py` | Entry point — wires user input to `ScreenInteractionHandler` |
 
 ---
@@ -105,7 +105,7 @@ User input goes through a **two-tier classification** system:
 
 ### Tier 1: Keyword Matching (fast, no LLM)
 
-`handler.try_parse_interaction(text)` checks the input against action keywords defined in `locales/*.json` under `interact_keywords`. Four action types are supported:
+`handler.try_parse_interaction(text)` checks the input against action keywords defined in `locales/*.json` under `interact_keywords`. Five action types are supported:
 
 | Action | Example keywords (ES) | Example keywords (EN) |
 |--------|----------------------|----------------------|
@@ -113,18 +113,39 @@ User input goes through a **two-tier classification** system:
 | `click` | _haz clic_, _presiona_, _pícale a_ | _click_, _press_, _tap_ |
 | `close` | _cierra_, _quita_, _mata_ | _close_, _quit_, _kill_ |
 | `minimize` | _minimiza_, _esconde_, _achica_ | _minimize_, _hide_, _shrink_ |
+| `type` | _escribe_, _teclea_, _pon_, _tipea_ | _type_, _write_, _enter_, _input_ |
 
-Detection priority: **close > minimize > click > navigate** (most destructive first).
+Detection priority: **close > minimize > type > click > navigate** (most destructive first).
 
 After extracting the keyword, prepositional prefixes like _"en el"_, _"a la"_, _"the"_ are stripped using patterns from `interact_prefixes` in the locale file.
 
+#### Type-action keyword parsing
+
+The `type` action is special because it needs to extract **two** pieces of information from the input: the **text to type** and the **target element** to type into. Two formats are supported:
+
+1. **Quoted text** — `escribe "hola mundo" en la barra de búsqueda`
+   - Text between quotes is extracted first
+   - A locale-defined separator (`type_separators`) splits the remainder to find the target
+
+2. **Unquoted text** — `escribe hola mundo en la barra de búsqueda`
+   - The parser finds the **last** occurrence of a separator word (e.g. _"en"_, _"in"_)
+   - Everything before the separator → text to type
+   - Everything after → target element
+
+Separator words are defined per locale in `type_separators` (e.g. ES: _"en el"_, _"en la"_, _"dentro de"_; EN: _"in the"_, _"into"_, _"on the"_), sorted longest-first to avoid partial matches.
+
 ### Tier 2: LLM Intent Classification (fallback)
 
-If keyword matching fails, `intent_classifier.classify_intent()` sends the text to the LLM (text-only, no image) to classify it as one of: `click`, `close`, `minimize`, `navigate`, `vision`, or `chat`.
+If keyword matching fails, `intent_classifier.classify_intent()` sends the text to the LLM (text-only, no image) to classify it as one of: `click`, `close`, `minimize`, `navigate`, `type`, `vision`, or `chat`.
 
 The LLM returns structured JSON:
 ```json
-{"intent": "click", "confidence": 85, "target": "the Chrome icon"}
+{"intent": "click", "confidence": 85, "target": "the Chrome icon", "text": ""}
+```
+
+For the `type` intent, the LLM also extracts the text to type:
+```json
+{"intent": "type", "confidence": 90, "target": "the search bar", "text": "hello world"}
 ```
 
 If `confidence ≥ 70` (`INTENT_CONFIDENCE_THRESHOLD`) and the intent is an interaction type, a screen interaction task starts. Otherwise, Jacky treats the input as a general conversation or vision request.
@@ -256,6 +277,16 @@ After arriving at the final position, Jacky performs the requested action:
 | `click` | Play attack animation (500ms), then `click_at()` via Win32 `SendInput` |
 | `close` | Click to bring window to foreground (300ms delay), then `Alt+F4` |
 | `minimize` | Click to bring window to foreground (300ms delay), then `ShowWindow(SW_MINIMIZE)` |
+| `type` | Click to focus element → 400ms delay → type text character-by-character via `SendInput` with `KEYEVENTF_UNICODE` |
+
+### Type Action Details
+
+The `type` action follows a two-step execute:
+
+1. **Click to focus** — `click_at()` puts the cursor in the target element (input field, search bar, etc.). If the safety check fails (user moved the mouse), the action aborts.
+2. **Type text** — After a 400ms delay for focus to settle, `type_text()` sends each character as a Unicode key-down / key-up pair via Win32 `SendInput` with `KEYEVENTF_UNICODE`. This supports any character including accented letters, CJK, and emoji. A configurable inter-character delay (default 20ms) improves reliability with slow applications.
+
+The text to type is stored in `ScreenInteractionTask.type_text` and is populated either from keyword parsing or the LLM intent classifier's `"text"` field.
 
 ### Safety Measures
 
@@ -319,7 +350,7 @@ These files are overwritten each interaction, providing a step-by-step visual tr
 |---------|-------|---------|
 | `llm_enabled` | `true` | LLM must be active for vision calls |
 | `permissions.allow_vision` | `true` | Required for all interaction types |
-| `permissions.allow_screen_interact` | `true` | Required for `click`, `close`, `minimize` (not `navigate`) |
+| `permissions.allow_screen_interact` | `true` | Required for `click`, `close`, `minimize`, `type` (not `navigate`) |
 
 ### Constants (`core/screen_interaction/constants.py`)
 
@@ -377,5 +408,6 @@ core/pet_window.py                    ← Entry point: on_ask() / on_listen()
                 └── _do_action()
                     ├── click_at()             ← utils/win32_helpers.py
                     ├── send_alt_f4()          ← utils/win32_helpers.py
-                    └── minimize_foreground_window()
+                    ├── minimize_foreground_window()
+                    └── type_text()            ← utils/win32_helpers.py
 ```

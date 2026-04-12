@@ -96,7 +96,7 @@ When LLM is enabled, Jacky can "look" at your screen:
 
 When instructed, Jacky can take action on your screen! Tell Jacky to _"click on the start button"_, or _"close the browser window"_. Jacky will intelligently partition the screen, use vision to identify the target, and perform actual mouse clicks.
 
-Supported actions: **navigate** (walk to), **click**, **close** (Alt+F4), and **minimize**.
+Supported actions: **navigate** (walk to), **click**, **write** (type text), **close** (Alt+F4), and **minimize**.
 
 The full pipeline involves intent detection (keyword matching + LLM fallback), a two-phase grid-based locate system with dynamic crop sizing, coordinate mapping across DPI-aware coordinate spaces, and optional LLM-based position refinement.
 
