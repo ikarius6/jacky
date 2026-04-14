@@ -6,3 +6,6 @@ build/
 config.json
 debug_screens/
 *.pyc
+downloads/
+settings.json
+settings.json.orig

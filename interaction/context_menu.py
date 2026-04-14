@@ -12,8 +12,9 @@ import logging
 
 from utils.config_manager import load_config, save_config
 from utils.i18n import t, get_permission_defs, available_languages, current_language
+from core import character as character_mod
 from core.character import (get_character_names, get_character_preview,
-                            reload_characters, get_writable_sprites_root, CHARACTERS)
+                            reload_characters, get_writable_sprites_root)
 from utils.shop import (fetch_shop_catalog, fetch_preview_bytes,
                         download_character, delete_character, needs_update,
                         ShopCharacter)
@@ -354,7 +355,7 @@ class CharacterCard(QFrame):
         self._source = source
         self._downloading = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(PREVIEW_SIZE + 28, PREVIEW_SIZE + 78)
+        self.setFixedSize(PREVIEW_SIZE + 28, PREVIEW_SIZE + 90)
         self._build()
         self._apply_style()
 
@@ -437,6 +438,21 @@ class CharacterCard(QFrame):
             self._action_btn.hide()
 
         self._action_layout.addWidget(self._action_btn)
+
+        # Delete button (downloaded characters only)
+        self._delete_btn = QPushButton(t("ui.btn_delete"))
+        self._delete_btn.setFixedHeight(22)
+        self._delete_btn.setStyleSheet("""
+            QPushButton { font-size: 8pt; padding: 1px 4px; background: #F8D7DA;
+                          border: 1px solid #F5C6CB; border-radius: 3px; color: #721C24; }
+            QPushButton:hover { background: #F5C6CB; }
+        """)
+        self._delete_btn.clicked.connect(lambda: self.delete_requested.emit(self._name))
+        self._delete_btn.hide()
+        if self._installed and self._source == "downloaded":
+            self._delete_btn.show()
+        self._action_layout.addWidget(self._delete_btn)
+
         layout.addWidget(self._action_widget)
 
     def _apply_style(self):
@@ -503,21 +519,6 @@ class CharacterCard(QFrame):
             self.clicked.emit(self._name)
         super().mousePressEvent(event)
 
-    def contextMenuEvent(self, event):
-        """Right-click context menu for delete (downloaded characters only)."""
-        if self._installed and self._source == "downloaded":
-            menu = QMenu(self)
-            menu.setStyleSheet("""
-                QMenu { background: #FFF8F0; border: 1px solid #DDB892; border-radius: 4px;
-                        font-size: 10pt; color: #5A3E2B; }
-                QMenu::item { padding: 4px 12px; }
-                QMenu::item:selected { background: #FFDDB5; }
-            """)
-            del_action = QAction(t("ui.btn_delete"), menu)
-            del_action.triggered.connect(lambda: self.delete_requested.emit(self._name))
-            menu.addAction(del_action)
-            menu.popup(event.globalPos())
-
     # ── download / progress ──────────────────────────────────────────
 
     def _on_download_click(self):
@@ -527,6 +528,7 @@ class CharacterCard(QFrame):
     def start_download_ui(self):
         """Switch card to downloading state."""
         self._downloading = True
+        self._delete_btn.hide()
         self._action_btn.hide()
         self._progress.setValue(0)
         self._progress.show()
@@ -544,6 +546,7 @@ class CharacterCard(QFrame):
         self._installed = True
         self._update_available = False
         self._progress.hide()
+        self._delete_btn.show()
         self._action_btn.hide()
         self._apply_style()
         # Refresh preview from local files
@@ -1185,7 +1188,7 @@ class SettingsDialog(QDialog):
 
         # 1. Local (installed) characters
         for name in local_names:
-            char_info = CHARACTERS.get(name, {})
+            char_info = character_mod.CHARACTERS.get(name, {})
             sc = shop_by_name.pop(name, None)
             update_avail = False
             if sc and char_info.get("version"):
@@ -1287,7 +1290,11 @@ class SettingsDialog(QDialog):
     def _on_download_done(self, card: CharacterCard, shop_char: ShopCharacter):
         """Handle successful download: reload characters and update card."""
         reload_characters()
-        card.download_finished()
+        self._populate_grid()
+        # Re-select the previously selected character
+        for c in self._char_cards:
+            if c.char_name == self._selected_char:
+                c.set_selected(True)
         log.info("Character '%s' downloaded and installed.", shop_char.name)
 
     def _on_delete_requested(self, name: str):
@@ -1303,7 +1310,7 @@ class SettingsDialog(QDialog):
             return
 
         # Find folder_id from CHARACTERS
-        char_info = CHARACTERS.get(name)
+        char_info = character_mod.CHARACTERS.get(name)
         if not char_info or char_info.get("source") != "downloaded":
             return
         folder_id = char_info.get("folder_id", "")

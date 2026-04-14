@@ -43,4 +43,4 @@ def get_writable_sprites_dir() -> str:
     same as the bundled sprites dir; in frozen mode it sits next to the
     executable so it persists across updates.
     """
-    return os.path.join(get_config_dir(), "sprites")
+    return os.path.join(get_config_dir(), "downloads")
