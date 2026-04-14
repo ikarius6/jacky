@@ -21,6 +21,7 @@
     "ollama_model": "llama3.2:latest",
     "window_interaction_enabled": true,
     "window_push_enabled": true,
+    "gravity": false,
     "always_on_top": true,
     "bubble_timeout": 5,
     "silent_mode": false,

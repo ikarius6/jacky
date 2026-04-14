@@ -483,6 +483,7 @@
         "check_always_on_top": "Always on top (above other windows)",
         "check_window_detect": "Enable window detection",
         "check_window_push": "Allow pushing windows",
+        "check_gravity": "Enable gravity (walk on ground and windows)",
         "group_debug": "Debug",
         "check_debug_log": "Enable debug logging",
         "check_llm_enable": "Enable LLM dialogue",

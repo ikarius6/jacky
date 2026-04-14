@@ -83,6 +83,7 @@ class PetWindow(QWidget):
             sprite_size=self._sprite_size,
             speed=self._config.get("movement_speed", 3),
         )
+        self.movement.set_gravity(self._config.get("gravity", False))
         self._apply_dpi_scale()
         self.scheduler = Scheduler()
 
@@ -672,7 +673,10 @@ class PetWindow(QWidget):
         self._refresh_screen_bounds()
         self._apply_dpi_scale()
         self.movement.set_position_after_drop(pos.x(), pos.y())
-        self.pet.set_state(PetState.IDLE)
+        if self.movement.gravity_enabled and self.movement.is_airborne:
+            self.pet.set_state(PetState.FALLING)
+        else:
+            self.pet.set_state(PetState.IDLE)
         self.scheduler.resume_all()  # resume paused timers, don't re-register
 
     def show_context_menu(self, pos: QPoint):
@@ -744,7 +748,19 @@ class PetWindow(QWidget):
                 # Check if walking toward a peer
                 self._peer_interactions.check_peer_arrival()
             else:
-                pass  # No gravity — pet stays where it is
+                if self.movement.gravity_enabled:
+                    self.movement.apply_gravity()
+                    self.move(self.movement.x, self.movement.y)
+                    _no_fall_states = (PetState.FALLING, PetState.DRAGGED, PetState.JUMPING)
+                    if self.movement.is_airborne and self.pet.state not in _no_fall_states:
+                        log.info("GRAVITY airborne detected state=%s pos=(%d,%d)",
+                                 self.pet.state.name, self.x(), self.y())
+                        self.pet.set_state(PetState.FALLING)
+                        self._start_fall_safety()
+                    elif self.pet.state == PetState.FALLING and not self.movement.is_airborne:
+                        log.info("GRAVITY landed pos=(%d,%d)", self.x(), self.y())
+                        self._cancel_fall_safety()
+                        self.pet.set_state(PetState.IDLE)
 
         # Always keep bubble following the pet
         self._update_bubble_pos()
@@ -934,6 +950,7 @@ class PetWindow(QWidget):
         """Apply in-memory config after settings change (does not re-read from disk)."""
         self.pet.name = self._config.get("pet_name", "Jacky")
         self.movement._speed = self._config.get("movement_speed", 3)
+        self.movement.set_gravity(self._config.get("gravity", False))
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._silent_mode = self._config.get("silent_mode", False)
         # Reload language if changed

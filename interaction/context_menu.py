@@ -629,6 +629,9 @@ class SettingsDialog(QDialog):
         self._win_push = QCheckBox(t("ui.check_window_push"))
         self._win_push.setChecked(self._config.get("window_push_enabled", True))
         win_form.addRow(self._win_push)
+        self._gravity = QCheckBox(t("ui.check_gravity"))
+        self._gravity.setChecked(self._config.get("gravity", False))
+        win_form.addRow(self._gravity)
         win_group.setLayout(win_form)
         layout.addWidget(win_group)
 
@@ -968,6 +971,7 @@ class SettingsDialog(QDialog):
         self._config["always_on_top"] = self._always_on_top.isChecked()
         self._config["window_interaction_enabled"] = self._win_enabled.isChecked()
         self._config["window_push_enabled"] = self._win_push.isChecked()
+        self._config["gravity"] = self._gravity.isChecked()
         self._config["llm_enabled"] = self._llm_enabled.isChecked()
         self._config["llm_provider"] = self._provider_combo.currentText()
         self._config["ollama_url"] = self._ollama_url.text().strip()

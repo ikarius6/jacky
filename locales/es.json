@@ -483,6 +483,7 @@
         "check_always_on_top": "Siempre visible (encima de otras ventanas)",
         "check_window_detect": "Activar detecci\u00f3n de ventanas",
         "check_window_push": "Permitir empujar ventanas",
+        "check_gravity": "Activar gravedad (caminar sobre el suelo y ventanas)",
         "group_debug": "Depuraci\u00f3n",
         "check_debug_log": "Activar logging de depuración",
         "check_llm_enable": "Activar diálogo LLM",
