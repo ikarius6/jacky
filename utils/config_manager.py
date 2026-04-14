@@ -8,8 +8,7 @@ log = logging.getLogger("config_manager")
 
 DEFAULT_CONFIG = {
     "pet_name": "Jacky",
-    "sprite_set": "placeholder",
-    "character": "placeholder",
+    "character": "Forest Ranger 3",
     "sprite_size": 128,
     "movement_speed": 3,
     "idle_interval": [5, 15],
@@ -30,6 +29,7 @@ DEFAULT_CONFIG = {
     "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
     "language": "es",
     "gravity": False,
+    "shop_url": "https://hackers.army/jacky/shop.json",
 }
 
 # Schema: key -> (type, min, max, choices)
@@ -38,7 +38,6 @@ DEFAULT_CONFIG = {
 # - choices: allowed values (None if not restricted)
 _SCHEMA = {
     "pet_name":                   (str,   None, None, None),
-    "sprite_set":                 (str,   None, None, None),
     "character":                  (str,   None, None, None),
     "sprite_size":                (int,   32,   512,  None),
     "movement_speed":             (int,   1,    10,   None),
@@ -59,6 +58,7 @@ _SCHEMA = {
     "max_peer_instances":         (int,   1,    20,   None),
     "language":                   (str,   None, None, None),
     "gravity":                    (bool,  None, None, None),
+    "shop_url":                   (str,   None, None, None),
 }
 
 # Interval keys: list of exactly 2 positive ints where [0] <= [1]

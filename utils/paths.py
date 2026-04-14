@@ -34,3 +34,13 @@ def get_config_dir() -> str:
     if is_frozen():
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def get_writable_sprites_dir() -> str:
+    """Return the writable sprites directory (next to .exe when frozen, project root in dev).
+
+    Downloaded character packs are stored here.  In dev mode this is the
+    same as the bundled sprites dir; in frozen mode it sits next to the
+    executable so it persists across updates.
+    """
+    return os.path.join(get_config_dir(), "sprites")

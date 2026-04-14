@@ -11,16 +11,6 @@ from PyQt6.QtCore import Qt
 
 from utils.paths import get_data_dir, get_config_dir
 
-
-def ensure_sprites():
-    """Generate placeholder sprites if they don't exist."""
-    sprites_dir = os.path.join(get_data_dir(), "sprites", "placeholder")
-    if not os.path.isdir(sprites_dir) or not any(f.endswith(".png") for f in os.listdir(sprites_dir)):
-        print("Generating placeholder sprites...")
-        from sprites.generate_placeholders import generate
-        generate()
-
-
 def main():
     # Configure logging — file + console
     from utils.config_manager import load_config
@@ -40,8 +30,6 @@ def main():
 
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)  # Keep running via system tray
-
-    ensure_sprites()
 
     from core.pet_window import PetWindow
     pet = PetWindow()

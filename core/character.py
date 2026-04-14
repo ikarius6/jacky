@@ -20,12 +20,13 @@ import json
 import logging
 import os
 
-from utils.paths import get_data_dir
+from utils.paths import get_data_dir, get_writable_sprites_dir
 
 log = logging.getLogger(__name__)
 
 BASE_DIR = get_data_dir()
 SPRITES_ROOT = os.path.join(BASE_DIR, "sprites")
+WRITABLE_SPRITES_ROOT = get_writable_sprites_dir()
 
 # ── standard directory-name → internal-state(s) mapping ────────────────
 # Each entry maps a sprite subdirectory name to one or more internal states.
@@ -63,16 +64,17 @@ def _build_state_map(sprite_dir: str) -> dict[str, str]:
 
 # ── discovery ───────────────────────────────────────────────────────────
 
-def _load_characters() -> dict[str, dict]:
-    """Scan sprites/*/character.json and build the full CHARACTERS dict."""
-    characters: dict[str, dict] = {}
+def _scan_sprites_dir(root: str, source: str) -> dict[str, dict]:
+    """Scan a single sprites root for character.json files.
 
-    if not os.path.isdir(SPRITES_ROOT):
-        log.warning("Sprites root not found: %s", SPRITES_ROOT)
+    *source* is ``"bundled"`` or ``"downloaded"`` and is stored on each entry.
+    """
+    characters: dict[str, dict] = {}
+    if not os.path.isdir(root):
         return characters
 
-    for folder in sorted(os.listdir(SPRITES_ROOT)):
-        json_path = os.path.join(SPRITES_ROOT, folder, "character.json")
+    for folder in sorted(os.listdir(root)):
+        json_path = os.path.join(root, folder, "character.json")
         if not os.path.isfile(json_path):
             continue
 
@@ -84,22 +86,40 @@ def _load_characters() -> dict[str, dict]:
             continue
 
         name = data.get("name", folder)
-        rel_path = f"sprites/{folder}"
+        abs_sprite_dir = os.path.join(root, folder)
         char_type = data.get("type", "sequence_dirs")
 
         if char_type == "sequence_dirs" and "state_map" not in data:
-            abs_sprite_dir = os.path.join(SPRITES_ROOT, folder)
             state_map = _build_state_map(abs_sprite_dir)
         else:
             state_map = data.get("state_map", {})
 
         characters[name] = {
             "type": char_type,
-            "path": rel_path,
+            "path": abs_sprite_dir,
             "sprite_size": data.get("sprite_size", 128),
             "fps": data.get("fps", 8),
             "state_map": state_map,
+            "version": data.get("version"),
+            "source": source,
+            "folder_id": folder,
         }
+
+    return characters
+
+
+def _load_characters() -> dict[str, dict]:
+    """Scan bundled + writable sprites dirs and build the CHARACTERS dict.
+
+    Downloaded characters (writable) override bundled ones if names collide.
+    """
+    # 1. Bundled (read-only in frozen mode)
+    characters = _scan_sprites_dir(SPRITES_ROOT, "bundled")
+
+    # 2. Downloaded / writable (next to .exe in frozen mode)
+    if os.path.normpath(WRITABLE_SPRITES_ROOT) != os.path.normpath(SPRITES_ROOT):
+        downloaded = _scan_sprites_dir(WRITABLE_SPRITES_ROOT, "downloaded")
+        characters.update(downloaded)  # downloaded wins on name collision
 
     return characters
 
@@ -118,23 +138,28 @@ def get_character(name: str) -> dict:
     """Return character config by name, defaulting to first available."""
     if name in CHARACTERS:
         return CHARACTERS[name]
-    fallback = "placeholder" if "placeholder" in CHARACTERS else next(iter(CHARACTERS), None)
+    fallback = "Forest_Ranger_3" if "Forest_Ranger_3" in CHARACTERS else next(iter(CHARACTERS), None)
     if fallback:
         return CHARACTERS[fallback]
-    return {"type": "flat", "path": "sprites/placeholder", "sprite_size": 128,
-            "fps": 6, "state_map": {}}
+    return {"type": "flat", "path": os.path.join(SPRITES_ROOT, "Forest_Ranger_3"),
+            "sprite_size": 128, "fps": 6, "state_map": {}}
 
 
 def get_sprites_dir(name: str) -> str:
     """Return the absolute sprites directory for a character."""
     char = get_character(name)
-    return os.path.join(BASE_DIR, char["path"])
+    return char["path"]
+
+
+def get_writable_sprites_root() -> str:
+    """Return the writable sprites root where downloaded packs live."""
+    return WRITABLE_SPRITES_ROOT
 
 
 def get_character_preview(name: str) -> str | None:
     """Return absolute path to the first idle frame for a character, or None."""
     char = get_character(name)
-    sprite_dir = os.path.join(BASE_DIR, char["path"])
+    sprite_dir = char["path"]
 
     if char["type"] == "flat":
         # flat layout: idle_0.png in the sprite dir

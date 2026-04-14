@@ -19,6 +19,10 @@ a = Analysis(
     binaries=[],
     datas=[
         # Bundle sprites (all character packs)
+        # NOTE: After implementing the character shop, you can reduce bundle size
+        # by only bundling specific character packs instead of the whole sprites folder.
+        # Example: ('sprites/Forest_Ranger_1', 'sprites/Forest_Ranger_2')
+        # Users can download other packs from the shop at runtime.
         ('sprites', 'sprites'),
         # Bundle locale files (i18n)
         ('locales', 'locales'),

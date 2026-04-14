@@ -69,7 +69,7 @@ class PetWindow(QWidget):
 
         # Core components
         self.pet = Pet(name=self._config.get("pet_name", "Jacky"))
-        self._character_name = self._config.get("character", "placeholder")
+        self._character_name = self._config.get("character", "Forest Ranger 3")
         self._char_cfg = get_character(self._character_name)
         sprites_dir = get_sprites_dir(self._character_name)
         self.animation = AnimationController(
@@ -193,12 +193,6 @@ class PetWindow(QWidget):
         """Check a granular permission from config['permissions']."""
         perms = self._config.get("permissions", DEFAULT_PERMISSIONS)
         return perms.get(key, True)
-
-    def _resolve_sprites_dir(self) -> str:
-        """Legacy fallback — prefer get_sprites_dir(character_name)."""
-        from utils.paths import get_data_dir
-        sprite_set = self._config.get("sprite_set", "placeholder")
-        return os.path.join(get_data_dir(), "sprites", sprite_set)
 
     def _apply_dpi_scale(self):
         """Pass the screen DPI scale to the movement engine for win32 coord conversion."""
@@ -1011,7 +1005,7 @@ class PetWindow(QWidget):
         _set_debug_enabled(debug_on)
 
         # Hot-swap character if changed
-        new_char = self._config.get("character", "placeholder")
+        new_char = self._config.get("character", "Forest Ranger 3")
         if new_char != self._character_name:
             self._character_name = new_char
             self._char_cfg = get_character(new_char)

@@ -164,7 +164,7 @@ class PeerDiscovery:
             "hwnd": hwnd,
             "pet_name": self._pw.pet.name,
             "display_name": self._display_name,
-            "character": self._pw._config.get("character", "placeholder"),
+            "character": self._pw._config.get("character", "Forest Ranger 3"),
             "x": self._pw.x(),
             "y": self._pw.y(),
             "state": self._pw.pet.state.name.lower(),

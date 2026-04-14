@@ -1,6 +1,5 @@
 {
     "pet_name": "Jacky",
-    "sprite_set": "placeholder",
     "character": "Forest Ranger 3",
     "sprite_size": 128,
     "movement_speed": 6,
@@ -60,5 +59,6 @@
     "elevenlabs_voice_id": "U0W3edavfdI8ibPeeteQ",
     "elevenlabs_model": "eleven_flash_v2_5",
     "debug_logging": false,
-    "language": "es"
+    "language": "es",
+    "shop_url": "https://hackers.army/jacky/shop.json"
 }

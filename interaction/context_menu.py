@@ -2,17 +2,25 @@ from PyQt6.QtWidgets import (QMenu, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QCheckBox, QSpinBox, QLineEdit, QPushButton,
                              QGroupBox, QFormLayout, QComboBox, QPlainTextEdit,
                              QTabWidget, QWidget, QGridLayout, QScrollArea,
-                             QFrame, QSizePolicy, QListWidget, QInputDialog)
-from PyQt6.QtCore import Qt, QPoint, QSize, pyqtSignal
+                             QFrame, QSizePolicy, QListWidget, QInputDialog,
+                             QProgressBar, QMessageBox)
+from PyQt6.QtCore import Qt, QPoint, QSize, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QFont, QPixmap
 
 import copy
+import logging
 
 from utils.config_manager import load_config, save_config
 from utils.i18n import t, get_permission_defs, available_languages, current_language
-from core.character import get_character_names, get_character_preview
+from core.character import (get_character_names, get_character_preview,
+                            reload_characters, get_writable_sprites_root, CHARACTERS)
+from utils.shop import (fetch_shop_catalog, fetch_preview_bytes,
+                        download_character, delete_character, needs_update,
+                        ShopCharacter)
 from speech.llm_provider import fetch_ollama_models
 from interaction.key_binding_input import KeyBindingInput
+
+log = logging.getLogger(__name__)
 
 
 class PetContextMenu(QMenu):
@@ -262,43 +270,121 @@ class AskDialog(QDialog):
 PREVIEW_SIZE = 96
 CARD_BORDER_NORMAL = "2px solid #DDB892"
 CARD_BORDER_SELECTED = "3px solid #E8913A"
+CARD_BORDER_NOT_INSTALLED = "2px dashed #C0C0C0"
+
+
+# ── Background workers ──────────────────────────────────────────────────
+
+class ShopFetchWorker(QThread):
+    """Fetch the remote shop catalog in a background thread."""
+    finished = pyqtSignal(list)  # list[ShopCharacter]
+
+    def __init__(self, shop_url: str, parent=None):
+        super().__init__(parent)
+        self._url = shop_url
+
+    def run(self):
+        catalog = fetch_shop_catalog(self._url)
+        self.finished.emit(catalog)
+
+
+class PreviewFetchWorker(QThread):
+    """Download a single preview image in background."""
+    finished = pyqtSignal(str, bytes)  # (char_id, image_bytes)
+
+    def __init__(self, char_id: str, url: str, parent=None):
+        super().__init__(parent)
+        self._char_id = char_id
+        self._url = url
+
+    def run(self):
+        data = fetch_preview_bytes(self._url)
+        if data:
+            self.finished.emit(self._char_id, data)
+
+
+class DownloadWorker(QThread):
+    """Download and extract a character pack in background."""
+    progress = pyqtSignal(int, int)   # (bytes_downloaded, total_bytes)
+    finished = pyqtSignal(str)        # extracted path
+    error = pyqtSignal(str)           # error message
+
+    def __init__(self, shop_char: ShopCharacter, dest_dir: str, parent=None):
+        super().__init__(parent)
+        self._char = shop_char
+        self._dest = dest_dir
+
+    def run(self):
+        try:
+            path = download_character(self._char, self._dest, self._on_progress)
+            self.finished.emit(path)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+    def _on_progress(self, downloaded: int, total: int):
+        self.progress.emit(downloaded, total)
 
 
 class CharacterCard(QFrame):
-    """Clickable card showing a character preview and name."""
+    """Card showing a character preview, name, and action buttons.
 
-    clicked = pyqtSignal(str)  # emits character name
+    Supports three visual states:
+    - **installed** (local character, selectable)
+    - **not_installed** (from shop, shows download button)
+    - **update_available** (installed but shop has newer version)
+    """
 
-    def __init__(self, char_name: str, is_selected: bool = False, parent=None):
+    clicked = pyqtSignal(str)           # emits character name (select)
+    download_requested = pyqtSignal(object)  # emits ShopCharacter
+    delete_requested = pyqtSignal(str)  # emits character name
+
+    def __init__(self, char_name: str, *,
+                 is_selected: bool = False,
+                 installed: bool = True,
+                 shop_char: ShopCharacter | None = None,
+                 update_available: bool = False,
+                 source: str = "bundled",
+                 parent=None):
         super().__init__(parent)
         self._name = char_name
         self._selected = is_selected
+        self._installed = installed
+        self._shop_char = shop_char
+        self._update_available = update_available
+        self._source = source
+        self._downloading = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(PREVIEW_SIZE + 24, PREVIEW_SIZE + 44)
+        self.setFixedSize(PREVIEW_SIZE + 28, PREVIEW_SIZE + 78)
         self._build()
         self._apply_style()
 
     def _build(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
+        layout.setContentsMargins(4, 4, 4, 2)
+        layout.setSpacing(2)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Preview image
         self._img_label = QLabel()
         self._img_label.setFixedSize(PREVIEW_SIZE, PREVIEW_SIZE)
         self._img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        preview_path = get_character_preview(self._name)
-        if preview_path:
-            pix = QPixmap(preview_path)
-            if not pix.isNull():
-                pix = pix.scaled(
-                    QSize(PREVIEW_SIZE, PREVIEW_SIZE),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-            self._img_label.setPixmap(pix)
+
+        if self._installed:
+            preview_path = get_character_preview(self._name)
+            if preview_path:
+                pix = QPixmap(preview_path)
+                if not pix.isNull():
+                    pix = pix.scaled(
+                        QSize(PREVIEW_SIZE, PREVIEW_SIZE),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                self._img_label.setPixmap(pix)
+            else:
+                self._img_label.setText("?")
+                self._img_label.setStyleSheet("font-size: 32pt; color: #B0B0B0;")
         else:
+            # Placeholder — will be replaced by shop preview if loaded
             self._img_label.setText("?")
             self._img_label.setStyleSheet("font-size: 32pt; color: #B0B0B0;")
         layout.addWidget(self._img_label)
@@ -307,12 +393,65 @@ class CharacterCard(QFrame):
         name_label = QLabel(self._name)
         name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         name_label.setWordWrap(True)
-        name_label.setStyleSheet("font-size: 9pt; color: #5A3E2B;")
+        name_label.setStyleSheet("font-size: 8pt; color: #5A3E2B;")
+        name_label.setFixedHeight(20)
         layout.addWidget(name_label)
 
+        # Action area (button or progress bar)
+        self._action_widget = QWidget()
+        self._action_layout = QVBoxLayout(self._action_widget)
+        self._action_layout.setContentsMargins(0, 0, 0, 0)
+        self._action_layout.setSpacing(0)
+
+        self._progress = QProgressBar()
+        self._progress.setFixedHeight(14)
+        self._progress.setTextVisible(False)
+        self._progress.setStyleSheet("""
+            QProgressBar { border: 1px solid #DDB892; border-radius: 3px; background: #FFF8F0; }
+            QProgressBar::chunk { background: #E8913A; border-radius: 2px; }
+        """)
+        self._progress.hide()
+        self._action_layout.addWidget(self._progress)
+
+        self._action_btn = QPushButton()
+        self._action_btn.setFixedHeight(22)
+        self._action_btn.setStyleSheet("""
+            QPushButton { font-size: 8pt; padding: 1px 4px; background: #FFDDB5;
+                          border: 1px solid #DDB892; border-radius: 3px; color: #5A3E2B; }
+            QPushButton:hover { background: #FFD0A0; }
+        """)
+
+        if not self._installed and self._shop_char:
+            size = self._shop_char.size_mb
+            self._action_btn.setText(t("ui.btn_download", size=f"{size:.1f}"))
+            self._action_btn.clicked.connect(self._on_download_click)
+        elif self._update_available:
+            self._action_btn.setText(t("ui.btn_update"))
+            self._action_btn.setStyleSheet("""
+                QPushButton { font-size: 8pt; padding: 1px 4px; background: #D4EDDA;
+                              border: 1px solid #A3D9A5; border-radius: 3px; color: #155724; }
+                QPushButton:hover { background: #C3E6CB; }
+            """)
+            self._action_btn.clicked.connect(self._on_download_click)
+        else:
+            self._action_btn.hide()
+
+        self._action_layout.addWidget(self._action_btn)
+        layout.addWidget(self._action_widget)
+
     def _apply_style(self):
-        border = CARD_BORDER_SELECTED if self._selected else CARD_BORDER_NORMAL
-        bg = "#FFF0DC" if self._selected else "#FFFFFF"
+        if not self._installed:
+            border = CARD_BORDER_NOT_INSTALLED
+            bg = "#F5F5F5"
+            hover_bg = "#EEEEEE"
+        elif self._selected:
+            border = CARD_BORDER_SELECTED
+            bg = "#FFF0DC"
+            hover_bg = "#FFF0DC"
+        else:
+            border = CARD_BORDER_NORMAL
+            bg = "#FFFFFF"
+            hover_bg = "#FFF0DC"
         self.setStyleSheet(f"""
             CharacterCard {{
                 background-color: {bg};
@@ -320,13 +459,24 @@ class CharacterCard(QFrame):
                 border-radius: 8px;
             }}
             CharacterCard:hover {{
-                background-color: #FFF0DC;
+                background-color: {hover_bg};
             }}
         """)
 
     def set_selected(self, selected: bool):
         self._selected = selected
         self._apply_style()
+
+    def set_preview_pixmap(self, pixmap: QPixmap):
+        """Set the preview image (used for shop previews loaded async)."""
+        if not pixmap.isNull():
+            pix = pixmap.scaled(
+                QSize(PREVIEW_SIZE, PREVIEW_SIZE),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            self._img_label.setPixmap(pix)
+            self._img_label.setStyleSheet("")
 
     @property
     def is_selected(self) -> bool:
@@ -336,9 +486,89 @@ class CharacterCard(QFrame):
     def char_name(self) -> str:
         return self._name
 
+    @property
+    def installed(self) -> bool:
+        return self._installed
+
+    @property
+    def source(self) -> str:
+        return self._source
+
+    @property
+    def shop_char(self) -> ShopCharacter | None:
+        return self._shop_char
+
     def mousePressEvent(self, event):
-        self.clicked.emit(self._name)
+        if self._installed and not self._downloading:
+            self.clicked.emit(self._name)
         super().mousePressEvent(event)
+
+    def contextMenuEvent(self, event):
+        """Right-click context menu for delete (downloaded characters only)."""
+        if self._installed and self._source == "downloaded":
+            menu = QMenu(self)
+            menu.setStyleSheet("""
+                QMenu { background: #FFF8F0; border: 1px solid #DDB892; border-radius: 4px;
+                        font-size: 10pt; color: #5A3E2B; }
+                QMenu::item { padding: 4px 12px; }
+                QMenu::item:selected { background: #FFDDB5; }
+            """)
+            del_action = QAction(t("ui.btn_delete"), menu)
+            del_action.triggered.connect(lambda: self.delete_requested.emit(self._name))
+            menu.addAction(del_action)
+            menu.popup(event.globalPos())
+
+    # ── download / progress ──────────────────────────────────────────
+
+    def _on_download_click(self):
+        if self._shop_char:
+            self.download_requested.emit(self._shop_char)
+
+    def start_download_ui(self):
+        """Switch card to downloading state."""
+        self._downloading = True
+        self._action_btn.hide()
+        self._progress.setValue(0)
+        self._progress.show()
+
+    def update_progress(self, downloaded: int, total: int):
+        if total > 0:
+            self._progress.setMaximum(100)
+            self._progress.setValue(int(downloaded * 100 / total))
+        else:
+            self._progress.setMaximum(0)  # indeterminate
+
+    def download_finished(self):
+        """Switch card to installed state after successful download."""
+        self._downloading = False
+        self._installed = True
+        self._update_available = False
+        self._progress.hide()
+        self._action_btn.hide()
+        self._apply_style()
+        # Refresh preview from local files
+        preview_path = get_character_preview(self._name)
+        if preview_path:
+            pix = QPixmap(preview_path)
+            if not pix.isNull():
+                pix = pix.scaled(
+                    QSize(PREVIEW_SIZE, PREVIEW_SIZE),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self._img_label.setPixmap(pix)
+                self._img_label.setStyleSheet("")
+
+    def download_failed(self, error: str):
+        """Show error and restore button."""
+        self._downloading = False
+        self._progress.hide()
+        self._action_btn.show()
+        self._action_btn.setText(t("ui.download_error", error=error[:30]))
+        self._action_btn.setStyleSheet("""
+            QPushButton { font-size: 7pt; padding: 1px 4px; background: #F8D7DA;
+                          border: 1px solid #F5C6CB; border-radius: 3px; color: #721C24; }
+        """)
 
 
 # Permission definitions: (config_key, group)
@@ -468,8 +698,10 @@ class SettingsDialog(QDialog):
             }
         """)
         self._config = copy.deepcopy(pet_window._config)
-        self._selected_char = self._config.get("character", "placeholder")
+        self._selected_char = self._config.get("character", "Forest Ranger 3")
         self._char_cards: list[CharacterCard] = []
+        self._shop_catalog: list[ShopCharacter] = []
+        self._active_workers: list[QThread] = []
         self._perm_checks: dict[str, QCheckBox] = {}
         self._build_ui()
 
@@ -498,14 +730,32 @@ class SettingsDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def _build_character_tab(self) -> QWidget:
-        """Build the visual character selection grid."""
+        """Build the visual character selection grid with shop integration."""
         tab = QWidget()
         tab_layout = QVBoxLayout(tab)
         tab_layout.setContentsMargins(4, 8, 4, 4)
 
+        # Header row: hint + refresh button
+        header = QHBoxLayout()
         hint = QLabel(t("ui.select_character"))
         hint.setStyleSheet("font-size: 10pt; color: #5A3E2B; padding: 2px 4px;")
-        tab_layout.addWidget(hint)
+        header.addWidget(hint)
+        header.addStretch()
+
+        self._shop_status = QLabel()
+        self._shop_status.setStyleSheet("font-size: 8pt; color: #999; padding: 2px 4px;")
+        header.addWidget(self._shop_status)
+
+        refresh_btn = QPushButton(t("ui.shop_refresh"))
+        refresh_btn.setFixedHeight(24)
+        refresh_btn.setStyleSheet("""
+            QPushButton { font-size: 8pt; padding: 2px 8px; background: #FFDDB5;
+                          border: 1px solid #DDB892; border-radius: 3px; color: #5A3E2B; }
+            QPushButton:hover { background: #FFD0A0; }
+        """)
+        refresh_btn.clicked.connect(self._fetch_shop_catalog)
+        header.addWidget(refresh_btn)
+        tab_layout.addLayout(header)
 
         # Scrollable grid
         scroll = QScrollArea()
@@ -513,22 +763,21 @@ class SettingsDialog(QDialog):
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setStyleSheet("QScrollArea { background: transparent; }")
 
-        grid_widget = QWidget()
-        grid_widget.setStyleSheet("background: transparent;")
-        grid = QGridLayout(grid_widget)
-        grid.setSpacing(10)
-        grid.setContentsMargins(6, 6, 6, 6)
+        self._grid_widget = QWidget()
+        self._grid_widget.setStyleSheet("background: transparent;")
+        self._grid = QGridLayout(self._grid_widget)
+        self._grid.setSpacing(10)
+        self._grid.setContentsMargins(6, 6, 6, 6)
 
-        names = get_character_names()
-        cols = 3
-        for i, name in enumerate(names):
-            card = CharacterCard(name, is_selected=(name == self._selected_char))
-            card.clicked.connect(self._on_card_clicked)
-            grid.addWidget(card, i // cols, i % cols)
-            self._char_cards.append(card)
+        # Build initial grid with local characters only
+        self._populate_grid()
 
-        scroll.setWidget(grid_widget)
+        scroll.setWidget(self._grid_widget)
         tab_layout.addWidget(scroll)
+
+        # Start fetching shop catalog in background
+        self._fetch_shop_catalog()
+
         return tab
 
     def _build_settings_tab(self) -> QWidget:
@@ -634,6 +883,15 @@ class SettingsDialog(QDialog):
         win_form.addRow(self._gravity)
         win_group.setLayout(win_form)
         layout.addWidget(win_group)
+
+        # Shop URL
+        shop_group = QGroupBox(t("ui.label_shop_url").rstrip(":"))
+        shop_form = QFormLayout()
+        self._shop_url = QLineEdit(self._config.get("shop_url", "https://hackers.army/jacky/shop.json"))
+        self._shop_url.setPlaceholderText("https://hackers.army/jacky/shop.json")
+        shop_form.addRow(t("ui.label_shop_url"), self._shop_url)
+        shop_group.setLayout(shop_form)
+        layout.addWidget(shop_group)
 
         # Debug group
         debug_group = QGroupBox(t("ui.group_debug"))
@@ -905,12 +1163,161 @@ class SettingsDialog(QDialog):
         for cb in self._perm_checks.values():
             cb.setChecked(checked)
 
-    # ── character selection ──────────────────────────────────────────
+    # ── character grid / shop ────────────────────────────────────────
+
+    def _populate_grid(self):
+        """Build the character card grid from local + shop data."""
+        # Clear existing cards
+        for card in self._char_cards:
+            card.setParent(None)
+            card.deleteLater()
+        self._char_cards.clear()
+
+        # Build merged list: local characters first, then shop-only
+        local_names = get_character_names()
+        # Map shop entries by name for lookup
+        shop_by_name: dict[str, ShopCharacter] = {
+            sc.name: sc for sc in self._shop_catalog
+        }
+
+        cols = 3
+        idx = 0
+
+        # 1. Local (installed) characters
+        for name in local_names:
+            char_info = CHARACTERS.get(name, {})
+            sc = shop_by_name.pop(name, None)
+            update_avail = False
+            if sc and char_info.get("version"):
+                update_avail = needs_update(char_info["version"], sc.version)
+
+            card = CharacterCard(
+                name,
+                is_selected=(name == self._selected_char),
+                installed=True,
+                shop_char=sc,
+                update_available=update_avail,
+                source=char_info.get("source", "bundled"),
+            )
+            card.clicked.connect(self._on_card_clicked)
+            card.download_requested.connect(self._on_download_requested)
+            card.delete_requested.connect(self._on_delete_requested)
+            self._grid.addWidget(card, idx // cols, idx % cols)
+            self._char_cards.append(card)
+            idx += 1
+
+        # 2. Shop-only (not installed) characters
+        for sc in shop_by_name.values():
+            card = CharacterCard(
+                sc.name,
+                is_selected=False,
+                installed=False,
+                shop_char=sc,
+                source="shop",
+            )
+            card.download_requested.connect(self._on_download_requested)
+            self._grid.addWidget(card, idx // cols, idx % cols)
+            self._char_cards.append(card)
+            idx += 1
+
+            # Fetch preview image async
+            if sc.preview_url:
+                worker = PreviewFetchWorker(sc.id, sc.preview_url, parent=self)
+                worker.finished.connect(self._on_preview_loaded)
+                self._active_workers.append(worker)
+                worker.start()
+
+    def _fetch_shop_catalog(self):
+        """Start a background fetch of the shop catalog."""
+        shop_url = self._config.get("shop_url", "")
+        if not shop_url:
+            return
+        self._shop_status.setText(t("ui.shop_loading"))
+        worker = ShopFetchWorker(shop_url, parent=self)
+        worker.finished.connect(self._on_shop_fetched)
+        self._active_workers.append(worker)
+        worker.start()
+
+    def _on_shop_fetched(self, catalog: list):
+        """Handle shop catalog response — merge with local and rebuild grid."""
+        self._shop_catalog = catalog
+        if catalog:
+            self._shop_status.setText("")
+        else:
+            self._shop_status.setText(t("ui.shop_error"))
+        self._populate_grid()
+
+    def _on_preview_loaded(self, char_id: str, data: bytes):
+        """Set the preview pixmap on the matching card."""
+        pix = QPixmap()
+        pix.loadFromData(data)
+        if pix.isNull():
+            return
+        for card in self._char_cards:
+            sc = card.shop_char
+            if sc and sc.id == char_id:
+                card.set_preview_pixmap(pix)
+                break
 
     def _on_card_clicked(self, name: str):
         self._selected_char = name
         for card in self._char_cards:
             card.set_selected(card.char_name == name)
+
+    def _on_download_requested(self, shop_char: ShopCharacter):
+        """Start downloading a character pack."""
+        # Find the card
+        card = None
+        for c in self._char_cards:
+            if c.shop_char and c.shop_char.id == shop_char.id:
+                card = c
+                break
+        if not card:
+            return
+
+        card.start_download_ui()
+        dest = get_writable_sprites_root()
+        worker = DownloadWorker(shop_char, dest, parent=self)
+        worker.progress.connect(card.update_progress)
+        worker.finished.connect(lambda path, c=card, sc=shop_char: self._on_download_done(c, sc))
+        worker.error.connect(lambda err, c=card: c.download_failed(err))
+        self._active_workers.append(worker)
+        worker.start()
+
+    def _on_download_done(self, card: CharacterCard, shop_char: ShopCharacter):
+        """Handle successful download: reload characters and update card."""
+        reload_characters()
+        card.download_finished()
+        log.info("Character '%s' downloaded and installed.", shop_char.name)
+
+    def _on_delete_requested(self, name: str):
+        """Confirm and delete a downloaded character."""
+        reply = QMessageBox.question(
+            self,
+            t("ui.delete_confirm_title"),
+            t("ui.delete_confirm_msg", name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Find folder_id from CHARACTERS
+        char_info = CHARACTERS.get(name)
+        if not char_info or char_info.get("source") != "downloaded":
+            return
+        folder_id = char_info.get("folder_id", "")
+        if not folder_id:
+            return
+
+        dest = get_writable_sprites_root()
+        if delete_character(folder_id, dest):
+            reload_characters()
+            # If we deleted the selected character, fallback
+            if self._selected_char == name:
+                names = get_character_names()
+                self._selected_char = names[0] if names else "Forest Ranger 3"
+            self._populate_grid()
 
     # ── models / save ───────────────────────────────────────────────
 
@@ -980,6 +1387,7 @@ class SettingsDialog(QDialog):
         self._config["openrouter_model"] = self._or_model.text().strip()
         self._config["groq_api_keys"] = list(self._groq_api_keys)
         self._config["groq_model"] = self._groq_model.text().strip()
+        self._config["shop_url"] = self._shop_url.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
         self._config["response_mode"] = self._response_mode.currentData()
         shortcut_val = self._listen_shortcut.shortcut_config_string()
@@ -1005,4 +1413,17 @@ class SettingsDialog(QDialog):
         save_config(self._config)
         self._pet_window._config = self._config
         self._pet_window.reload_config()
+        self._cleanup_workers()
         self.accept()
+
+    def reject(self):
+        self._cleanup_workers()
+        super().reject()
+
+    def _cleanup_workers(self):
+        """Stop and clean up any background workers."""
+        for worker in self._active_workers:
+            if worker.isRunning():
+                worker.quit()
+                worker.wait()
+        self._active_workers.clear()
