@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QWidget, QSystemTrayIcon, QMenu, QApplication
 from PyQt6.QtCore import Qt, QTimer, QPoint, pyqtSignal
 from PyQt6.QtGui import QPainter, QIcon, QPixmap, QAction
 
-from core.pet import Pet, PetState
+from core.pet import Pet, PetState, ANIMATION_FALLBACKS
 from core.animation import AnimationController
 from core.movement import MovementEngine
 from core.character import get_character, get_sprites_dir
@@ -478,7 +478,7 @@ class PetWindow(QWidget):
             self._screen_interaction.cancel()
             return
         log.info("ACTION on_pet_clicked pos=(%d,%d)", self.x(), self.y())
-        self.pet.set_state(PetState.HAPPY)
+        self.pet.set_state(PetState.GETTING_PET)
         self._say(get_line("petted", self.pet.name))
         self._temp_state_timer.start(2000)
 
@@ -496,12 +496,7 @@ class PetWindow(QWidget):
         if self._screen_interaction.is_active:
             self._screen_interaction.cancel()
         log.info("ACTION on_attack pos=(%d,%d)", self.x(), self.y())
-        if "shooting" in self.animation.available_states:
-            self.pet.set_state(PetState.SHOOTING)
-        elif "slashing" in self.animation.available_states:
-            self.pet.set_state(PetState.SLASHING)
-        else:
-            self.pet.set_state(PetState.INTERACTING)
+        self.pet.set_state(PetState.ATTACKING)
         self._temp_state_timer.start(2000)
 
     def _needs_vision(self, text: str) -> bool:
@@ -700,9 +695,15 @@ class PetWindow(QWidget):
 
     def _on_anim_tick(self):
         anim_name = self.pet.get_animation_name()
+        # Resolve fallback if primary animation is not in the current sprite pack
         if anim_name not in self.animation.available_states:
-            log.warning("ANIM_MISS state='%s' not in available=%s pos=(%d,%d)",
-                        anim_name, self.animation.available_states, self.x(), self.y())
+            for alt in ANIMATION_FALLBACKS.get(anim_name, []):
+                if alt in self.animation.available_states:
+                    anim_name = alt
+                    break
+            else:
+                log.warning("ANIM_MISS state='%s' not in available=%s pos=(%d,%d)",
+                            anim_name, self.animation.available_states, self.x(), self.y())
         # Keep the controller aware of the current facing direction so every
         # animation (idle, talk, hurt, jump…) mirrors correctly when facing left.
         self.animation.set_facing(self.pet.direction < 0)
@@ -827,9 +828,9 @@ class PetWindow(QWidget):
         log.info("SAY state=%s pos=(%d,%d) text='%s'", self.pet.state.name, self.x(), self.y(), text[:80])
         old_state = self.pet.state
         _KEEP_ANIM = (PetState.HAPPY, PetState.EATING, PetState.DRAGGED,
-                     PetState.SHOOTING, PetState.SLASHING, PetState.THROWING,
-                     PetState.SLIDING, PetState.INTERACTING, PetState.HURT,
-                     PetState.DYING, PetState.WALKING, PetState.RUNNING)
+                     PetState.ATTACKING, PetState.HURT,
+                     PetState.DYING, PetState.WALKING, PetState.RUNNING,
+                     PetState.DANCE, PetState.GETTING_PET)
         if old_state not in _KEEP_ANIM:
             self.pet.set_state(PetState.TALKING)
 
@@ -915,11 +916,11 @@ class PetWindow(QWidget):
         pass  # Animation handled by _on_anim_tick
 
     def _end_temp_state(self):
-        """Return to IDLE after a temporary state (happy, eating, interacting, peeking)."""
-        if self.pet.state in (PetState.HAPPY, PetState.EATING, PetState.INTERACTING,
-                              PetState.PEEKING, PetState.SHOOTING, PetState.THROWING,
-                              PetState.JUMPING, PetState.SLIDING, PetState.HURT,
-                              PetState.TALKING, PetState.SLASHING, PetState.DYING):
+        """Return to IDLE after a temporary state (happy, eating, attacking, peeking)."""
+        if self.pet.state in (PetState.HAPPY, PetState.EATING, PetState.ATTACKING,
+                              PetState.PEEKING, PetState.JUMPING, PetState.HURT,
+                              PetState.TALKING, PetState.DYING,
+                              PetState.DANCE, PetState.GETTING_PET):
             log.debug("END_TEMP %s -> IDLE pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
 

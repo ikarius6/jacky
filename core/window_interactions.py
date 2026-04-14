@@ -150,13 +150,13 @@ class WindowInteractionHandler:
         )
         if pushed:
             log.info("WIN_ACT push pos=(%d,%d)", pw.x(), pw.y())
-            pw.pet.set_state(PetState.INTERACTING)
+            pw.pet.set_state(PetState.ATTACKING)
             pw._say(get_line("window_push", pw.pet.name))
             pw._temp_state_timer.start(2000)
 
     def _do_peek(self):
         pw = self._pw
-        if pw.pet.state not in (PetState.IDLE, PetState.INTERACTING):
+        if pw.pet.state not in (PetState.IDLE, PetState.ATTACKING):
             return
 
         result = pw._window_awareness.get_peek_position(pw._sprite_size)
@@ -197,7 +197,7 @@ class WindowInteractionHandler:
         if not target:
             return
         log.info("WIN_ACT shake target='%s' pos=(%d,%d)", target.title, pw.x(), pw.y())
-        pw.pet.set_state(PetState.INTERACTING)
+        pw.pet.set_state(PetState.ATTACKING)
         pw._say(get_line("window_shake", pw.pet.name))
         self._shake_hwnd = target.hwnd
         self._shake_step = 0
@@ -222,18 +222,13 @@ class WindowInteractionHandler:
         )
         if target:
             log.info("WIN_ACT minimize target='%s' pos=(%d,%d)", target.title, pw.x(), pw.y())
-            if "shooting" in pw.animation.available_states:
-                pw.pet.set_state(PetState.SHOOTING)
-            elif "slashing" in pw.animation.available_states:
-                pw.pet.set_state(PetState.SLASHING)
-            else:
-                pw.pet.set_state(PetState.INTERACTING)
+            pw.pet.set_state(PetState.ATTACKING)
             pw._say(get_line("window_minimize", pw.pet.name))
             pw._temp_state_timer.start(2000)
 
     def _do_sit(self):
         pw = self._pw
-        if pw.pet.state not in (PetState.IDLE, PetState.INTERACTING):
+        if pw.pet.state not in (PetState.IDLE, PetState.ATTACKING):
             return
         result = pw._window_awareness.get_titlebar_position(pw._sprite_size)
         if not result:
@@ -258,7 +253,7 @@ class WindowInteractionHandler:
         )
         if target:
             log.info("WIN_ACT resize target='%s' pos=(%d,%d)", target.title, pw.x(), pw.y())
-            pw.pet.set_state(PetState.INTERACTING)
+            pw.pet.set_state(PetState.ATTACKING)
             pw._say(get_line("window_resize", pw.pet.name))
             pw._temp_state_timer.start(2000)
 
@@ -267,13 +262,13 @@ class WindowInteractionHandler:
         target = pw._window_awareness.try_knock_window()
         if target:
             log.info("WIN_ACT knock target='%s' pos=(%d,%d)", target.title, pw.x(), pw.y())
-            pw.pet.set_state(PetState.INTERACTING)
+            pw.pet.set_state(PetState.ATTACKING)
             pw._say(get_line("window_knock", pw.pet.name))
             pw._temp_state_timer.start(2000)
 
     def _do_drag(self):
         pw = self._pw
-        if pw.pet.state not in (PetState.IDLE, PetState.INTERACTING):
+        if pw.pet.state not in (PetState.IDLE, PetState.ATTACKING):
             return
         target = pw._window_awareness.start_drag_window(
             pw.movement.x, pw.movement.y
@@ -293,7 +288,7 @@ class WindowInteractionHandler:
         success = pw._window_awareness.try_tidy_windows()
         if success:
             log.info("WIN_ACT tidy pos=(%d,%d)", pw.x(), pw.y())
-            pw.pet.set_state(PetState.INTERACTING)
+            pw.pet.set_state(PetState.ATTACKING)
             pw._say(get_line("window_tidy", pw.pet.name))
             pw._temp_state_timer.start(3000)
 
@@ -305,9 +300,6 @@ class WindowInteractionHandler:
         if toppled:
             log.info("WIN_ACT topple pos=(%d,%d) dir=%d",
                      pw.x(), pw.y(), pw.pet.direction)
-            if "shooting" in pw.animation.available_states:
-                pw.pet.set_state(PetState.SHOOTING)
-            else:
-                pw.pet.set_state(PetState.INTERACTING)
+            pw.pet.set_state(PetState.ATTACKING)
             pw._say(get_line("window_topple", pw.pet.name))
             pw._temp_state_timer.start(2500)

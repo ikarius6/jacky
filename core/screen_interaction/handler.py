@@ -713,12 +713,7 @@ class ScreenInteractionHandler(QObject):
         # For click/close/minimize/type — need to do the actual action
         # Play attack animation first
         from core.pet import PetState
-        if "shooting" in self._pet.animation.available_states:
-            self._pet.pet.set_state(PetState.SHOOTING)
-        elif "slashing" in self._pet.animation.available_states:
-            self._pet.pet.set_state(PetState.SLASHING)
-        else:
-            self._pet.pet.set_state(PetState.INTERACTING)
+        self._pet.pet.set_state(PetState.ATTACKING)
 
         # Delay the actual click to let the animation play
         QTimer.singleShot(500, self._do_action)

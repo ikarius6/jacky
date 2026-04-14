@@ -38,18 +38,9 @@ DIR_TO_STATES: dict[str, list[str]] = {
     "Kicking":              ["kick", "happy"],
     "Dying":                ["dying"],
     "Falling Down":         ["falling"],
-    "Jump Start":           ["jump_start"],
     "Jump Loop":            ["jump_loop"],
-    "Sliding":              ["sliding"],
-    "Throwing":             ["throwing"],
-    "Throwing in The Air":  ["throwing_air"],
-    "Run Throwing":         ["run_throwing"],
     "Shooting":             ["shooting"],
-    "Shooting in The Air":  ["shooting_air"],
-    "Run Shooting":         ["run_shooting"],
     "Slashing":             ["slashing"],
-    "Slashing in The Air":  ["slashing_air"],
-    "Run Slashing":         ["run_slashing"],
 }
 
 # ── auto-detection helpers ──────────────────────────────────────────────

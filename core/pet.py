@@ -7,43 +7,47 @@ log = logging.getLogger("pet")
 
 class PetState(Enum):
     IDLE = auto()
-    WALKING = auto()
     TALKING = auto()
-    DRAGGED = auto()
-    INTERACTING = auto()
-    PEEKING = auto()
-    HAPPY = auto()
-    EATING = auto()
+    WALKING = auto()
     RUNNING = auto()
-    JUMPING = auto()
-    FALLING = auto()
     HURT = auto()
+    HAPPY = auto()
+    FALLING = auto()
+    JUMPING = auto()
+    ATTACKING = auto()
+    EATING = auto()
+    DRAGGED = auto()
     DYING = auto()
-    SHOOTING = auto()
-    SLASHING = auto()
-    THROWING = auto()
-    SLIDING = auto()
+    DANCE = auto()
+    GETTING_PET = auto()
+    PEEKING = auto()
 
 
 # Maps pet states to animation state names (sprite prefixes)
 STATE_ANIMATION_MAP = {
     PetState.IDLE: "idle",
-    PetState.WALKING: "walk",
     PetState.TALKING: "talk",
-    PetState.DRAGGED: "drag",
-    PetState.INTERACTING: "kick",
-    PetState.PEEKING: "idle",
-    PetState.HAPPY: "happy",
-    PetState.EATING: "happy",
+    PetState.WALKING: "walk",
     PetState.RUNNING: "run",
-    PetState.JUMPING: "jump_loop",
-    PetState.FALLING: "falling",
     PetState.HURT: "hurt",
+    PetState.HAPPY: "happy",
+    PetState.FALLING: "falling",
+    PetState.JUMPING: "jump_loop",
+    PetState.ATTACKING: "shooting",
+    PetState.EATING: "happy",
+    PetState.DRAGGED: "drag",
     PetState.DYING: "dying",
-    PetState.SHOOTING: "shooting",
-    PetState.SLASHING: "slashing",
-    PetState.THROWING: "throwing",
-    PetState.SLIDING: "sliding",
+    PetState.DANCE: "happy",
+    PetState.GETTING_PET: "happy",
+    PetState.PEEKING: "idle",
+}
+
+# Fallback chains for states whose primary animation may not exist in all sprite packs.
+# When the primary animation name (from STATE_ANIMATION_MAP) is not available,
+# try these alternatives in order.
+ANIMATION_FALLBACKS: dict[str, list[str]] = {
+    "shooting": ["slashing", "kick"],
+    "happy":    ["kick"],
 }
 
 

@@ -104,7 +104,7 @@ class PeerInteractionHandler:
     def do_dance(self, target: PeerInfo):
         """Start dancing and invite the peer to dance too."""
         pw = self._pw
-        pw.pet.set_state(PetState.HAPPY)
+        pw.pet.set_state(PetState.DANCE)
         pw._say(get_line("peer_dance", pw.pet.name, peer_name=target.display_name))
         pw._peer_discovery.send_event(target.pid, "dance")
         pw._temp_state_timer.start(4000)
@@ -127,7 +127,7 @@ class PeerInteractionHandler:
     def _walk_toward_peer(self, target: PeerInfo, action: str):
         """Set the pet walking toward a peer's position. Execute action on arrival."""
         pw = self._pw
-        if pw.pet.state not in (PetState.IDLE, PetState.WALKING, PetState.RUNNING, PetState.INTERACTING):
+        if pw.pet.state not in (PetState.IDLE, PetState.WALKING, PetState.RUNNING, PetState.ATTACKING):
             return
 
         self._walk_to_peer = target
@@ -193,12 +193,7 @@ class PeerInteractionHandler:
             pw._temp_state_timer.start(2500)
 
         elif action == "attack":
-            if "shooting" in pw.animation.available_states:
-                pw.pet.set_state(PetState.SHOOTING)
-            elif "slashing" in pw.animation.available_states:
-                pw.pet.set_state(PetState.SLASHING)
-            else:
-                pw.pet.set_state(PetState.INTERACTING)
+            pw.pet.set_state(PetState.ATTACKING)
             pw._say(get_line("peer_attack", pw.pet.name, peer_name=peer.display_name))
             pw._peer_discovery.send_event(peer.pid, "attack")
             pw._temp_state_timer.start(2000)
@@ -261,12 +256,7 @@ class PeerInteractionHandler:
     def _do_fight_strike(self, target: PeerInfo):
         """Perform one fight strike."""
         pw = self._pw
-        if "shooting" in pw.animation.available_states:
-            pw.pet.set_state(PetState.SHOOTING)
-        elif "slashing" in pw.animation.available_states:
-            pw.pet.set_state(PetState.SLASHING)
-        else:
-            pw.pet.set_state(PetState.INTERACTING)
+        pw.pet.set_state(PetState.ATTACKING)
 
         pw._say(get_line("peer_attack", pw.pet.name, peer_name=target.display_name))
         pw._peer_discovery.send_event(target.pid, "fight_strike",
@@ -393,12 +383,7 @@ class PeerInteractionHandler:
         pw = self._pw
         if pw.pet.state in (PetState.DRAGGED, PetState.FALLING):
             return
-        if "shooting" in pw.animation.available_states:
-            pw.pet.set_state(PetState.SHOOTING)
-        elif "slashing" in pw.animation.available_states:
-            pw.pet.set_state(PetState.SLASHING)
-        else:
-            pw.pet.set_state(PetState.INTERACTING)
+        pw.pet.set_state(PetState.ATTACKING)
         pw._say(get_line("peer_attack", pw.pet.name, peer_name=target_name))
         pw._peer_discovery.send_event(target_pid, "attack")
         pw._temp_state_timer.start(2000)
@@ -427,7 +412,7 @@ class PeerInteractionHandler:
     def _react_to_dance(self, event: PeerEvent):
         pw = self._pw
         name = self._get_source_name(event)
-        pw.pet.set_state(PetState.HAPPY)
+        pw.pet.set_state(PetState.DANCE)
         pw._say(get_line("peer_dance_response", pw.pet.name, peer_name=name))
         pw._temp_state_timer.start(4000)
 
