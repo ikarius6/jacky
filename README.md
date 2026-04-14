@@ -131,6 +131,9 @@ Translated content includes: dialogues, app-group keywords, UI labels, permissio
 
 Drop sprite folders inside `sprites/`. Each folder contains a `character.json` descriptor and sub-folders for each animation state (Idle, Walking, Dying, Hurt, etc.). Sprites should have transparent backgrounds.
 
+### Animation States
+📖 **[Animation States — Technical Deep Dive](docs/animation_states.md)** — full reference for PetState enum, sprite folder mapping, and animation fallback system.
+
 ## Compile
 
 ```powershell
