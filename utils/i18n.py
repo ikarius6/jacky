@@ -27,25 +27,60 @@ def _resolve_locales_dir() -> str:
     return os.path.join(base, "locales")
 
 
-def load_language(code: str) -> None:
-    """Load a language file by its ISO code (e.g. ``'es'``, ``'en'``).
+def _load_locale(code: str) -> dict | None:
+    """Try to load locale data for *code*.
 
-    Falls back to ``'es'`` if the requested file does not exist.
+    Checks for a directory (``locales/<code>/``) first, merging all
+    ``.json`` files inside it.  Falls back to a single file
+    (``locales/<code>.json``) for backward compatibility.
+
+    Returns the merged dict or ``None`` on failure.
+    """
+    lang_dir = os.path.join(_locales_dir, code)
+    if os.path.isdir(lang_dir):
+        merged: dict = {}
+        for fname in sorted(os.listdir(lang_dir)):
+            if not fname.endswith(".json"):
+                continue
+            fpath = os.path.join(lang_dir, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    merged.update(json.load(f))
+            except Exception as e:
+                log.error("Failed to load locale part '%s': %s", fpath, e)
+        if merged:
+            return merged
+    # Backward compat: single file
+    path = os.path.join(_locales_dir, f"{code}.json")
+    if os.path.isfile(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            log.error("Failed to load locale '%s': %s", path, e)
+    return None
+
+
+def load_language(code: str) -> None:
+    """Load a language by its ISO code (e.g. ``'es'``, ``'en'``).
+
+    Supports both split directories (``locales/es/*.json``) and single
+    files (``locales/es.json``).  Falls back to ``'es'`` if the
+    requested locale cannot be found.
     """
     global _current_lang, _strings, _locales_dir
     _locales_dir = _resolve_locales_dir()
-    path = os.path.join(_locales_dir, f"{code}.json")
-    if not os.path.isfile(path):
-        log.warning("Locale file not found: %s — falling back to 'es'", path)
+    data = _load_locale(code)
+    if data is None:
+        log.warning("Locale not found for '%s' — falling back to 'es'", code)
         code = "es"
-        path = os.path.join(_locales_dir, f"{code}.json")
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            _strings = json.load(f)
+        data = _load_locale(code)
+    if data is not None:
+        _strings = data
         _current_lang = code
-        log.info("Loaded language '%s' from %s", code, path)
-    except Exception as e:
-        log.error("Failed to load locale '%s': %s", code, e)
+        log.info("Loaded language '%s'", code)
+    else:
+        log.error("Failed to load any locale (tried '%s' and 'es')", code)
 
 
 def current_language() -> str:
@@ -182,25 +217,50 @@ def get_system_prompt(pet_name: str = "Jacky") -> str:
 
 
 def available_languages() -> list[tuple[str, str]]:
-    """Discover available languages from locale files.
+    """Discover available languages from locale directories and files.
 
     Returns a sorted list of ``(code, display_name)`` tuples, e.g.
     ``[("en", "English"), ("es", "Español")]``.
     """
     locales_dir = _resolve_locales_dir()
     langs: list[tuple[str, str]] = []
+    seen: set[str] = set()
     if not os.path.isdir(locales_dir):
         return [("es", "Español")]
-    for fname in os.listdir(locales_dir):
-        if not fname.endswith(".json"):
-            continue
-        code = fname[:-5]
-        try:
-            with open(os.path.join(locales_dir, fname), "r", encoding="utf-8") as f:
-                data = json.load(f)
-            name = data.get("meta", {}).get("name", code)
+    for entry in os.listdir(locales_dir):
+        entry_path = os.path.join(locales_dir, entry)
+        # Directory-based locale (e.g. locales/es/)
+        if os.path.isdir(entry_path):
+            code = entry
+            if code in seen:
+                continue
+            seen.add(code)
+            name = code
+            for fname in sorted(os.listdir(entry_path)):
+                if not fname.endswith(".json"):
+                    continue
+                try:
+                    with open(os.path.join(entry_path, fname), "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    meta_name = data.get("meta", {}).get("name")
+                    if meta_name:
+                        name = meta_name
+                        break
+                except Exception:
+                    pass
             langs.append((code, name))
-        except Exception:
-            langs.append((code, code))
+        # Single-file locale (e.g. locales/es.json) — backward compat
+        elif entry.endswith(".json"):
+            code = entry[:-5]
+            if code in seen:
+                continue
+            seen.add(code)
+            try:
+                with open(entry_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                name = data.get("meta", {}).get("name", code)
+                langs.append((code, name))
+            except Exception:
+                langs.append((code, code))
     langs.sort(key=lambda x: x[0])
     return langs

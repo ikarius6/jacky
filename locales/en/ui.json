@@ -1,0 +1,166 @@
+{
+    "ui": {
+        "menu_pet": "🤗 Pet {name}",
+        "menu_feed": "🍔 Feed",
+        "menu_attack": "⚔️ Attack",
+        "menu_peers": "👥 Companions",
+        "menu_silent": "🔇 Silent mode",
+        "menu_ask": "💬 Ask",
+        "menu_listen": "🎤 Listen",
+        "menu_look": "👁 Look at screen",
+        "menu_settings": "⚙️ Settings",
+        "menu_quit": "👋 Quit",
+        "peer_greet": "👋 Greet",
+        "peer_attack": "⚔️ Attack",
+        "peer_chase": "🏃 Chase",
+        "peer_dance": "💃 Dance",
+        "peer_fight": "🥊 Fight",
+        "ask_title": "Ask {name}",
+        "ask_label": "Write your question:",
+        "ask_placeholder": "E.g.: What do you think of my desktop?",
+        "btn_send": "Send",
+        "btn_cancel": "Cancel",
+        "btn_save": "Save",
+        "settings_title": "Settings for {name}",
+        "tab_character": "Character",
+        "tab_settings": "Settings",
+        "tab_llm": "LLM",
+        "tab_voice": "Voice",
+        "tab_permissions": "Permissions",
+        "select_character": "Select a character:",
+        "group_pet": "Pet",
+        "label_name": "Name:",
+        "placeholder_name": "Your pet's name",
+        "group_movement": "Movement",
+        "label_speed": "Speed:",
+        "group_intervals": "Intervals (seconds)",
+        "label_idle": "Walk (idle):",
+        "label_chat": "Talk (chat):",
+        "label_wincheck": "Window interaction:",
+        "group_window": "Window interaction",
+        "check_always_on_top": "Always on top (above other windows)",
+        "check_window_detect": "Enable window detection",
+        "check_window_push": "Allow pushing windows",
+        "check_gravity": "Enable gravity (walk on ground and windows)",
+        "group_debug": "Debug",
+        "check_debug_log": "Enable debug logging",
+        "check_llm_enable": "Enable LLM dialogue",
+        "group_voice_general": "General Options",
+        "group_assemblyai": "AssemblyAI (Speech to Text)",
+        "desc_assemblyai": "Allows your pet to hear instructions using the microphone.",
+        "group_elevenlabs": "ElevenLabs (Text to Speech)",
+        "desc_elevenlabs": "Gives a voice to your pet.",
+        "label_response_mode": "Response Mode:",
+        "mode_text": "Text",
+        "mode_voice": "Voice (require ElevenLabs)",
+        "mode_both": "Both (require ElevenLabs)",
+        "label_listen_shortcut": "Listen Shortcut:",
+        "placeholder_apikey": "Enter your API Key",
+        "label_get_apikey": "Get your API key at <a href='{url}'>{name}</a>",
+        "label_voice_id": "Voice ID:",
+        "group_provider": "Provider",
+        "label_provider": "Provider:",
+        "label_url": "URL:",
+        "label_model": "Model:",
+        "tooltip_refresh": "Refresh model list",
+        "label_apikey": "API Key:",
+        "label_apikeys": "API Keys:",
+        "btn_add": "＋ Add",
+        "btn_remove": "- Remove",
+        "tooltip_add_key": "Add API key",
+        "tooltip_del_key": "Delete selected API key",
+        "dlg_add_groq_title": "Add Groq API Key",
+        "dlg_add_groq_label": "Paste your Groq API key:",
+        "perm_hint": "Control what actions the pet can perform on windows:",
+        "btn_enable_all": "Enable all",
+        "btn_disable_all": "Disable all",
+        "group_observe": "Observe (does not modify windows)",
+        "group_destructive": "Destructive (modifies windows)",
+        "label_language": "Language:",
+        "thinking": "Thinking",
+        "listening": "* Listening *",
+        "busy": "Wait, I'm still thinking! >_<",
+        "no_llm": "I can't see anything without LLM enabled... >_<",
+        "no_vision_perm": "I don't have permission to see the screen... >_<",
+        "llm_error": "I couldn't think of anything... try again! >_<",
+        "no_interact_perm": "I don't have permission to interact with the screen... >_<",
+        "tray_show": "Show {name}",
+        "tray_settings": "Settings",
+        "tray_quit": "Quit",
+        "shop_loading": "Loading shop...",
+        "shop_error": "Could not connect to the shop",
+        "shop_refresh": "Refresh shop",
+        "btn_download": "Download ({size} MB)",
+        "btn_update": "Update",
+        "btn_delete": "Delete character",
+        "download_progress": "Downloading... {percent}%",
+        "download_complete": "Download complete!",
+        "download_error": "Error: {error}",
+        "delete_confirm_title": "Delete character",
+        "delete_confirm_msg": "Delete {name}? The downloaded sprites will be removed.",
+        "label_shop_url": "Shop URL:",
+        "char_version": "v{version}",
+        "char_size": "{size} MB",
+        "char_bundled": "Bundled",
+        "char_update_available": "Update available",
+        "char_not_installed": "Not installed"
+    },
+    "permissions": {
+        "allow_comment": {
+            "label": "Comment on windows",
+            "desc": "Make comments about open windows"
+        },
+        "allow_peek": {
+            "label": "Peek at windows",
+            "desc": "Peek behind the edges of windows"
+        },
+        "allow_sit": {
+            "label": "Sit on windows",
+            "desc": "Sit on the title bar of windows"
+        },
+        "allow_vision": {
+            "label": "See screen",
+            "desc": "Capture and analyze the screen with LLM vision"
+        },
+        "allow_push": {
+            "label": "Push windows",
+            "desc": "Push nearby windows"
+        },
+        "allow_shake": {
+            "label": "Shake windows",
+            "desc": "Shake windows rapidly"
+        },
+        "allow_minimize": {
+            "label": "Minimize windows",
+            "desc": "Minimize nearby windows"
+        },
+        "allow_resize": {
+            "label": "Resize windows",
+            "desc": "Shrink or enlarge windows"
+        },
+        "allow_knock": {
+            "label": "Knock on windows",
+            "desc": "Flash and bring a window to front"
+        },
+        "allow_drag": {
+            "label": "Drag windows",
+            "desc": "Drag a window while walking"
+        },
+        "allow_tidy": {
+            "label": "Tidy windows",
+            "desc": "Organize windows in a grid"
+        },
+        "allow_topple": {
+            "label": "Topple windows",
+            "desc": "Push windows in a chain like dominoes"
+        },
+        "allow_screen_interact": {
+            "label": "Interact with screen",
+            "desc": "Find and click on screen elements"
+        },
+        "allow_cache": {
+            "label": "Allow voice cache",
+            "desc": "Save text-to-speech audio files for future use"
+        }
+    }
+}

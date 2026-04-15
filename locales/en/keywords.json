@@ -1,0 +1,112 @@
+{
+    "interact_keywords": {
+        "navigate": [
+            "find",
+            "search",
+            "go to",
+            "move to",
+            "locate",
+            "where is",
+            "look for",
+            "run to",
+            "head to",
+            "head towards",
+            "walk to",
+            "walk towards",
+            "navigate to",
+            "point to",
+            "take me to",
+            "position on"
+        ],
+        "click": [
+            "press",
+            "click",
+            "tap",
+            "push",
+            "activate",
+            "open",
+            "hit",
+            "select",
+            "choose",
+            "pick",
+            "click on",
+            "tap on",
+            "press on",
+            "trigger",
+            "fire",
+            "pull"
+        ],
+        "close": [
+            "close",
+            "quit",
+            "exit",
+            "remove",
+            "delete",
+            "get rid of",
+            "kill",
+            "x out",
+            "dismiss"
+        ],
+        "minimize": [
+            "minimize",
+            "hide",
+            "shrink",
+            "reduce",
+            "send down",
+            "put away"
+        ],
+        "type": [
+            "type",
+            "write",
+            "enter",
+            "input",
+            "type in",
+            "write in",
+            "enter in",
+            "input in",
+            "type into",
+            "write into",
+            "enter into",
+            "put",
+            "put in",
+            "put into"
+        ]
+    },
+    "type_separators": [
+        "inside",
+        "into the",
+        "in the",
+        "into",
+        "in",
+        "on the",
+        "on",
+        "at the",
+        "at"
+    ],
+    "interact_prefixes": [
+        "to",
+        "on",
+        "in",
+        "at",
+        "towards",
+        "for",
+        "with",
+        "the",
+        "a",
+        "an",
+        "into",
+        "onto"
+    ],
+    "vision_keywords": [
+        "look",
+        "see",
+        "watch",
+        "screen",
+        "looking",
+        "seeing",
+        "observe",
+        "view",
+        "mira",
+        "pantalla"
+    ]
+}

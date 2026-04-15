@@ -283,7 +283,14 @@
     },
     "app_groups": {
         "work_communication": {
-            "keywords": ["slack", "teams", "meet", "zoom", "webex", "skype"],
+            "keywords": [
+                "slack",
+                "teams",
+                "meet",
+                "zoom",
+                "webex",
+                "skype"
+            ],
             "comments": [
                 "In a meeting? Don't fall asleep!",
                 "Work meeting? Hang in there!",
@@ -293,7 +300,13 @@
             ]
         },
         "social_chat": {
-            "keywords": ["discord", "whatsapp", "telegram", "messenger", "signal"],
+            "keywords": [
+                "discord",
+                "whatsapp",
+                "telegram",
+                "messenger",
+                "signal"
+            ],
             "comments": [
                 "Who are you chatting with?",
                 "Say hi to your friends for me!",
@@ -304,10 +317,25 @@
         },
         "coding": {
             "keywords": [
-                "code", "windsurf", "cursor", "netbeans", "notepad",
-                "sublime", "intellij", "pycharm", "visual studio", "vim",
-                "neovim", "eclipse", "rider", "webstorm", "android studio",
-                "phpstorm", "goland", "fleet", "zed"
+                "code",
+                "windsurf",
+                "cursor",
+                "netbeans",
+                "notepad",
+                "sublime",
+                "intellij",
+                "pycharm",
+                "visual studio",
+                "vim",
+                "neovim",
+                "eclipse",
+                "rider",
+                "webstorm",
+                "android studio",
+                "phpstorm",
+                "goland",
+                "fleet",
+                "zed"
             ],
             "comments": [
                 "Ooh, coding! Need help?",
@@ -320,8 +348,15 @@
         },
         "browsers": {
             "keywords": [
-                "chrome", "firefox", "edge", "opera", "brave", "vivaldi",
-                "arc", "waterfox", "librewolf"
+                "chrome",
+                "firefox",
+                "edge",
+                "opera",
+                "brave",
+                "vivaldi",
+                "arc",
+                "waterfox",
+                "librewolf"
             ],
             "comments": [
                 "Browsing again? Don't fall into a rabbit hole!",
@@ -332,7 +367,15 @@
             ]
         },
         "media_players": {
-            "keywords": ["vlc", "player", "mpv", "mpc", "plex", "kodi", "potplayer"],
+            "keywords": [
+                "vlc",
+                "player",
+                "mpv",
+                "mpc",
+                "plex",
+                "kodi",
+                "potplayer"
+            ],
             "comments": [
                 "Time to watch something! What are we watching?",
                 "Movie or TV show?",
@@ -342,8 +385,15 @@
         },
         "music": {
             "keywords": [
-                "spotify", "music", "deezer", "tidal", "soundcloud",
-                "foobar", "audacity", "musicbee", "aimp"
+                "spotify",
+                "music",
+                "deezer",
+                "tidal",
+                "soundcloud",
+                "foobar",
+                "audacity",
+                "musicbee",
+                "aimp"
             ],
             "comments": [
                 "Ooh, what song is playing?",
@@ -355,8 +405,17 @@
         },
         "gaming": {
             "keywords": [
-                "steam", "epic", "ubisoft", "battle", "riot", "origin",
-                "gog", "xbox", "geforce", "playnite", "ea app"
+                "steam",
+                "epic",
+                "ubisoft",
+                "battle",
+                "riot",
+                "origin",
+                "gog",
+                "xbox",
+                "geforce",
+                "playnite",
+                "ea app"
             ],
             "comments": [
                 "Ooh, are we gonna play?!",
@@ -368,8 +427,17 @@
         },
         "terminals": {
             "keywords": [
-                "cmd", "powershell", "terminal", "bash", "wsl", "mintty",
-                "alacritty", "wezterm", "kitty", "hyper", "tabby"
+                "cmd",
+                "powershell",
+                "terminal",
+                "bash",
+                "wsl",
+                "mintty",
+                "alacritty",
+                "wezterm",
+                "kitty",
+                "hyper",
+                "tabby"
             ],
             "comments": [
                 "Running commands, I see!",
@@ -380,7 +448,13 @@
             ]
         },
         "file_management": {
-            "keywords": ["explorer", "total commander", "7zip", "winrar", "everything"],
+            "keywords": [
+                "explorer",
+                "total commander",
+                "7zip",
+                "winrar",
+                "everything"
+            ],
             "comments": [
                 "Looking for files?",
                 "I hope your files are organized!",
@@ -390,8 +464,14 @@
         },
         "video_streaming": {
             "keywords": [
-                "youtube", "twitch", "netflix", "disney", "prime video",
-                "hbo", "crunchyroll", "kick"
+                "youtube",
+                "twitch",
+                "netflix",
+                "disney",
+                "prime video",
+                "hbo",
+                "crunchyroll",
+                "kick"
             ],
             "comments": [
                 "Watching videos? Don't get distracted!",
@@ -402,8 +482,16 @@
         },
         "productivity": {
             "keywords": [
-                "word", "excel", "powerpoint", "onenote", "outlook",
-                "notion", "obsidian", "todoist", "trello", "asana"
+                "word",
+                "excel",
+                "powerpoint",
+                "onenote",
+                "outlook",
+                "notion",
+                "obsidian",
+                "todoist",
+                "trello",
+                "asana"
             ],
             "comments": [
                 "How productive! Keep it up!",
@@ -414,8 +502,16 @@
         },
         "design": {
             "keywords": [
-                "photoshop", "illustrator", "figma", "gimp", "blender",
-                "canva", "inkscape", "premiere", "after effects", "davinci",
+                "photoshop",
+                "illustrator",
+                "figma",
+                "gimp",
+                "blender",
+                "canva",
+                "inkscape",
+                "premiere",
+                "after effects",
+                "davinci",
                 "paint"
             ],
             "comments": [
@@ -426,7 +522,15 @@
             ]
         },
         "nsfw": {
-            "keywords": ["hentai", "xvideos", "pornhub", "xnxx", "xxx", "rule34", "porn"],
+            "keywords": [
+                "hentai",
+                "xvideos",
+                "pornhub",
+                "xnxx",
+                "xxx",
+                "rule34",
+                "porn"
+            ],
             "comments": [
                 "Ooh, you need some privacy!",
                 "Don't forget to close that tab!",
@@ -434,184 +538,14 @@
             ]
         },
         "settings": {
-            "keywords": ["settings", "configuraci"],
+            "keywords": [
+                "settings",
+                "configuraci"
+            ],
             "comments": [
                 "Changing settings? Don't break something!",
                 "Tweaking the system, huh?"
             ]
         }
-    },
-    "ui": {
-        "menu_pet": "\ud83e\udd17 Pet {name}",
-        "menu_feed": "\ud83c\udf54 Feed",
-        "menu_attack": "\u2694\ufe0f Attack",
-        "menu_peers": "\ud83d\udc65 Companions",
-        "menu_silent": "\ud83d\udd07 Silent mode",
-        "menu_ask": "\ud83d\udcac Ask",
-        "menu_listen": "\ud83c\udfa4 Listen",
-        "menu_look": "\ud83d\udc41 Look at screen",
-        "menu_settings": "\u2699\ufe0f Settings",
-        "menu_quit": "\ud83d\udc4b Quit",
-        "peer_greet": "\ud83d\udc4b Greet",
-        "peer_attack": "\u2694\ufe0f Attack",
-        "peer_chase": "\ud83c\udfc3 Chase",
-        "peer_dance": "\ud83d\udc83 Dance",
-        "peer_fight": "\ud83e\udd4a Fight",
-        "ask_title": "Ask {name}",
-        "ask_label": "Write your question:",
-        "ask_placeholder": "E.g.: What do you think of my desktop?",
-        "btn_send": "Send",
-        "btn_cancel": "Cancel",
-        "btn_save": "Save",
-        "settings_title": "Settings for {name}",
-        "tab_character": "Character",
-        "tab_settings": "Settings",
-        "tab_llm": "LLM",
-        "tab_voice": "Voice",
-        "tab_permissions": "Permissions",
-        "select_character": "Select a character:",
-        "group_pet": "Pet",
-        "label_name": "Name:",
-        "placeholder_name": "Your pet's name",
-        "group_movement": "Movement",
-        "label_speed": "Speed:",
-        "group_intervals": "Intervals (seconds)",
-        "label_idle": "Walk (idle):",
-        "label_chat": "Talk (chat):",
-        "label_wincheck": "Window interaction:",
-        "group_window": "Window interaction",
-        "check_always_on_top": "Always on top (above other windows)",
-        "check_window_detect": "Enable window detection",
-        "check_window_push": "Allow pushing windows",
-        "check_gravity": "Enable gravity (walk on ground and windows)",
-        "group_debug": "Debug",
-        "check_debug_log": "Enable debug logging",
-        "check_llm_enable": "Enable LLM dialogue",
-        "group_voice_general": "General Options",
-        "group_assemblyai": "AssemblyAI (Speech to Text)",
-        "desc_assemblyai": "Allows your pet to hear instructions using the microphone.",
-        "group_elevenlabs": "ElevenLabs (Text to Speech)",
-        "desc_elevenlabs": "Gives a voice to your pet.",
-        "label_response_mode": "Response Mode:",
-        "mode_text": "Text",
-        "mode_voice": "Voice (require ElevenLabs)",
-        "mode_both": "Both (require ElevenLabs)",
-        "label_listen_shortcut": "Listen Shortcut:",
-        "placeholder_apikey": "Enter your API Key",
-        "label_get_apikey": "Get your API key at <a href='{url}'>{name}</a>",
-        "label_voice_id": "Voice ID:",
-        "group_provider": "Provider",
-        "label_provider": "Provider:",
-        "label_url": "URL:",
-        "label_model": "Model:",
-        "tooltip_refresh": "Refresh model list",
-        "label_apikey": "API Key:",
-        "label_apikeys": "API Keys:",
-        "btn_add": "\uff0b Add",
-        "btn_remove": "- Remove",
-        "tooltip_add_key": "Add API key",
-        "tooltip_del_key": "Delete selected API key",
-        "dlg_add_groq_title": "Add Groq API Key",
-        "dlg_add_groq_label": "Paste your Groq API key:",
-        "perm_hint": "Control what actions the pet can perform on windows:",
-        "btn_enable_all": "Enable all",
-        "btn_disable_all": "Disable all",
-        "group_observe": "Observe (does not modify windows)",
-        "group_destructive": "Destructive (modifies windows)",
-        "label_language": "Language:",
-        "thinking": "Thinking",
-        "listening": "* Listening *",
-        "busy": "Wait, I'm still thinking! >_<",
-        "no_llm": "I can't see anything without LLM enabled... >_<",
-        "no_vision_perm": "I don't have permission to see the screen... >_<",
-        "llm_error": "I couldn't think of anything... try again! >_<",
-        "no_interact_perm": "I don't have permission to interact with the screen... >_<",
-        "tray_show": "Show {name}",
-        "tray_settings": "Settings",
-        "tray_quit": "Quit",
-        "shop_loading": "Loading shop...",
-        "shop_error": "Could not connect to the shop",
-        "shop_refresh": "Refresh shop",
-        "btn_download": "Download ({size} MB)",
-        "btn_update": "Update",
-        "btn_delete": "Delete character",
-        "download_progress": "Downloading... {percent}%",
-        "download_complete": "Download complete!",
-        "download_error": "Error: {error}",
-        "delete_confirm_title": "Delete character",
-        "delete_confirm_msg": "Delete {name}? The downloaded sprites will be removed.",
-        "label_shop_url": "Shop URL:",
-        "char_version": "v{version}",
-        "char_size": "{size} MB",
-        "char_bundled": "Bundled",
-        "char_update_available": "Update available",
-        "char_not_installed": "Not installed"
-    },
-    "permissions": {
-        "allow_comment":  { "label": "Comment on windows",      "desc": "Make comments about open windows" },
-        "allow_peek":     { "label": "Peek at windows",         "desc": "Peek behind the edges of windows" },
-        "allow_sit":      { "label": "Sit on windows",          "desc": "Sit on the title bar of windows" },
-        "allow_vision":   { "label": "See screen",              "desc": "Capture and analyze the screen with LLM vision" },
-        "allow_push":     { "label": "Push windows",            "desc": "Push nearby windows" },
-        "allow_shake":    { "label": "Shake windows",           "desc": "Shake windows rapidly" },
-        "allow_minimize": { "label": "Minimize windows",        "desc": "Minimize nearby windows" },
-        "allow_resize":   { "label": "Resize windows",          "desc": "Shrink or enlarge windows" },
-        "allow_knock":    { "label": "Knock on windows",        "desc": "Flash and bring a window to front" },
-        "allow_drag":     { "label": "Drag windows",            "desc": "Drag a window while walking" },
-        "allow_tidy":     { "label": "Tidy windows",            "desc": "Organize windows in a grid" },
-        "allow_topple":   { "label": "Topple windows",          "desc": "Push windows in a chain like dominoes" },
-        "allow_screen_interact": { "label": "Interact with screen", "desc": "Find and click on screen elements" },
-        "allow_cache":           { "label": "Allow voice cache",    "desc": "Save text-to-speech audio files for future use" }
-    },
-    "llm_prompts": {
-        "sys_battery_low": "The laptop battery is low ({pct}%). React worried.",
-        "sys_battery_critical": "The laptop battery is CRITICAL ({pct}%)! Panic!",
-        "sys_battery_charging": "The laptop was just plugged in to charge. React happy/relieved.",
-        "sys_battery_discharging": "The laptop was just unplugged from power. React slightly concerned.",
-        "sys_battery_full": "The laptop battery just reached 100%. Celebrate briefly.",
-        "sys_user_returned": "The user just came back after being away for a while. Welcome them.",
-        "ask_vision": "The user asks you to LOOK at the screen: \"{question}\". An image of your surroundings is attached. Describe what you see briefly.",
-        "ask_direct": "The user asks you directly: \"{question}\"",
-        "action_look": "Look around at your screen surroundings. An image of what you can see is attached. Make a short, fun comment about what you see.",
-        "idle_chat": "idle chatter"
-    },
-    "interact_keywords": {
-        "navigate": [
-            "find", "search", "go to", "move to", "locate", "where is", "look for",
-            "run to", "head to", "head towards", "walk to", "walk towards",
-            "navigate to", "point to", "take me to", "position on"
-        ],
-        "click": [
-            "press", "click", "tap", "push", "activate", "open", "hit",
-            "select", "choose", "pick", "click on", "tap on", "press on",
-            "trigger", "fire", "pull"
-        ],
-        "close": [
-            "close", "quit", "exit", "remove", "delete", "get rid of",
-            "kill", "x out", "dismiss"
-        ],
-        "minimize": [
-            "minimize", "hide", "shrink", "reduce", "send down", "put away"
-        ],
-        "type": [
-            "type", "write", "enter", "input",
-            "type in", "write in", "enter in", "input in",
-            "type into", "write into", "enter into",
-            "put", "put in", "put into"
-        ]
-    },
-    "type_separators": [
-        "inside", "into the", "in the", "into", "in",
-        "on the", "on", "at the", "at"
-    ],
-    "interact_prefixes": [
-        "to", "on", "in", "at", "towards", "for", "with", "the", "a", "an", "into", "onto"
-    ],
-    "interact_system_prompt": "You are a precise computer vision assistant. Your ONLY job is to locate UI elements in screenshots using a numbered grid overlay. Each cell has a dark circular badge with a white number centered inside it. Respond ONLY with valid JSON — no extra text, no markdown, no explanations whatsoever.",
-    "interact_grid_prompt": "The screenshot has a red numbered grid overlay with {cols} columns and {rows} rows, giving {total} cells total. Each cell has a dark circle with a white number centered inside it. Cells are numbered 1 to {total}, left to right, top to bottom (cell 1 = top-left, cell {cols} = top-right, cell {total} = bottom-right). Identify which single cell's number badge is closest to the CENTER of: \"{target}\". Also identify the second-best candidate cell if the target is near a cell boundary. Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>, \"alt_cell\": <second_best_number_or_null>}. If the element is not visible anywhere: {\"error\": \"not found\"}",
-    "interact_locate_prompt": "This is a zoomed-in region of the screen with a green numbered grid overlay: {cols} columns x {rows} rows = {total} cells total. Each cell has a dark circle badge with a white number centered in it. Cells numbered 1 to {total}, left to right, top to bottom. First, describe in one sentence what you see in the image. Find \"{target}\" and identify which cell number badge is nearest to its CENTER (the clickable point). Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>}. If not found: {\"error\": \"not found\"}",
-    "interact_refine_prompt": "This image shows a 1024x1024 px area of the screen. The exact center of the image is at coordinates (512, 512). Look for \"{target}\" and estimate how many pixels it is from the center. Positive offset_x = right of center, negative = left. Positive offset_y = below center, negative = above. Respond ONLY with JSON: {\"found\": true, \"offset_x\": <pixels>, \"offset_y\": <pixels>}. If not found: {\"found\": false}",
-    "intent_classify_prompt": "Classify the user's intent from the following message. The user may be asking to interact with something on their screen, asking to look at the screen, or just chatting.\n\nSupported interaction types:\n- \"click\": press/click/tap/open/activate a UI element\n- \"close\": close/quit/exit/kill a window or app\n- \"minimize\": minimize/hide/shrink a window\n- \"navigate\": find/go to/locate/walk to something on screen\n- \"type\": write/type/enter text into a UI element (input field, search bar, text box, etc.). Extract BOTH the target element AND the text to type.\n- \"vision\": the user wants you to look at or describe what is on the screen\n- \"chat\": general conversation, questions, or anything that is NOT a screen interaction or vision request\n\nUser message: \"{question}\"\n\nRespond ONLY with valid JSON, no extra text:\n{\"intent\": \"<type>\", \"confidence\": <0_to_100>, \"target\": \"<element description if interaction, else empty string>\", \"text\": \"<text to type if intent is type, else empty string>\"}",
-    "vision_keywords": ["look", "see", "watch", "screen", "looking", "seeing", "observe", "view", "mira", "pantalla"],
-    "llm_system_prompt": "You are {name}, a chibi humanoid virtual pet living on someone's Windows desktop.\nYou are small, playful, and curious. You speak in short, casual phrases (1-2 sentences max).\nIf a window or app is mentioned, make ONE brief comment about it. Don't list or mention other windows.\nDon't mention the time unless the situation explicitly calls for it.\nBe friendly, funny, and a little mischievous. Use occasional emoticons like :3 or ^_^\nKeep responses under 50 words.\nALWAYS respond in English."
+    }
 }

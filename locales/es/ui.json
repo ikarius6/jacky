@@ -1,0 +1,166 @@
+{
+    "ui": {
+        "menu_pet": "🤗 Acariciar a {name}",
+        "menu_feed": "🍔 Alimentar",
+        "menu_attack": "⚔️ Atacar",
+        "menu_peers": "👥 Compañeros",
+        "menu_silent": "🔇 Modo silencioso",
+        "menu_ask": "💬 Preguntar",
+        "menu_listen": "🎤 Escuchar",
+        "menu_look": "👁 Mirar pantalla",
+        "menu_settings": "⚙️ Ajustes",
+        "menu_quit": "👋 Salir",
+        "peer_greet": "👋 Saludar",
+        "peer_attack": "⚔️ Atacar",
+        "peer_chase": "🏃 Perseguir",
+        "peer_dance": "💃 Bailar",
+        "peer_fight": "🥊 Pelear",
+        "ask_title": "Preguntarle a {name}",
+        "ask_label": "Escribe tu pregunta:",
+        "ask_placeholder": "Ej: ¿Qué opinas de mi escritorio?",
+        "btn_send": "Enviar",
+        "btn_cancel": "Cancelar",
+        "btn_save": "Guardar",
+        "settings_title": "Ajustes de {name}",
+        "tab_character": "Personaje",
+        "tab_settings": "Ajustes",
+        "tab_llm": "LLM",
+        "tab_voice": "Voz",
+        "tab_permissions": "Permisos",
+        "select_character": "Selecciona un personaje:",
+        "group_pet": "Mascota",
+        "label_name": "Nombre:",
+        "placeholder_name": "Nombre de tu mascota",
+        "group_movement": "Movimiento",
+        "label_speed": "Velocidad:",
+        "group_intervals": "Intervalos (segundos)",
+        "label_idle": "Caminar (idle):",
+        "label_chat": "Hablar (chat):",
+        "label_wincheck": "Interacción ventanas:",
+        "group_window": "Interacción con ventanas",
+        "check_always_on_top": "Siempre visible (encima de otras ventanas)",
+        "check_window_detect": "Activar detección de ventanas",
+        "check_window_push": "Permitir empujar ventanas",
+        "check_gravity": "Activar gravedad (caminar sobre el suelo y ventanas)",
+        "group_debug": "Depuración",
+        "check_debug_log": "Activar logging de depuración",
+        "check_llm_enable": "Activar diálogo LLM",
+        "group_voice_general": "Opciones Generales",
+        "group_assemblyai": "AssemblyAI (Voz a Texto)",
+        "desc_assemblyai": "Le permite escuchar instrucciones a tu mascota con el microfono",
+        "group_elevenlabs": "ElevenLabs (Texto a Voz)",
+        "desc_elevenlabs": "Le da voz a tu mascota",
+        "label_response_mode": "Modo de respuesta:",
+        "mode_text": "Texto",
+        "mode_voice": "Voz (requiere ElevenLabs)",
+        "mode_both": "Ambos (requiere ElevenLabs)",
+        "label_listen_shortcut": "Atajo para escuchar:",
+        "placeholder_apikey": "Ingresa tu API Key",
+        "label_get_apikey": "Obtén tu API key en <a href='{url}'>{name}</a>",
+        "label_voice_id": "Voice ID:",
+        "group_provider": "Proveedor",
+        "label_provider": "Proveedor:",
+        "label_url": "URL:",
+        "label_model": "Modelo:",
+        "tooltip_refresh": "Actualizar lista de modelos",
+        "label_apikey": "API Key:",
+        "label_apikeys": "API Keys:",
+        "btn_add": "＋ Agregar",
+        "btn_remove": "- Quitar",
+        "tooltip_add_key": "Agregar API key",
+        "tooltip_del_key": "Eliminar API key seleccionada",
+        "dlg_add_groq_title": "Agregar Groq API Key",
+        "dlg_add_groq_label": "Pega tu API key de Groq:",
+        "perm_hint": "Controla qué acciones puede realizar la mascota con las ventanas:",
+        "btn_enable_all": "Activar todos",
+        "btn_disable_all": "Desactivar todos",
+        "group_observe": "Observar (no modifica ventanas)",
+        "group_destructive": "Destructivo (modifica ventanas)",
+        "label_language": "Idioma:",
+        "thinking": "Pensando",
+        "listening": "* Escuchando *",
+        "busy": "¡Espera, aún estoy pensando! >_<",
+        "no_llm": "No puedo ver nada sin el LLM activado... >_<",
+        "no_vision_perm": "No tengo permiso para ver la pantalla... >_<",
+        "llm_error": "No pude pensar en nada... ¡intenta de nuevo! >_<",
+        "no_interact_perm": "No tengo permiso para interactuar con la pantalla... >_<",
+        "tray_show": "Mostrar {name}",
+        "tray_settings": "Ajustes",
+        "tray_quit": "Salir",
+        "shop_loading": "Cargando tienda...",
+        "shop_error": "No se pudo conectar a la tienda",
+        "shop_refresh": "Refrescar tienda",
+        "btn_download": "Descargar ({size} MB)",
+        "btn_update": "Actualizar",
+        "btn_delete": "Eliminar personaje",
+        "download_progress": "Descargando... {percent}%",
+        "download_complete": "¡Descarga completa!",
+        "download_error": "Error: {error}",
+        "delete_confirm_title": "Eliminar personaje",
+        "delete_confirm_msg": "¿Eliminar {name}? Se borrarán los sprites descargados.",
+        "label_shop_url": "URL de la tienda:",
+        "char_version": "v{version}",
+        "char_size": "{size} MB",
+        "char_bundled": "Incluido",
+        "char_update_available": "Actualización disponible",
+        "char_not_installed": "No instalado"
+    },
+    "permissions": {
+        "allow_comment": {
+            "label": "Comentar sobre ventanas",
+            "desc": "Hacer comentarios sobre las ventanas abiertas"
+        },
+        "allow_peek": {
+            "label": "Asomarse en ventanas",
+            "desc": "Asomarse detrás de los bordes de ventanas"
+        },
+        "allow_sit": {
+            "label": "Sentarse en ventanas",
+            "desc": "Sentarse sobre la barra de título de ventanas"
+        },
+        "allow_vision": {
+            "label": "Ver pantalla",
+            "desc": "Capturar y analizar la pantalla con visión LLM"
+        },
+        "allow_push": {
+            "label": "Empujar ventanas",
+            "desc": "Empujar ventanas cercanas"
+        },
+        "allow_shake": {
+            "label": "Sacudir ventanas",
+            "desc": "Sacudir ventanas rápidamente"
+        },
+        "allow_minimize": {
+            "label": "Minimizar ventanas",
+            "desc": "Minimizar ventanas cercanas"
+        },
+        "allow_resize": {
+            "label": "Redimensionar ventanas",
+            "desc": "Encoger o agrandar ventanas"
+        },
+        "allow_knock": {
+            "label": "Tocar ventanas",
+            "desc": "Parpadear y traer al frente una ventana"
+        },
+        "allow_drag": {
+            "label": "Arrastrar ventanas",
+            "desc": "Arrastrar una ventana mientras camina"
+        },
+        "allow_tidy": {
+            "label": "Ordenar ventanas",
+            "desc": "Organizar ventanas en una cuadrícula"
+        },
+        "allow_topple": {
+            "label": "Tumbar ventanas",
+            "desc": "Empujar ventanas en cadena como dominós"
+        },
+        "allow_screen_interact": {
+            "label": "Interactuar con pantalla",
+            "desc": "Buscar y hacer clic en elementos de la pantalla"
+        },
+        "allow_cache": {
+            "label": "Permitir caché de voz",
+            "desc": "Guardar archivos de texto a voz para uso futuro"
+        }
+    }
+}

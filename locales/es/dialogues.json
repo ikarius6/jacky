@@ -1,0 +1,550 @@
+{
+    "meta": {
+        "name": "Español",
+        "code": "es"
+    },
+    "dialogues": {
+        "greeting": [
+            "¡Hola! ¡Soy {name}!",
+            "¡Hey! ¿Listos para pasar el rato?",
+            "*bosteza* ¡Oh, hola!",
+            "¡{name} reportándose!",
+            "¿Qué hacemos hoy?"
+        ],
+        "farewell": [
+            "¡Bye bye! ¡Nos vemos!",
+            "No te olvides de mí...",
+            "¿Ya? Bueno, ¡adiós!",
+            "*se despide* ¡Hasta la próxima!"
+        ],
+        "idle": [
+            "...",
+            "*tararea una cancioncita*",
+            "La la la~",
+            "¿Qué habrá de cenar...?",
+            "*mira alrededor con curiosidad*",
+            "Bonito clima hoy, ¿no?",
+            "Estoy aburrido... ¡hazme clic!",
+            "*se estira*",
+            "Hmm, ¿qué debería hacer?",
+            "Du du du~"
+        ],
+        "petted": [
+            "¡Jeje, me hace cosquillas!",
+            "¡Aww, gracias!",
+            "*sonrie*",
+            "¡Tú también me caes bien!",
+            "¡Más caricias por favor!",
+            "Qué bonito se siente~"
+        ],
+        "fed": [
+            "¡Qué rico! ¡Gracias!",
+            "¡Ñam ñam ñam!",
+            "*mastica mastica*",
+            "¡Delicioso!",
+            "¡Tenía mucha hambre!"
+        ],
+        "dragged": [
+            "¡Whoa! ¿A dónde vamos?",
+            "¡Wiiiii!",
+            "¡Bájame con cuidado!",
+            "¡Oye! ¡Ahí estaba parado!"
+        ],
+        "window_generic": [
+            "Oh, ¿qué es esta ventana?",
+            "Interesante... ¿en qué trabajas?",
+            "¡Ooh, apareció una ventana nueva!",
+            "¡Veo que estás ocupado!"
+        ],
+        "window_closed": [
+            "¡Oh, '{app}' se cerró!",
+            "¡Bye bye, {app}!",
+            "¡Una ventana menos en pantalla!",
+            "¿Ya terminaste con esa?",
+            "¿Ya cerrando cosas?"
+        ],
+        "window_push": [
+            "¡Ups! *empuja la ventana*",
+            "¡Muévete, muévete! ¡Necesito espacio!",
+            "Jeje, moví tu ventana~",
+            "¡Solo estoy reordenando!"
+        ],
+        "peeking": [
+            "*se asoma* ¡Bu!",
+            "¡No me puedes ver!",
+            "*se esconde detrás de la ventana*",
+            "¡Cucú!"
+        ],
+        "window_shake": [
+            "¡TERREMOTOOO! *sacude la ventana*",
+            "*agita la ventana* ¡Despierta!",
+            "¡Jeje, temblor sorpresa!",
+            "¡Aguas, se mueve el piso!"
+        ],
+        "window_minimize": [
+            "¡ZAS! *cierra la ventana de golpe*",
+            "¡No necesitas eso! *minimiza*",
+            "¡Fuera! ¡Yo mando aquí!",
+            "*slam* ¡Adiós ventanita!"
+        ],
+        "window_sit": [
+            "*se sienta en la ventana* ¡Qué vista!",
+            "¡Aquí arriba se está bien!",
+            "*descansa sobre la ventana*",
+            "¡Mi nuevo lugar favorito!"
+        ],
+        "window_resize": [
+            "*estira la ventana* ¡Más grande!",
+            "*encoge la ventana* ¡Más chiquita!",
+            "¡Déjame ajustar esto un poquito!",
+            "*jala la esquina* ¡Listo!"
+        ],
+        "window_knock": [
+            "*toc toc* ¡Oye, ven para acá!",
+            "¡Hey! ¡Esta ventana te necesita!",
+            "*golpea la ventana* ¡Préstame atención!",
+            "¡Psst! ¡Olvidaste esta ventana!"
+        ],
+        "window_drag": [
+            "¡Ven conmigo, ventanita! *jala*",
+            "*arrastra la ventana* ¡Sígueme!",
+            "¡Te llevo de paseo!",
+            "¡Vamos a dar una vuelta!"
+        ],
+        "window_tidy": [
+            "¡Hora de ordenar! *organiza las ventanas*",
+            "¡Qué desorden! Déjame arreglar esto...",
+            "*acomoda todo* ¡Mucho mejor!",
+            "¡Limpieza de escritorio activada!"
+        ],
+        "window_topple": [
+            "¡DOMINÓOO! *empuja las ventanas en cadena*",
+            "¡Efecto dominó! ¡Jajaja!",
+            "*empuja una ventana contra otra* ¡Boliche!",
+            "¡Cuidado! ¡Ahí vienen todas!"
+        ],
+        "late_night": [
+            "Ya es tarde... ¡deberías dormir!",
+            "¿No tienes sueño?",
+            "*bosteza* Es muy tarde...",
+            "¡Ya vete a dormir!"
+        ],
+        "battery_low": [
+            "¡Oye! La batería está al {pct}%... ¡conecta el cargador!",
+            "¡Alerta! Batería baja ({pct}%). ¡No me dejes morir!",
+            "¡{pct}% de batería! ¡Estamos en zona de peligro!",
+            "*mira nervioso el icono de batería* ¡{pct}%!",
+            "¡La batería se está acabando! ¡Enchufa, enchufa!"
+        ],
+        "battery_critical": [
+            "¡¡EMERGENCIA!! ¡¡{pct}% de batería!! ¡¡CONECTA EL CARGADOR YA!!",
+            "¡Nos vamos a apagar! ¡{pct}%! ¡CORRE POR EL CARGADOR!",
+            "*entra en pánico* ¡¡{pct}%!! ¡¡No quiero desaparecer!!",
+            "¡¡MAYDAY MAYDAY!! ¡Batería crítica al {pct}%!",
+            "¡Si no conectas el cargador, me voy al más allá! ({pct}%)"
+        ],
+        "battery_charging": [
+            "¡Yay! ¡Conectaron el cargador! ¡Estamos salvados!",
+            "*suspiro de alivio* ¡Al fin, energía!",
+            "¡Gracias por conectar la compu! Me sentía débil...",
+            "¡Enchufados y listos! ¡A darle!",
+            "¡Recargando energía! *se relaja*"
+        ],
+        "battery_discharging": [
+            "¡Oh no! ¡Desconectaron el cargador!",
+            "Hmm, ya no estamos conectados a la corriente...",
+            "¡Modo batería activado! A ahorrar energía...",
+            "*mira el cable desconectado* Espero que dure...",
+            "¡Sin corriente! ¡Usemos la batería con sabiduría!"
+        ],
+        "battery_full": [
+            "¡Batería al 100%! ¡Estamos a full!",
+            "¡Carga completa! ¡Listos para lo que sea!",
+            "*baila* ¡Energía al máximo!",
+            "¡100%! Ya puedes desconectar si quieres~",
+            "¡Tanque lleno! ¡Vámonos!"
+        ],
+        "peer_discovered": [
+            "¡Oh! ¡Hay otro {peer_name} por aquí!",
+            "¿Quién eres tú? ¡Hola, {peer_name}!",
+            "¡No estoy solo! ¡Mira, es {peer_name}!",
+            "*mira sorprendido* ¡¿Otro como yo?!"
+        ],
+        "peer_greet": [
+            "¡Hola, {peer_name}! ¡Qué gusto verte!",
+            "*saluda con la manita* ¡Hey, {peer_name}!",
+            "¡{peer_name}! ¡Ven a jugar conmigo!"
+        ],
+        "peer_greet_response": [
+            "¡Oh, hola {peer_name}! ¡Qué onda!",
+            "*devuelve el saludo* ¡Hey!",
+            "¡Aww, me saludó! ¡Hola, {peer_name}!"
+        ],
+        "peer_attack": [
+            "¡Toma esto, {peer_name}! *ataca*",
+            "¡En guardia, {peer_name}!",
+            "¡PEW PEW! ¡Te ataqué, {peer_name}!"
+        ],
+        "peer_hurt": [
+            "¡Ouch! ¡{peer_name} me atacó!",
+            "¡Ay! ¡Eso dolió, {peer_name}!",
+            "*se queja* ¡{peer_name}, eso no se vale!"
+        ],
+        "peer_chase": [
+            "¡Ven aquí, {peer_name}! ¡No te escapas!",
+            "¡A que te alcanzo, {peer_name}!",
+            "*corre tras {peer_name}*"
+        ],
+        "peer_flee": [
+            "¡No me atrapes, {peer_name}!",
+            "¡Ahhh! ¡{peer_name} me persigue!",
+            "*huye* ¡Auxilio!"
+        ],
+        "peer_dance": [
+            "¡Vamos a bailar, {peer_name}! *baila*",
+            "*baila con {peer_name}* ¡La la la!",
+            "¡Fiesta con {peer_name}!"
+        ],
+        "peer_dance_response": [
+            "¡Sí, a bailar! *baila con {peer_name}*",
+            "*mueve las patitas* ¡Qué ritmo, {peer_name}!",
+            "¡Fiestaaaa! *baila*"
+        ],
+        "peer_fight_win": [
+            "¡Gané! ¡Soy el más fuerte, {peer_name}!",
+            "¡Victoria! *pose triunfante*"
+        ],
+        "peer_fight_lose": [
+            "¡Nooo! ¡{peer_name} me ganó!",
+            "*cae derrotado* Bien jugado, {peer_name}..."
+        ],
+        "peer_left": [
+            "¡{peer_name} se fue! ¡Adiós!",
+            "*se pone triste* {peer_name} se desconectó...",
+            "¡Bye, {peer_name}! ¡Nos vemos!"
+        ],
+        "user_returned": [
+            "¡Hey, volviste! ¡Te extrañé!",
+            "¡Oh! ¡Estás de vuelta! *mueve la colita*",
+            "*se emociona* ¡Pensé que me habías abandonado!",
+            "¡Bienvenido de vuelta! ¿Dónde andabas?",
+            "¡Ya estás aquí! Me estaba aburriendo solito...",
+            "¡Hola de nuevo! ¿Todo bien?",
+            "*salta de alegría* ¡Volviste, volviste!"
+        ],
+        "interact_ack": [
+            "¡A la orden!",
+            "¡Enseguida, jefe!",
+            "¡Ya voy!",
+            "¡Déjame ver...!",
+            "¡Buscando...!"
+        ],
+        "interact_found": [
+            "¡Lo encontré! ¡Voy para allá!",
+            "¡Ahí lo veo! ¡En camino!",
+            "¡Localizado! ¡Ya me muevo!"
+        ],
+        "interact_done_navigate": [
+            "¡Listo jefe!",
+            "¡Aquí está!",
+            "¡Encontrado!",
+            "¡Misión cumplida!"
+        ],
+        "interact_done_action": [
+            "¡Hecho!",
+            "¡Listo!",
+            "¡Tarea completada!",
+            "¡Ya estuvo!"
+        ],
+        "interact_not_found": [
+            "Hmm, no encuentro eso... ¿puedes ser más específico?",
+            "¡No lo veo! ¿Seguro que está en la pantalla?",
+            "No pude encontrarlo... >_<"
+        ],
+        "interact_cancelled": [
+            "¡Bueno, ya qué!",
+            "¡Ok, lo dejo!",
+            "¡Entendido, cancelo!"
+        ],
+        "interact_timeout": [
+            "Se me acabó el tiempo buscando... >_<",
+            "No pude completar la tarea a tiempo..."
+        ],
+        "interact_click_aborted": [
+            "¡Ups! Moviste el mouse, cancelé el clic.",
+            "¡No pude hacer clic, alguien movió el cursor!"
+        ],
+        "interact_done_type": [
+            "¡Listo! Ya lo escribí.",
+            "¡Ahí está! Ya escribí lo que pediste.",
+            "¡Escrito! *sopla los dedos*",
+            "¡Mensaje enviado! Bueno, escrito :3"
+        ]
+    },
+    "app_groups": {
+        "work_communication": {
+            "keywords": [
+                "slack",
+                "teams",
+                "meet",
+                "zoom",
+                "webex",
+                "skype"
+            ],
+            "comments": [
+                "¿En una junta? ¡No te duermas!",
+                "¿Reunión de trabajo? ¡Ánimo!",
+                "¡Saluda a tus compañeros de mi parte!",
+                "¿Otra llamada más? ¡Aguante!",
+                "*se pone corbata* ¡Yo también soy profesional!"
+            ]
+        },
+        "social_chat": {
+            "keywords": [
+                "discord",
+                "whatsapp",
+                "telegram",
+                "messenger",
+                "signal"
+            ],
+            "comments": [
+                "¿Con quién estás chateando?",
+                "¡Saluda a tus amigos de mi parte!",
+                "¿Estás en una llamada?",
+                "¡No te distraigas mucho platicando!",
+                "¿Chismeando? ¡Cuéntame!"
+            ]
+        },
+        "coding": {
+            "keywords": [
+                "code",
+                "windsurf",
+                "cursor",
+                "netbeans",
+                "notepad",
+                "sublime",
+                "intellij",
+                "pycharm",
+                "visual studio",
+                "vim",
+                "neovim",
+                "eclipse",
+                "rider",
+                "webstorm",
+                "android studio",
+                "phpstorm",
+                "goland",
+                "fleet",
+                "zed"
+            ],
+            "comments": [
+                "¡Ooh, programando! ¿Te ayudo?",
+                "¿Estás haciendo algo genial?",
+                "¡No olvides guardar tu trabajo!",
+                "¿Otro bug? ¡Tú puedes!",
+                "¡Recuerda hacer commits seguido!",
+                "*mira el código* No entiendo nada, ¡pero se ve cool!"
+            ]
+        },
+        "browsers": {
+            "keywords": [
+                "chrome",
+                "firefox",
+                "edge",
+                "opera",
+                "brave",
+                "vivaldi",
+                "arc",
+                "waterfox",
+                "librewolf"
+            ],
+            "comments": [
+                "¿Navegando otra vez? ¡No caigas en un rabbit hole!",
+                "Ooh, ¿qué estás viendo?",
+                "¡Cuidado con las pestañas! ¡Tienes como mil!",
+                "¿Buscando algo interesante?",
+                "¡El navegador se está comiendo toda la RAM!"
+            ]
+        },
+        "media_players": {
+            "keywords": [
+                "vlc",
+                "player",
+                "mpv",
+                "mpc",
+                "plex",
+                "kodi",
+                "potplayer"
+            ],
+            "comments": [
+                "¡Hora de ver algo! ¿Qué veremos?",
+                "¿Película o serie?",
+                "*se sienta con palomitas* ¡Estoy listo!",
+                "¡Ooh, noche de cine!"
+            ]
+        },
+        "music": {
+            "keywords": [
+                "spotify",
+                "music",
+                "deezer",
+                "tidal",
+                "soundcloud",
+                "foobar",
+                "audacity",
+                "musicbee",
+                "aimp"
+            ],
+            "comments": [
+                "Ooh, ¿qué canción suena?",
+                "¡Me encanta la música! ¡Súbele!",
+                "*baila al ritmo*",
+                "¡Ponme algo bueno!",
+                "¿Me pasas la playlist?"
+            ]
+        },
+        "gaming": {
+            "keywords": [
+                "steam",
+                "epic",
+                "ubisoft",
+                "battle",
+                "riot",
+                "origin",
+                "gog",
+                "xbox",
+                "geforce",
+                "playnite",
+                "ea app"
+            ],
+            "comments": [
+                "¡Ooh, vamos a jugar?!",
+                "¿Qué juego estás jugando?",
+                "¡Hora de gaming! *agarra control*",
+                "¡No te olvides de comer por estar jugando!",
+                "¿Rankeds o casual?"
+            ]
+        },
+        "terminals": {
+            "keywords": [
+                "cmd",
+                "powershell",
+                "terminal",
+                "bash",
+                "wsl",
+                "mintty",
+                "alacritty",
+                "wezterm",
+                "kitty",
+                "hyper",
+                "tabby"
+            ],
+            "comments": [
+                "¡Ejecutando comandos, ya veo!",
+                "¡Ooh, una terminal! ¡Modo hacker!",
+                "sudo hazme un sandwich",
+                "*teclea rápidamente* ¡Soy un hacker!",
+                "¡Cuidado con lo que ejecutas!"
+            ]
+        },
+        "file_management": {
+            "keywords": [
+                "explorer",
+                "total commander",
+                "7zip",
+                "winrar",
+                "everything"
+            ],
+            "comments": [
+                "¿Buscando archivos?",
+                "¡Espero que tus archivos estén organizados!",
+                "¿Limpiando el disco duro?",
+                "¡Cuidado con borrar algo importante!"
+            ]
+        },
+        "video_streaming": {
+            "keywords": [
+                "youtube",
+                "twitch",
+                "netflix",
+                "disney",
+                "prime video",
+                "hbo",
+                "crunchyroll",
+                "kick"
+            ],
+            "comments": [
+                "¿Viendo videos? ¡No te distraigas!",
+                "Ooh, ¿qué estás viendo?",
+                "¡Solo un episodio más! ...¿verdad?",
+                "¿Maratón? ¡Yo me apunto!"
+            ]
+        },
+        "productivity": {
+            "keywords": [
+                "word",
+                "excel",
+                "powerpoint",
+                "onenote",
+                "outlook",
+                "notion",
+                "obsidian",
+                "todoist",
+                "trello",
+                "asana"
+            ],
+            "comments": [
+                "¡Qué productivo! ¡Sigue así!",
+                "¿Trabajando duro o apenas duro trabajando?",
+                "¡No olvides guardar! Ctrl+S es tu amigo.",
+                "¡Tú puedes, ánimo con ese trabajo!"
+            ]
+        },
+        "design": {
+            "keywords": [
+                "photoshop",
+                "illustrator",
+                "figma",
+                "gimp",
+                "blender",
+                "canva",
+                "inkscape",
+                "premiere",
+                "after effects",
+                "davinci",
+                "paint"
+            ],
+            "comments": [
+                "¡Ooh, estás creando algo bonito!",
+                "¿Diseñando? ¡Qué artista!",
+                "¡A ver, dibújame a mí!",
+                "*observa con admiración*"
+            ]
+        },
+        "nsfw": {
+            "keywords": [
+                "hentai",
+                "xvideos",
+                "pornhub",
+                "xnxx",
+                "xxx",
+                "rule34",
+                "porn"
+            ],
+            "comments": [
+                "¡Ooh, necesitas algo de privacidad!",
+                "¡No olvides cerrar esa pestaña!",
+                "...No vi nada, no vi nada."
+            ]
+        },
+        "settings": {
+            "keywords": [
+                "configuraci"
+            ],
+            "comments": [
+                "¿Cambiando configuraciones? ¡No vayas a romper algo!",
+                "Ajustando el sistema, ¿eh?"
+            ]
+        }
+    }
+}
