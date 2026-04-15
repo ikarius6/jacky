@@ -16,6 +16,26 @@ from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 log = logging.getLogger("speech.voice")
 
+
+def _is_valid_mp3(filepath: str) -> bool:
+    """Quick check: file exists, non-zero size, and ends with MP3 sync pattern."""
+    if not os.path.isfile(filepath):
+        return False
+    size = os.path.getsize(filepath)
+    if size < 128:  # MP3 frame header is 4 bytes + ID3v1 tag is 128 bytes
+        return False
+    # Check for ID3 header or any MP3 frame sync (0xFF 0xFB)
+    try:
+        with open(filepath, "rb") as f:
+            header = f.read(4)
+            if header[:2] == b"ID":
+                return True  # ID3v2 tag
+            if len(header) >= 2 and header[0] == 0xFF and (header[1] & 0xE0) == 0xE0:
+                return True  # MP3 frame sync
+        return True  # If we can read it, assume it's OK — FFmpeg will validate further
+    except Exception:
+        return False
+
 class ElevenLabsTTSClient(QObject):
     """Client for ElevenLabs Text-to-Speech API.
     Downloads the audio stream and plays it using QMediaPlayer."""
@@ -90,11 +110,17 @@ class ElevenLabsTTSClient(QObject):
                 if allow_cache:
                     os.makedirs(self._cache_dir, exist_ok=True)
                     output_path = os.path.join(self._cache_dir, filename)
-                    if os.path.exists(output_path):
+                    if os.path.exists(output_path) and _is_valid_mp3(output_path):
                         log.debug(f"Using cached TTS audio for text: {clean_text[:30]}...")
                         self._update_usage_record(filename)
                         self._playback_ready.emit(output_path)
                         return
+                    elif os.path.exists(output_path):
+                        log.debug(f"Discarding corrupted cache file: {filename}")
+                        try:
+                            os.remove(output_path)
+                        except Exception:
+                            pass
                 else:
                     output_path = os.path.join(tempfile.gettempdir(), f"temp_{filename}")
 
@@ -138,12 +164,26 @@ class ElevenLabsTTSClient(QObject):
         # Stop previous playback if any
         self._cleanup()
         self._current_temp_file = file_path
-        
+
+        if not _is_valid_mp3(file_path):
+            log.warning("Skipping invalid audio file: %s", file_path)
+            self.playback_finished.emit()
+            return
+
         self._player.setSource(QUrl.fromLocalFile(file_path))
         self._player.play()
 
     def _on_media_status_changed(self, status):
-        if status == QMediaPlayer.MediaStatus.EndOfMedia or status == QMediaPlayer.MediaStatus.InvalidMedia:
+        if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            self._cleanup()
+            self.playback_finished.emit()
+        elif status == QMediaPlayer.MediaStatus.InvalidMedia:
+            if self._current_temp_file:
+                log.warning("Invalid media detected, removing corrupted file: %s", self._current_temp_file)
+                try:
+                    os.remove(self._current_temp_file)
+                except Exception:
+                    pass
             self._cleanup()
             self.playback_finished.emit()
 
