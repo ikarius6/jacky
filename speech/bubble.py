@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF
 from PyQt6.QtGui import QPainter, QColor, QFont, QPainterPath, QBrush, QPen
 
-from utils.dwm_helpers import remove_dwm_border
+from pal import remove_dwm_border
 
 
 class SpeechBubble(QWidget):
@@ -128,7 +128,7 @@ class SpeechBubble(QWidget):
         y = y_below if self._flipped else y_above
 
         # Keep on screen horizontally
-        from utils.win32_helpers import get_screen_size
+        from pal import get_screen_size
         try:
             sw, sh = get_screen_size()
             x = max(0, min(x, sw - w))

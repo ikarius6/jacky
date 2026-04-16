@@ -22,7 +22,7 @@ from utils.i18n import (
     get_type_separators,
 )
 from utils.screen_capture import capture_full_screen_gridded, encode_qimage_png, capture_vision_area, draw_subgrid
-from utils.win32_helpers import click_at, send_alt_f4, minimize_foreground_window, type_text
+from pal import click_at, send_alt_f4, minimize_foreground_window, type_text
 
 from core.screen_interaction.constants import (
     CONFIDENCE_THRESHOLD,

@@ -1,10 +1,10 @@
 import random
 from typing import List, Optional, Callable, Set
 
-import win32gui
 from PyQt6.QtCore import QTimer
 
-from utils.win32_helpers import (
+from pal import (
+    backend,
     get_visible_windows, get_foreground_window, move_window,
     set_window_pos, resize_window, minimize_window,
     flash_window, set_foreground_window, tile_windows,
@@ -350,7 +350,7 @@ class WindowAwareness:
     def drag_window_tick(self, hwnd: int, pet_x: int, pet_y: int, pet_size: int):
         """Move the dragged window so its top-center follows the pet."""
         try:
-            rect = win32gui.GetWindowRect(hwnd)
+            rect = backend.get_window_rect(hwnd)
             w_width = rect[2] - rect[0]
             target_x = pet_x + pet_size // 2 - w_width // 2
             target_y = pet_y + pet_size  # window hangs below the pet

@@ -4,12 +4,12 @@ Uses polling via QTimer to avoid the complexity of hidden Win32 message windows.
 Emits Qt signals that PetWindow can connect to for reactions.
 """
 
-import ctypes
-import ctypes.wintypes as wintypes
 import logging
 from enum import Enum, auto
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+
+from pal import get_power_status as _pal_get_power_status, get_idle_seconds as _get_idle_seconds
 
 log = logging.getLogger("system_events")
 
@@ -23,45 +23,13 @@ class SystemEvent(Enum):
     USER_RETURNED = auto()        # User came back after being idle
 
 
-# ── Win32 structures ─────────────────────────────────────────────
-
-class SYSTEM_POWER_STATUS(ctypes.Structure):
-    _fields_ = [
-        ("ACLineStatus", ctypes.c_byte),        # 0=offline, 1=online, 255=unknown
-        ("BatteryFlag", ctypes.c_byte),          # bitmask
-        ("BatteryLifePercent", ctypes.c_byte),   # 0-100 or 255=unknown
-        ("SystemStatusFlag", ctypes.c_byte),
-        ("BatteryLifeTime", ctypes.c_ulong),     # seconds remaining or -1
-        ("BatteryFullLifeTime", ctypes.c_ulong),
-    ]
-
-
-class LASTINPUTINFO(ctypes.Structure):
-    _fields_ = [
-        ("cbSize", ctypes.c_uint),
-        ("dwTime", ctypes.c_ulong),
-    ]
-
-
 def _get_power_status():
     """Return (ac_online: bool|None, percent: int|None)."""
-    status = SYSTEM_POWER_STATUS()
-    if ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(status)):
-        ac = None if status.ACLineStatus == 255 else bool(status.ACLineStatus)
-        pct = None if status.BatteryLifePercent == 255 else int(status.BatteryLifePercent)
-        return ac, pct
-    return None, None
-
-
-def _get_idle_seconds() -> float:
-    """Return the number of seconds since last user input (mouse/keyboard)."""
-    lii = LASTINPUTINFO()
-    lii.cbSize = ctypes.sizeof(LASTINPUTINFO)
-    if ctypes.windll.user32.GetLastInputInfo(ctypes.byref(lii)):
-        tick_count = ctypes.windll.kernel32.GetTickCount()
-        elapsed_ms = tick_count - lii.dwTime
-        return max(elapsed_ms / 1000.0, 0.0)
-    return 0.0
+    ac, pct = _pal_get_power_status()
+    # Translate backend convention (-1 = unknown) to None for callers
+    ac_out = None if not ac and pct == -1 else ac
+    pct_out = None if pct == -1 else pct
+    return ac_out, pct_out
 
 
 # ── Monitor ──────────────────────────────────────────────────────

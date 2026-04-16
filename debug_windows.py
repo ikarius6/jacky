@@ -21,7 +21,7 @@ import os
 # Allow running from repo root without installing the package.
 sys.path.insert(0, os.path.dirname(__file__))
 
-from utils.win32_helpers import get_visible_windows, get_foreground_window
+from pal import get_visible_windows, get_foreground_window
 from interaction.window_awareness import _is_junk_window
 
 # ── ANSI colours (work in Windows Terminal / PowerShell 7) ──────────────────

@@ -6,7 +6,7 @@ from PyQt6.QtCore import QTimer
 from core.pet import PetState
 from interaction.window_awareness import _is_junk_window
 from speech.dialogue import get_line, get_app_comment
-from utils.win32_helpers import WindowInfo, get_foreground_window
+from pal import WindowInfo, get_foreground_window
 
 log = logging.getLogger("window_interactions")
 

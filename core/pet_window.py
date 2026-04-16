@@ -30,7 +30,7 @@ from speech.llm_provider import create_llm_provider
 from speech.voice import ElevenLabsTTSClient, AssemblyAISTTClient
 from interaction.hotkey import GlobalHotkey
 from utils.config_manager import load_config
-from utils.dwm_helpers import remove_dwm_border, set_topmost
+from pal import remove_dwm_border, set_topmost
 from utils.screen_capture import capture_vision_area
 from utils.i18n import load_language, t, get_vision_keywords, current_language
 
@@ -434,7 +434,7 @@ class PetWindow(QWidget):
 
     def set_click_through(self, click_through: bool):
         """Temporarily make the pet window and its speech bubble transparent to mouse clicks."""
-        from utils.win32_helpers import set_window_click_through
+        from pal import set_window_click_through
         set_window_click_through(int(self.winId()), click_through)
         if self._bubble:
             set_window_click_through(int(self._bubble.winId()), click_through)

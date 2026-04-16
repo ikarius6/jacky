@@ -2,7 +2,7 @@ import logging
 import random
 from typing import Optional, Tuple, List
 
-from utils.win32_helpers import get_work_area, get_taskbar_rect, WindowInfo
+from pal import get_work_area, get_taskbar_rect, WindowInfo
 
 log = logging.getLogger("movement")
 
