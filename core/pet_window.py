@@ -1044,11 +1044,11 @@ class PetWindow(QWidget):
     def _remove_dwm_border(self):
         """Remove the DWM shadow/border and apply platform-specific topmost level.
 
-        On macOS this also calls set_topmost() so that the NSWindow receives
-        NSFloatingWindowLevel immediately when first shown (instead of waiting
-        for the first speech event or the 5-second reassertion timer).
+        On macOS this also schedules set_topmost() for the next event-loop tick
+        so the NSWindow is guaranteed to exist before we try to set its level.
         """
         wid = int(self.winId())
         remove_dwm_border(wid)
         if sys.platform == "darwin":
-            set_topmost(wid)
+            QTimer.singleShot(0, lambda: set_topmost(int(self.winId())))
+

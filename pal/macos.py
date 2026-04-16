@@ -539,13 +539,27 @@ class MacOSBackend(PlatformBackend):
     # -- Pet-window chrome -------------------------------------------------
 
     def _get_nswindow(self, view_ptr: int):
-        """Convert a Qt winId() NSView pointer to NSWindow. Returns None on failure."""
+        """Convert a Qt winId() NSView* pointer to the owning NSWindow.
+
+        Qt's ``winId()`` on macOS returns the address of the ``NSView`` that
+        backs the QWidget.  We use pyobjc to wrap that raw pointer and call
+        ``-[NSView window]`` to retrieve the parent ``NSWindow``.
+        Returns ``None`` on any failure.
+        """
         try:
             import objc
-            nsview = objc.objc_object(c_void_p=view_ptr)
+            import ctypes
+            # pyobjc accepts either a plain int or ctypes.c_void_p for c_void_p=
+            try:
+                nsview = objc.objc_object(c_void_p=ctypes.c_void_p(view_ptr))
+            except TypeError:
+                nsview = objc.objc_object(c_void_p=view_ptr)
             win = nsview.window() if hasattr(nsview, 'window') else None
+            if win is None:
+                log.debug("_get_nswindow: NSView.window() returned nil for ptr=%s", view_ptr)
             return win
-        except Exception:
+        except Exception as exc:
+            log.debug("_get_nswindow failed: %s", exc)
             return None
 
     def set_topmost(self, wid: int) -> None:
@@ -554,23 +568,24 @@ class MacOSBackend(PlatformBackend):
         On macOS, Qt's winId() returns an NSView* pointer (not a CGWindowID /
         windowNumber). We cast it via objc to get the owning NSWindow, then
         assign NSFloatingWindowLevel so the window always floats above normal
-        windows. We also set NSWindowCollectionBehaviorCanJoinAllSpaces so it
-        stays visible across Mission Control spaces without getting focus.
+        windows. NSWindowCollectionBehaviorCanJoinAllSpaces keeps it visible
+        across Mission Control spaces without stealing focus.
         """
         try:
             nswin = self._get_nswindow(wid)
             if nswin is None:
+                log.debug("set_topmost: _get_nswindow returned None for wid=%s", wid)
                 return
-            # Level 3 = NSFloatingWindowLevel — above normal (0) and modal (8)
+            # NSFloatingWindowLevel (3) sits above normal app windows (0).
             nswin.setLevel_(Cocoa.NSFloatingWindowLevel)
-            # Stay on all Spaces without being brought to front
-            behaviour = (
+            # Visible on all Spaces — do NOT add Stationary; that flag prevents
+            # the window from being ordered correctly in some compositor states.
+            nswin.setCollectionBehavior_(
                 Cocoa.NSWindowCollectionBehaviorCanJoinAllSpaces
-                | Cocoa.NSWindowCollectionBehaviorStationary
             )
-            nswin.setCollectionBehavior_(behaviour)
-        except Exception:
-            pass
+            log.debug("set_topmost: NSFloatingWindowLevel applied wid=%s", wid)
+        except Exception as exc:
+            log.debug("set_topmost failed: %s", exc)
 
     def remove_window_border(self, wid: int) -> None:
         try:
