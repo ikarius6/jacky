@@ -57,6 +57,33 @@ python main.py
 
 > **macOS note:** On first launch, Jacky will ask for **Accessibility** permission (System Settings → Privacy & Security → Accessibility). This is needed for window interactions (move, resize, peek, minimize). The pet still works without it — window manipulation features will just be disabled.
 
+## Troubleshooting
+
+### macOS — `pyaudio` build fails (`portaudio.h` file not found)
+
+`pyaudio` requires the **portaudio** C library to be present on your system before pip can build it. On macOS this library is not installed by default, so `pip install -r requirements.txt` will fail with:
+
+```
+fatal error: 'portaudio.h' file not found
+error: command '/usr/bin/clang' failed with exit code 1
+ERROR: Failed building wheel for pyaudio
+```
+
+**Fix:** Install portaudio via Homebrew first, then re-run pip pointing to the Homebrew paths:
+
+```bash
+brew install portaudio
+CPATH=$(brew --prefix portaudio)/include \
+LIBRARY_PATH=$(brew --prefix portaudio)/lib \
+pip install pyaudio
+```
+
+After that, any remaining packages in `requirements.txt` can be installed normally:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Configuration
 
 Edit `config.json` or use the in-app Settings dialog (right-click Jacky → Settings / Ajustes).
