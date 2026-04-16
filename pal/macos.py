@@ -563,13 +563,18 @@ class MacOSBackend(PlatformBackend):
             return None
 
     def set_topmost(self, wid: int) -> None:
-        """Set window to floating level and enable all-spaces visibility.
+        """Set window to floating level and ensure it never hides on deactivation.
 
         On macOS, Qt's winId() returns an NSView* pointer (not a CGWindowID /
-        windowNumber). We cast it via objc to get the owning NSWindow, then
-        assign NSFloatingWindowLevel so the window always floats above normal
-        windows. NSWindowCollectionBehaviorCanJoinAllSpaces keeps it visible
-        across Mission Control spaces without stealing focus.
+        windowNumber). We cast it via objc to get the owning NSWindow/NSPanel.
+
+        Key issues this fixes:
+        - Qt.WindowType.Tool creates an NSPanel with hidesOnDeactivate=YES by
+          default. This causes the window to sink behind others whenever a
+          different app is focused. We disable that.
+        - NSFloatingWindowLevel keeps it above normal (level 0) app windows.
+        - NSWindowCollectionBehaviorCanJoinAllSpaces keeps it visible across
+          Mission Control spaces without stealing focus.
         """
         try:
             nswin = self._get_nswindow(wid)
@@ -578,14 +583,18 @@ class MacOSBackend(PlatformBackend):
                 return
             # NSFloatingWindowLevel (3) sits above normal app windows (0).
             nswin.setLevel_(Cocoa.NSFloatingWindowLevel)
-            # Visible on all Spaces — do NOT add Stationary; that flag prevents
-            # the window from being ordered correctly in some compositor states.
+            # CRITICAL: NSPanel created by Qt.Tool has hidesOnDeactivate=YES,
+            # which hides the window when another app is focused. Disable it.
+            if hasattr(nswin, 'setHidesOnDeactivate_'):
+                nswin.setHidesOnDeactivate_(False)
+            # Visible on all Spaces without stealing focus.
             nswin.setCollectionBehavior_(
                 Cocoa.NSWindowCollectionBehaviorCanJoinAllSpaces
             )
             log.debug("set_topmost: NSFloatingWindowLevel applied wid=%s", wid)
         except Exception as exc:
             log.debug("set_topmost failed: %s", exc)
+
 
     def remove_window_border(self, wid: int) -> None:
         try:
