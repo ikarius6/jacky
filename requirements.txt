@@ -1,7 +1,14 @@
 PyQt6>=6.6.0
-pywin32>=306
 requests>=2.31.0
 mss>=9.0.0
-
 assemblyai[extras]>=0.25.0
-webrtcvad>=2.0.10
+
+# Windows only
+pywin32>=306; sys_platform == "win32"
+webrtcvad>=2.0.10; sys_platform == "win32"
+
+# macOS only
+pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"
+pyobjc-framework-Quartz>=10.0; sys_platform == "darwin"
+pyobjc-framework-ApplicationServices>=10.0; sys_platform == "darwin"
+silero-vad>=1.0; sys_platform == "darwin"

@@ -323,20 +323,47 @@ class AssemblyAISTTClient:
                 # --- VAD pre-gate: buffer locally, connect only on speech ---
                 pre_data = b""
                 try:
-                    import webrtcvad
-                    vad = webrtcvad.Vad(2)  # aggressiveness 0-3
-                    ring = deque(maxlen=_PRE_ROLL)
-                    while self._should_record_audio:
-                        frame = stream.read(_VAD_FRAMES, exception_on_overflow=False)
-                        ring.append(frame)
-                        if vad.is_speech(frame, _RATE):
-                            break
-                    if not self._should_record_audio:
-                        return  # cancelled before speech — no WS opened, no billing
-                    pre_data = b"".join(ring)
-                    log.debug("VAD pre-gate: speech detected, buffered %d bytes", len(pre_data))
+                    import sys as _sys
+                    _vad_obj = None
+                    _vad_type = None  # 'webrtcvad' or 'silero'
+
+                    if _sys.platform == "darwin":
+                        try:
+                            from silero_vad import load as _silero_load
+                            _silero_model = _silero_load()
+                            _vad_obj = _silero_model
+                            _vad_type = "silero"
+                        except ImportError:
+                            pass
+                    if _vad_obj is None:
+                        try:
+                            import webrtcvad
+                            _vad_obj = webrtcvad.Vad(2)  # aggressiveness 0-3
+                            _vad_type = "webrtcvad"
+                        except ImportError:
+                            pass
+
+                    if _vad_obj is not None:
+                        ring = deque(maxlen=_PRE_ROLL)
+                        while self._should_record_audio:
+                            frame = stream.read(_VAD_FRAMES, exception_on_overflow=False)
+                            ring.append(frame)
+                            if _vad_type == "webrtcvad":
+                                speech = _vad_obj.is_speech(frame, _RATE)
+                            else:  # silero
+                                import torch
+                                audio_tensor = torch.frombuffer(frame, dtype=torch.int16).float() / 32768.0
+                                speech = _vad_obj(audio_tensor, _RATE).item() > 0.5
+                            if speech:
+                                break
+                        if not self._should_record_audio:
+                            return  # cancelled before speech — no WS opened, no billing
+                        pre_data = b"".join(ring)
+                        log.debug("VAD pre-gate (%s): speech detected, buffered %d bytes", _vad_type, len(pre_data))
+                    else:
+                        log.debug("No VAD available; connecting immediately (no pre-gate)")
                 except ImportError:
-                    log.debug("webrtcvad not installed; connecting immediately (no pre-gate)")
+                    log.debug("VAD import error; connecting immediately (no pre-gate)")
 
                 # --- Stream via WS ---
                 with websockets.sync.client.connect(url, additional_headers=headers) as ws:

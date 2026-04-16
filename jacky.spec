@@ -9,9 +9,18 @@ Output: dist/Jacky/Jacky.exe
 """
 
 import os
+import sys
 
 block_cipher = None
 PROJECT_ROOT = os.path.abspath('.')
+
+_hidden = [
+    'PyQt6.QtWidgets',
+    'PyQt6.QtCore',
+    'PyQt6.QtGui',
+]
+if sys.platform == 'win32':
+    _hidden += ['win32api', 'win32gui', 'win32con', 'win32process', 'pywintypes']
 
 a = Analysis(
     ['main.py'],
@@ -29,16 +38,7 @@ a = Analysis(
         # Bundle config.json as a template (user copy lives next to .exe)
         ('config.json', '.'),
     ],
-    hiddenimports=[
-        'PyQt6.QtWidgets',
-        'PyQt6.QtCore',
-        'PyQt6.QtGui',
-        'win32api',
-        'win32gui',
-        'win32con',
-        'win32process',
-        'pywintypes',
-    ],
+    hiddenimports=_hidden,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

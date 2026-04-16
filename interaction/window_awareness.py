@@ -1,4 +1,5 @@
 import random
+import sys
 from typing import List, Optional, Callable, Set
 
 from PyQt6.QtCore import QTimer
@@ -14,28 +15,52 @@ from pal import (
 )
 
 
-_JUNK_PATTERNS = (
-    "mainwindowview", "applicationframehost",
-    "softwareupdatenotification", "progman", "workerw",
-)
+# ── Platform-specific junk definitions ────────────────────────────────────────
 
-# Executables whose windows are always junk regardless of title
-_JUNK_PROCESSES = (
-    "applicationframehost.exe",
-    "python.exe",
-    "pythonw.exe",
-    "python3.exe",
-    "conhost.exe",
-)
+if sys.platform == "darwin":
+    _JUNK_PATTERNS = (
+        "finder desktop", "notification center",
+        "systemuiserver", "spotlight", "control center",
+        "loginwindow", "universalcontrol",
+    )
+    _JUNK_PROCESSES = (
+        "Finder",           # only its desktop window; real Finder windows still pass
+        "Dock",
+        "SystemUIServer",
+        "Spotlight",
+        "NotificationCenter",
+        "Control Center",
+        "loginwindow",
+        "python", "python3", "Python",
+    )
+else:
+    _JUNK_PATTERNS = (
+        "mainwindowview", "applicationframehost",
+        "softwareupdatenotification", "progman", "workerw",
+    )
+    _JUNK_PROCESSES = (
+        "applicationframehost.exe",
+        "python.exe",
+        "pythonw.exe",
+        "python3.exe",
+        "conhost.exe",
+    )
 
 
 def _is_junk_window(title: str, process_name: str) -> bool:
     """Return True if a window looks like system noise rather than a real user window."""
     t = title.lower()
     p = process_name.lower()
-    # Bare executable name as title
-    if t.endswith(".exe"):
-        return True
+
+    if sys.platform == "win32":
+        # Bare executable name as title
+        if t.endswith(".exe"):
+            return True
+    elif sys.platform == "darwin":
+        # Finder's desktop layer (title-less Finder window)
+        if p == "finder" and (not t or t == "desktop"):
+            return True
+
     # Internal/system window names
     if t.startswith("_"):
         return True
@@ -43,7 +68,7 @@ def _is_junk_window(title: str, process_name: str) -> bool:
     if any(pat in t or pat in p for pat in _JUNK_PATTERNS):
         return True
     # Executables that are always junk
-    if any(p == proc for proc in _JUNK_PROCESSES):
+    if any(p == proc.lower() for proc in _JUNK_PROCESSES):
         return True
     # Very short generic title (likely internal)
     if len(t) < 3:
