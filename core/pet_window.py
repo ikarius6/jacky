@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import random
 import datetime
@@ -422,11 +423,18 @@ class PetWindow(QWidget):
         self._reassert_topmost()
 
     def _reassert_topmost(self):
-        """Re-assert HWND_TOPMOST via Win32 — guards against z-order demotion."""
+        """Re-assert HWND_TOPMOST via Win32 — guards against z-order demotion.
+
+        On macOS we skip self.raise_() because it activates the app and steals
+        focus from the user. The NSFloatingWindowLevel applied by set_topmost()
+        is sufficient to keep the window above others without taking focus.
+        """
         if not self._always_on_top:
             return
         try:
-            self.raise_()
+            # Only call raise_() on non-macOS; on macOS it steals focus.
+            if sys.platform != "darwin":
+                self.raise_()
             hwnd = int(self.winId())
             set_topmost(hwnd)
         except Exception:
@@ -1034,5 +1042,13 @@ class PetWindow(QWidget):
         QTimer.singleShot(500, lambda: self._say(get_line("greeting", self.pet.name)))
 
     def _remove_dwm_border(self):
-        """Use Windows DWM API to remove the shadow/border around the window."""
-        remove_dwm_border(int(self.winId()))
+        """Remove the DWM shadow/border and apply platform-specific topmost level.
+
+        On macOS this also calls set_topmost() so that the NSWindow receives
+        NSFloatingWindowLevel immediately when first shown (instead of waiting
+        for the first speech event or the 5-second reassertion timer).
+        """
+        wid = int(self.winId())
+        remove_dwm_border(wid)
+        if sys.platform == "darwin":
+            set_topmost(wid)

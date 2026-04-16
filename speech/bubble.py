@@ -1,8 +1,9 @@
+import sys
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF
 from PyQt6.QtGui import QPainter, QColor, QFont, QPainterPath, QBrush, QPen
 
-from pal import remove_dwm_border
+from pal import remove_dwm_border, set_topmost
 
 
 class SpeechBubble(QWidget):
@@ -55,7 +56,7 @@ class SpeechBubble(QWidget):
         self._recalculate_size()
         self._reposition()
         self.show()
-        self._remove_dwm_border()
+        self._apply_platform_chrome()
         self.update()
         self._hide_timer.stop()
         self._think_timer.start()
@@ -85,7 +86,7 @@ class SpeechBubble(QWidget):
         self._recalculate_size()
         self._reposition()
         self.show()
-        self._remove_dwm_border()
+        self._apply_platform_chrome()
         self.update()
         self._hide_timer.stop()
         if timeout_ms > 0:
@@ -185,9 +186,22 @@ class SpeechBubble(QWidget):
         painter.drawText(text_rect, Qt.TextFlag.TextWordWrap, self._text)
         painter.end()
 
+    def _apply_platform_chrome(self):
+        """Apply platform-specific window chrome.
+
+        On Windows, remove the DWM shadow/border.
+        On macOS, also set NSFloatingWindowLevel so the bubble truly floats
+        above other windows without stealing focus (WA_ShowWithoutActivating
+        prevents activation, but the NSWindow level must also be set natively).
+        """
+        wid = int(self.winId())
+        remove_dwm_border(wid)  # no-op on macOS
+        if sys.platform == "darwin":
+            set_topmost(wid)
+
+    # Keep old name in case any other code references it
     def _remove_dwm_border(self):
-        """Use Windows DWM API to remove the shadow/border around the window."""
-        remove_dwm_border(int(self.winId()))
+        self._apply_platform_chrome()
 
     def mousePressEvent(self, event):
         """Click the bubble to dismiss it."""

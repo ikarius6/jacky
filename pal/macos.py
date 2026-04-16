@@ -538,37 +538,53 @@ class MacOSBackend(PlatformBackend):
 
     # -- Pet-window chrome -------------------------------------------------
 
-    def set_topmost(self, wid: int) -> None:
+    def _get_nswindow(self, view_ptr: int):
+        """Convert a Qt winId() NSView pointer to NSWindow. Returns None on failure."""
         try:
-            # Access the NSWindow from the Qt winId
-            from Cocoa import NSApp
-            for win in NSApp.windows():
-                if win.windowNumber() == wid:
-                    win.setLevel_(Cocoa.NSFloatingWindowLevel)
-                    return
-            # Fallback: use objc to get window from wid
             import objc
-            nsview = objc.objc_object(c_void_p=wid)
-            if hasattr(nsview, 'window'):
-                nsview.window().setLevel_(Cocoa.NSFloatingWindowLevel)
+            nsview = objc.objc_object(c_void_p=view_ptr)
+            win = nsview.window() if hasattr(nsview, 'window') else None
+            return win
+        except Exception:
+            return None
+
+    def set_topmost(self, wid: int) -> None:
+        """Set window to floating level and enable all-spaces visibility.
+
+        On macOS, Qt's winId() returns an NSView* pointer (not a CGWindowID /
+        windowNumber). We cast it via objc to get the owning NSWindow, then
+        assign NSFloatingWindowLevel so the window always floats above normal
+        windows. We also set NSWindowCollectionBehaviorCanJoinAllSpaces so it
+        stays visible across Mission Control spaces without getting focus.
+        """
+        try:
+            nswin = self._get_nswindow(wid)
+            if nswin is None:
+                return
+            # Level 3 = NSFloatingWindowLevel — above normal (0) and modal (8)
+            nswin.setLevel_(Cocoa.NSFloatingWindowLevel)
+            # Stay on all Spaces without being brought to front
+            behaviour = (
+                Cocoa.NSWindowCollectionBehaviorCanJoinAllSpaces
+                | Cocoa.NSWindowCollectionBehaviorStationary
+            )
+            nswin.setCollectionBehavior_(behaviour)
         except Exception:
             pass
 
     def remove_window_border(self, wid: int) -> None:
         try:
-            import objc
-            nsview = objc.objc_object(c_void_p=wid)
-            if hasattr(nsview, 'window'):
-                nsview.window().setHasShadow_(False)
+            nswin = self._get_nswindow(wid)
+            if nswin is not None:
+                nswin.setHasShadow_(False)
         except Exception:
             pass
 
     def set_click_through(self, wid: int, enabled: bool) -> bool:
         try:
-            import objc
-            nsview = objc.objc_object(c_void_p=wid)
-            if hasattr(nsview, 'window'):
-                nsview.window().setIgnoresMouseEvents_(enabled)
+            nswin = self._get_nswindow(wid)
+            if nswin is not None:
+                nswin.setIgnoresMouseEvents_(enabled)
                 return True
         except Exception:
             pass
