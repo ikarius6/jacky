@@ -1,6 +1,6 @@
 # Jacky — Desktop Virtual Pet
 
-A Windows desktop pet application. Jacky is a cute chibi character who walks around your screen, interacts with windows, interacts with other Jackys, listens to your voice, talks back to you, can *see* your screen, and follows simple instructions.
+A desktop pet application for **Windows** and **macOS**. Jacky is a cute chibi character who walks around your screen, interacts with windows, interacts with other Jackys, listens to your voice, talks back to you, can *see* your screen, and follows simple instructions.
 
 ## Try it now!
 
@@ -35,20 +35,27 @@ https://github.com/user-attachments/assets/e34f4733-f044-4b01-8944-50e9c8e887cf
 
 ## Setup
 
-```bash
-# Create and activate virtual environment
+### Windows
+
+```powershell
 python -m venv venv
 .\venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Create your config from the example
 copy config.json.example config.json
-
-# Run
 python main.py
 ```
+
+### macOS
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp config.json.example config.json
+python main.py
+```
+
+> **macOS note:** On first launch, Jacky will ask for **Accessibility** permission (System Settings → Privacy & Security → Accessibility). This is needed for window interactions (move, resize, peek, minimize). The pet still works without it — window manipulation features will just be disabled.
 
 ## Configuration
 
@@ -111,7 +118,7 @@ Jacky can listen to your voice and talk back!
 
 ### Multi-instance & Peer Interactions
 
-Run several Jacky instances simultaneously. They discover each other via a shared temp file (`%TEMP%/jacky_peers.json`) and can interact:
+Run several Jacky instances simultaneously. They discover each other via a shared temp file (`jacky_peers.json` in the system temp directory) and can interact:
 - **Greet** — wave and say hello
 - **Attack / Fight** — animated battle sequences
 - **Chase** — one Jacky chases another
@@ -136,12 +143,28 @@ Drop sprite folders inside `sprites/`. Each folder contains a `character.json` d
 
 ## Compile
 
+### Windows
+
 ```powershell
-# From project root:
 .\venv\Scripts\pyinstaller.exe jacky.spec --noconfirm
 
-# Then copy your config next to the exe (for user-writable settings):
+# Copy your config next to the exe:
 Copy-Item config.json dist\Jacky\config.json
 ```
 
-Run `dist\Jacky\Jacky.exe` to start Jacky.
+Run `dist\Jacky\Jacky.exe` to launch.
+
+### macOS
+
+```bash
+python -m PyInstaller jacky_mac.spec --noconfirm
+
+# Copy your config into the app bundle:
+cp config.json dist/Jacky.app/Contents/MacOS/config.json
+```
+
+Run `dist/Jacky.app` to launch (double-click or `open dist/Jacky.app`).
+
+> **macOS notes:**
+> - The `.app` bundle is ad-hoc signed. For distribution, sign with a Developer ID certificate.
+> - If macOS blocks the app ("unidentified developer"), right-click → Open, or allow it in System Settings → Privacy & Security.
