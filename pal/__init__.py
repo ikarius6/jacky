@@ -34,8 +34,8 @@ def _create_backend() -> PlatformBackend:
         from pal.windows import WindowsBackend
         return WindowsBackend()
     elif sys.platform == "darwin":
-        # Phase 2: from pal.macos import MacOSBackend
-        raise NotImplementedError("macOS backend not yet implemented")
+        from pal.macos import MacOSBackend
+        return MacOSBackend()
     else:
         raise NotImplementedError(f"Unsupported platform: {sys.platform}")
 
