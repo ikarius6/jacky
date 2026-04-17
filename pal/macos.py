@@ -60,6 +60,8 @@ try:
         CGEventGetIntegerValueField,
         kCGKeyboardEventKeycode,
         CGEventGetFlags,
+        kCGSessionEventTap,
+        kCGTailAppendEventTap,
     )
     from ApplicationServices import (
         AXUIElementCreateApplication,
@@ -354,6 +356,11 @@ class _MacHotkeyHandle:
                     pass
                 return event
 
+            # Try kCGHIDEventTap first (captures all HID events), then fall
+            # back to kCGSessionEventTap (current user session only). Both
+            # require Input Monitoring permission on macOS Catalina+.
+            # kCGHIDEventTap can still fail on macOS 14+ if SIP is active
+            # even with permission granted, so the fallback is important.
             tap = CGEventTapCreate(
                 kCGHIDEventTap,
                 kCGHeadInsertEventTap,
@@ -363,9 +370,23 @@ class _MacHotkeyHandle:
                 None,
             )
             if tap is None:
+                log.warning(
+                    "CGEventTapCreate(kCGHIDEventTap) failed — "
+                    "retrying with kCGSessionEventTap")
+                tap = CGEventTapCreate(
+                    kCGSessionEventTap,
+                    kCGTailAppendEventTap,
+                    kCGEventTapOptionListenOnly,
+                    (1 << kCGEventKeyDown),
+                    _tap_cb,
+                    None,
+                )
+            if tap is None:
                 log.error(
-                    "CGEventTapCreate failed — grant Accessibility permission "
-                    "in System Settings → Privacy & Security")
+                    "CGEventTapCreate failed (both kCGHIDEventTap and "
+                    "kCGSessionEventTap). Ensure Input Monitoring permission "
+                    "is granted in System Settings → Privacy & Security → "
+                    "Input Monitoring, then fully quit and relaunch Jacky.")
                 return
 
             src = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
