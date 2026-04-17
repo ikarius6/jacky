@@ -86,14 +86,25 @@ _OWN_PID = os.getpid()
 # ── Accessibility helper ─────────────────────────────────────────────────────
 
 
+_accessibility_warned = False
+
+
 def _check_accessibility(prompt: bool = False) -> bool:
     """Return True if this process has Accessibility permission."""
+    global _accessibility_warned
     if not _HAS_PYOBJC:
         return False
     if prompt:
         opts = {kAXTrustedCheckOptionPrompt: True}
         return AXIsProcessTrustedWithOptions(opts)
-    return AXIsProcessTrusted()
+    trusted = AXIsProcessTrusted()
+    if not trusted and not _accessibility_warned:
+        _accessibility_warned = True
+        log.warning(
+            "Accessibility permission not granted — window manipulation "
+            "disabled. Enable in System Settings → Privacy & Security → "
+            "Accessibility")
+    return trusted
 
 
 # ── AX helpers ───────────────────────────────────────────────────────────────
