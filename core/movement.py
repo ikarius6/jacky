@@ -185,9 +185,10 @@ class MovementEngine:
         # Occasionally pick a platform to walk onto
         pet_feet_y = self._y + self._sprite_size
         max_climb = self._sprite_size
+        min_y = bounds[1]
         walkable = [
             p for p in self._platforms
-            if p[1] >= self._sprite_size
+            if p[1] - self._sprite_size >= min_y
             and abs(pet_feet_y - p[1]) <= max_climb
         ]
         if walkable and random.random() < 0.3:
@@ -269,11 +270,12 @@ class MovementEngine:
         self._refresh_ground()
         if self._y >= self._ground_y:
             return False
+        min_y = self._get_bounds()[1]
         pet_bottom = self._y + self._sprite_size
         pet_center_x = self._x + self._sprite_size // 2
         for plat in self._platforms:
-            if plat[1] < self._sprite_size:
-                continue  # platform too close to screen top
+            if plat[1] - self._sprite_size < min_y:
+                continue  # pet wouldn't fit above this platform
             if plat[0] <= pet_center_x <= plat[2]:
                 if abs(pet_bottom - plat[1]) < 15:
                     return False
@@ -290,13 +292,14 @@ class MovementEngine:
             return  # Already moving
 
         self._refresh_ground()
+        min_y = self._get_bounds()[1]
         pet_bottom = self._y + self._sprite_size
         pet_center_x = self._x + self._sprite_size // 2
 
         # 1. Check if already resting on a platform surface
         for plat in self._platforms:
-            if plat[1] < self._sprite_size:
-                continue  # platform too close to screen top
+            if plat[1] - self._sprite_size < min_y:
+                continue  # pet wouldn't fit above this platform
             if plat[0] <= pet_center_x <= plat[2]:
                 plat_top = plat[1]
                 if abs(pet_bottom - plat_top) < 15:
@@ -309,8 +312,8 @@ class MovementEngine:
         if self._just_dropped:
             for plat in self._platforms:
                 plat_left, plat_top, plat_right, plat_bottom = plat
-                if plat_top < self._sprite_size:
-                    continue  # platform too close to screen top
+                if plat_top - self._sprite_size < min_y:
+                    continue  # pet wouldn't fit above this platform
                 if plat_left <= pet_center_x <= plat_right:
                     # Only slide up if feet are near the window top (within sprite_size)
                     overlap = pet_bottom - plat_top
@@ -333,8 +336,8 @@ class MovementEngine:
 
             best_land_y = None
             for plat in self._platforms:
-                if plat[1] < self._sprite_size:
-                    continue  # platform too close to screen top
+                if plat[1] - self._sprite_size < min_y:
+                    continue  # pet wouldn't fit above this platform
                 if plat[0] <= pet_center_x <= plat[2]:
                     plat_top = plat[1]
                     if pet_bottom <= plat_top <= next_bottom:
