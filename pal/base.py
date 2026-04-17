@@ -69,6 +69,14 @@ EVENT_OBJECT_SHOW    = 0x8002
 class PlatformBackend(ABC):
     """Interface that each OS backend must implement."""
 
+    @property
+    def coords_are_physical(self) -> bool:
+        """Return True if window coordinates from this backend are in physical
+        pixels and need to be divided by devicePixelRatio to get Qt logical
+        coords.  Windows returns physical pixels (True); macOS returns CG
+        points which already match Qt logical coords (False)."""
+        return True
+
     # -- Screen / desktop geometry -----------------------------------------
 
     @abstractmethod

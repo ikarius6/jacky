@@ -412,6 +412,11 @@ _observers: list = []
 class MacOSBackend(PlatformBackend):
     """macOS implementation of the Platform Abstraction Layer."""
 
+    @property
+    def coords_are_physical(self) -> bool:
+        # CG window bounds are in points (== Qt logical coords on macOS).
+        return False
+
     # -- Screen / desktop geometry -----------------------------------------
 
     def get_screen_size(self) -> Tuple[int, int]:

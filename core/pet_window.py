@@ -196,10 +196,20 @@ class PetWindow(QWidget):
         return perms.get(key, True)
 
     def _apply_dpi_scale(self):
-        """Pass the screen DPI scale to the movement engine for win32 coord conversion."""
-        screen = self._current_screen()
-        if screen:
-            self.movement.set_dpi_scale(screen.devicePixelRatio())
+        """Pass the screen DPI scale to the movement engine for coord conversion.
+
+        On macOS, CG window coordinates are already in logical points that
+        match Qt coords, so no scaling is needed (scale stays 1.0).
+        On Windows, GetWindowRect returns physical pixels that must be divided
+        by devicePixelRatio.
+        """
+        from pal import backend
+        if backend.coords_are_physical:
+            screen = self._current_screen()
+            if screen:
+                self.movement.set_dpi_scale(screen.devicePixelRatio())
+        else:
+            self.movement.set_dpi_scale(1.0)
 
     def _init_position(self):
         self._refresh_screen_bounds()
