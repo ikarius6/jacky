@@ -83,8 +83,8 @@ except ImportError:
 
 _OWN_PID = os.getpid()
 
-# ── ctypes fallback for AXValueGetValue ─────────────────────────────────────
-# pyobjc may not expose AXValueGetValue; call the C symbol directly.
+# ── ctypes bindings for AXValue (AXValueCreate / AXValueGetValue) ────────────
+# pyobjc on Python 3.14 may not expose these; call the C symbols directly.
 
 _kAXValueCGPointType = 1
 _kAXValueCGSizeType = 2
@@ -102,10 +102,17 @@ if _HAS_PYOBJC:
 
     _app_svc_lib = ctypes.cdll.LoadLibrary(
         ctypes.util.find_library("ApplicationServices"))
+
+    # Boolean AXValueGetValue(AXValueRef, AXValueType, void *)
     _AXValueGetValue_c = _app_svc_lib.AXValueGetValue
     _AXValueGetValue_c.restype = ctypes.c_bool
     _AXValueGetValue_c.argtypes = [
         ctypes.c_void_p, ctypes.c_uint32, ctypes.c_void_p]
+
+    # AXValueRef AXValueCreate(AXValueType, const void *)
+    _AXValueCreate_c = _app_svc_lib.AXValueCreate
+    _AXValueCreate_c.restype = ctypes.c_void_p
+    _AXValueCreate_c.argtypes = [ctypes.c_uint32, ctypes.c_void_p]
 
 # ── Accessibility helper ─────────────────────────────────────────────────────
 
@@ -163,14 +170,20 @@ def _ax_get_pos_size(win_el):
 
 
 def _ax_set_position(win_el, x: float, y: float) -> bool:
-    pt = CGPoint(x, y)
-    val = Quartz.AXValueCreate(Quartz.kAXValueCGPointType, pt)
+    pt = _CGPointC(x, y)
+    raw = _AXValueCreate_c(_kAXValueCGPointType, ctypes.byref(pt))
+    if not raw:
+        return False
+    val = _objc.objc_object(c_void_p=raw)
     return AXUIElementSetAttributeValue(win_el, kAXPositionAttribute, val) == kAXErrorSuccess
 
 
 def _ax_set_size(win_el, w: float, h: float) -> bool:
-    sz = Cocoa.NSSize(w, h)
-    val = Quartz.AXValueCreate(Quartz.kAXValueCGSizeType, sz)
+    sz = _CGSizeC(w, h)
+    raw = _AXValueCreate_c(_kAXValueCGSizeType, ctypes.byref(sz))
+    if not raw:
+        return False
+    val = _objc.objc_object(c_void_p=raw)
     return AXUIElementSetAttributeValue(win_el, kAXSizeAttribute, val) == kAXErrorSuccess
 
 
