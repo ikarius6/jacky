@@ -484,45 +484,57 @@ class MacOSBackend(PlatformBackend):
     def move_window(self, wid: int, dx: int, dy: int) -> bool:
         if not _check_accessibility():
             return False
-        pid, ax_win = _get_ax_window(wid)
-        if ax_win is None:
+        try:
+            pid, ax_win = _get_ax_window(wid)
+            if ax_win is None:
+                return False
+            ps = _ax_get_pos_size(ax_win)
+            if ps is None:
+                return False
+            (cx, cy), _ = ps
+            return _ax_set_position(ax_win, cx + dx, cy + dy)
+        except Exception:
             return False
-        ps = _ax_get_pos_size(ax_win)
-        if ps is None:
-            return False
-        (cx, cy), _ = ps
-        return _ax_set_position(ax_win, cx + dx, cy + dy)
 
     def set_window_pos(self, wid: int, x: int, y: int) -> bool:
         if not _check_accessibility():
             return False
-        _, ax_win = _get_ax_window(wid)
-        if ax_win is None:
+        try:
+            _, ax_win = _get_ax_window(wid)
+            if ax_win is None:
+                return False
+            return _ax_set_position(ax_win, x, y)
+        except Exception:
             return False
-        return _ax_set_position(ax_win, x, y)
 
     def resize_window(self, wid: int, dw: int, dh: int) -> bool:
         if not _check_accessibility():
             return False
-        _, ax_win = _get_ax_window(wid)
-        if ax_win is None:
+        try:
+            _, ax_win = _get_ax_window(wid)
+            if ax_win is None:
+                return False
+            ps = _ax_get_pos_size(ax_win)
+            if ps is None:
+                return False
+            _, (cw, ch) = ps
+            new_w = max(200, cw + dw)
+            new_h = max(150, ch + dh)
+            return _ax_set_size(ax_win, new_w, new_h)
+        except Exception:
             return False
-        ps = _ax_get_pos_size(ax_win)
-        if ps is None:
-            return False
-        _, (cw, ch) = ps
-        new_w = max(200, cw + dw)
-        new_h = max(150, ch + dh)
-        return _ax_set_size(ax_win, new_w, new_h)
 
     def minimize_window(self, wid: int) -> bool:
         if not _check_accessibility():
             return False
-        _, ax_win = _get_ax_window(wid)
-        if ax_win is None:
+        try:
+            _, ax_win = _get_ax_window(wid)
+            if ax_win is None:
+                return False
+            err = AXUIElementSetAttributeValue(ax_win, kAXMinimizedAttribute, True)
+            return err == kAXErrorSuccess
+        except Exception:
             return False
-        err = AXUIElementSetAttributeValue(ax_win, kAXMinimizedAttribute, True)
-        return err == kAXErrorSuccess
 
     def flash_window(self, wid: int, count: int = 3) -> bool:
         try:
@@ -536,16 +548,19 @@ class MacOSBackend(PlatformBackend):
     def set_foreground_window(self, wid: int) -> bool:
         if not _check_accessibility():
             return False
-        pid, ax_win = _get_ax_window(wid)
-        if ax_win is None:
+        try:
+            pid, ax_win = _get_ax_window(wid)
+            if ax_win is None:
+                return False
+            AXUIElementPerformAction(ax_win, kAXRaiseAction)
+            # Also activate the owning app
+            if pid:
+                app = Cocoa.NSRunningApplication.runningApplicationWithProcessIdentifier_(pid)
+                if app:
+                    app.activateWithOptions_(Cocoa.NSApplicationActivateIgnoringOtherApps)
+            return True
+        except Exception:
             return False
-        AXUIElementPerformAction(ax_win, kAXRaiseAction)
-        # Also activate the owning app
-        if pid:
-            app = Cocoa.NSRunningApplication.runningApplicationWithProcessIdentifier_(pid)
-            if app:
-                app.activateWithOptions_(Cocoa.NSApplicationActivateIgnoringOtherApps)
-        return True
 
     def tile_windows(self, wids: List[int]) -> bool:
         if not wids or not _check_accessibility():
