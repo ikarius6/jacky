@@ -54,7 +54,6 @@ try:
         CGPoint,
         CGEventTapCreate,
         CGEventTapEnable,
-        kCGSessionEventTap,
         kCGHeadInsertEventTap,
         kCGEventTapOptionListenOnly,
         kCGEventKeyDown,
@@ -294,7 +293,11 @@ class _MacHotkeyHandle:
                     kc = CGEventGetIntegerValueField(
                         event, kCGKeyboardEventKeycode)
                     if kc == vk:
-                        flags = CGEventGetFlags(event) & _MOD_MASK
+                        raw = CGEventGetFlags(event)
+                        flags = raw & _MOD_MASK
+                        log.debug(
+                            "Hotkey tap: kc=%d raw=0x%X masked=0x%X "
+                            "expected=0x%X", kc, raw, flags, mod_flags)
                         if flags == mod_flags:
                             cb()
                 except Exception:
@@ -302,7 +305,7 @@ class _MacHotkeyHandle:
                 return event
 
             tap = CGEventTapCreate(
-                kCGSessionEventTap,
+                kCGHIDEventTap,
                 kCGHeadInsertEventTap,
                 kCGEventTapOptionListenOnly,
                 (1 << kCGEventKeyDown),
