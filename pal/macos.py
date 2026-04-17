@@ -195,8 +195,8 @@ def _get_ax_window(wid: int):
 # ── Hotkey parsing (macOS key codes) ─────────────────────────────────────────
 
 _MAC_MOD_MAP = {
-    "ctrl": kCGEventFlagMaskControl if _HAS_PYOBJC else 0,
-    "control": kCGEventFlagMaskControl if _HAS_PYOBJC else 0,
+    "ctrl": kCGEventFlagMaskCommand if _HAS_PYOBJC else 0,       # ⌘ (semantic Ctrl)
+    "control": kCGEventFlagMaskControl if _HAS_PYOBJC else 0,    # physical Control
     "shift": kCGEventFlagMaskShift if _HAS_PYOBJC else 0,
     "alt": kCGEventFlagMaskAlternate if _HAS_PYOBJC else 0,
     "option": kCGEventFlagMaskAlternate if _HAS_PYOBJC else 0,
