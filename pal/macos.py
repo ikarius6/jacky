@@ -494,6 +494,7 @@ class MacOSBackend(PlatformBackend):
             (cx, cy), _ = ps
             return _ax_set_position(ax_win, cx + dx, cy + dy)
         except Exception:
+            log.debug("move_window failed for wid=%s", wid, exc_info=True)
             return False
 
     def set_window_pos(self, wid: int, x: int, y: int) -> bool:
@@ -505,6 +506,7 @@ class MacOSBackend(PlatformBackend):
                 return False
             return _ax_set_position(ax_win, x, y)
         except Exception:
+            log.debug("set_window_pos failed for wid=%s", wid, exc_info=True)
             return False
 
     def resize_window(self, wid: int, dw: int, dh: int) -> bool:
@@ -522,6 +524,7 @@ class MacOSBackend(PlatformBackend):
             new_h = max(150, ch + dh)
             return _ax_set_size(ax_win, new_w, new_h)
         except Exception:
+            log.debug("resize_window failed for wid=%s", wid, exc_info=True)
             return False
 
     def minimize_window(self, wid: int) -> bool:
@@ -534,6 +537,7 @@ class MacOSBackend(PlatformBackend):
             err = AXUIElementSetAttributeValue(ax_win, kAXMinimizedAttribute, True)
             return err == kAXErrorSuccess
         except Exception:
+            log.debug("minimize_window failed for wid=%s", wid, exc_info=True)
             return False
 
     def flash_window(self, wid: int, count: int = 3) -> bool:
@@ -543,6 +547,7 @@ class MacOSBackend(PlatformBackend):
             )
             return True
         except Exception:
+            log.debug("flash_window failed for wid=%s", wid, exc_info=True)
             return False
 
     def set_foreground_window(self, wid: int) -> bool:
@@ -560,6 +565,7 @@ class MacOSBackend(PlatformBackend):
                     app.activateWithOptions_(Cocoa.NSApplicationActivateIgnoringOtherApps)
             return True
         except Exception:
+            log.debug("set_foreground_window failed for wid=%s", wid, exc_info=True)
             return False
 
     def tile_windows(self, wids: List[int]) -> bool:
@@ -585,6 +591,7 @@ class MacOSBackend(PlatformBackend):
                     _ax_set_size(ax_win, cell_w, cell_h)
             return True
         except Exception:
+            log.debug("tile_windows failed", exc_info=True)
             return False
 
     def get_window_rect(self, wid: int) -> Optional[Tuple[int, int, int, int]]:
