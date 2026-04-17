@@ -83,6 +83,30 @@ except ImportError:
 
 _OWN_PID = os.getpid()
 
+# ── ctypes fallback for AXValueGetValue ─────────────────────────────────────
+# pyobjc may not expose AXValueGetValue; call the C symbol directly.
+
+_kAXValueCGPointType = 1
+_kAXValueCGSizeType = 2
+
+if _HAS_PYOBJC:
+    import ctypes
+    import ctypes.util
+    import objc as _objc
+
+    class _CGPointC(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
+
+    class _CGSizeC(ctypes.Structure):
+        _fields_ = [("width", ctypes.c_double), ("height", ctypes.c_double)]
+
+    _app_svc_lib = ctypes.cdll.LoadLibrary(
+        ctypes.util.find_library("ApplicationServices"))
+    _AXValueGetValue_c = _app_svc_lib.AXValueGetValue
+    _AXValueGetValue_c.restype = ctypes.c_bool
+    _AXValueGetValue_c.argtypes = [
+        ctypes.c_void_p, ctypes.c_uint32, ctypes.c_void_p]
+
 # ── Accessibility helper ─────────────────────────────────────────────────────
 
 
@@ -127,11 +151,13 @@ def _ax_get_pos_size(win_el):
     err, size_val = AXUIElementCopyAttributeValue(win_el, kAXSizeAttribute, None)
     if err != kAXErrorSuccess:
         return None
-    pos = Cocoa.NSPoint()
-    size = Cocoa.NSSize()
-    if not Quartz.AXValueGetValue(pos_val, Quartz.kAXValueCGPointType, pos):
+    pos = _CGPointC()
+    size = _CGSizeC()
+    if not _AXValueGetValue_c(
+            _objc.pyobjc_id(pos_val), _kAXValueCGPointType, ctypes.byref(pos)):
         return None
-    if not Quartz.AXValueGetValue(size_val, Quartz.kAXValueCGSizeType, size):
+    if not _AXValueGetValue_c(
+            _objc.pyobjc_id(size_val), _kAXValueCGSizeType, ctypes.byref(size)):
         return None
     return (pos.x, pos.y), (size.width, size.height)
 
