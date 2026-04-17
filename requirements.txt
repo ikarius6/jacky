@@ -11,6 +11,6 @@ webrtcvad>=2.0.10; sys_platform == "win32"
 pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"
 pyobjc-framework-Quartz>=10.0; sys_platform == "darwin"
 pyobjc-framework-ApplicationServices>=10.0; sys_platform == "darwin"
-silero-vad>=1.0; sys_platform == "darwin"
+# silero-vad removed — pulls in torch (~480 MB) which bloats the macOS .app bundle
 # pyaudio requires portaudio system library on macOS — see README Troubleshooting
 pyaudio>=0.2.14; sys_platform == "darwin"
