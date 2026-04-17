@@ -52,6 +52,15 @@ try:
         kCGEventFlagMaskControl,
         CGEventKeyboardSetUnicodeString,
         CGPoint,
+        CGEventTapCreate,
+        CGEventTapEnable,
+        kCGSessionEventTap,
+        kCGHeadInsertEventTap,
+        kCGEventTapOptionListenOnly,
+        kCGEventKeyDown,
+        CGEventGetIntegerValueField,
+        kCGKeyboardEventKeycode,
+        CGEventGetFlags,
     )
     from ApplicationServices import (
         AXUIElementCreateApplication,
@@ -244,56 +253,97 @@ def _parse_mac_shortcut(shortcut: str) -> Tuple[int, int]:
 
 
 class _MacHotkeyHandle:
-    """NSEvent global monitor for a single hotkey combination."""
+    """CGEventTap-based global hotkey monitor.
+
+    Runs a passive Quartz event tap in a dedicated background thread with its
+    own ``CFRunLoop``.  This is more reliable than ``NSEvent`` global monitors
+    in PyQt applications because it does not depend on NSApplication
+    event-loop integration.
+    """
 
     def __init__(self, mod_flags: int, vk: int, callback: Callable):
         self.mod_flags = mod_flags
         self.vk = vk
         self.callback = callback
-        self._monitor = None
+        self._thread: Optional[threading.Thread] = None
+        self._tap = None
+        self._run_loop = None
+        self._ready = threading.Event()
 
     def start(self) -> bool:
         if not _HAS_PYOBJC:
             return False
-        mask = Cocoa.NSEventMaskKeyDown
+        self._thread = threading.Thread(
+            target=self._run, daemon=True, name="jacky-hotkey-tap")
+        self._thread.start()
+        if not self._ready.wait(timeout=2.0):
+            log.error("CGEventTap thread failed to initialise")
+            return False
+        return True
 
-        mod_flags = self.mod_flags
-        vk = self.vk
-        cb = self.callback
+    def _run(self):
+        try:
+            mod_flags = self.mod_flags
+            vk = self.vk
+            cb = self.callback
+            _MOD_MASK = (kCGEventFlagMaskCommand | kCGEventFlagMaskShift
+                         | kCGEventFlagMaskAlternate | kCGEventFlagMaskControl)
 
-        def _handler(event):
-            if event.keyCode() == vk:
-                ev_mods = event.modifierFlags() & (
-                    Cocoa.NSEventModifierFlagCommand
-                    | Cocoa.NSEventModifierFlagShift
-                    | Cocoa.NSEventModifierFlagOption
-                    | Cocoa.NSEventModifierFlagControl
-                )
-                # Map CG flags to NS flags for comparison
-                ns_mods = 0
-                if mod_flags & kCGEventFlagMaskCommand:
-                    ns_mods |= Cocoa.NSEventModifierFlagCommand
-                if mod_flags & kCGEventFlagMaskShift:
-                    ns_mods |= Cocoa.NSEventModifierFlagShift
-                if mod_flags & kCGEventFlagMaskAlternate:
-                    ns_mods |= Cocoa.NSEventModifierFlagOption
-                if mod_flags & kCGEventFlagMaskControl:
-                    ns_mods |= Cocoa.NSEventModifierFlagControl
-                if ev_mods == ns_mods:
-                    cb()
+            def _tap_cb(_proxy, _etype, event, _refcon):
+                try:
+                    kc = CGEventGetIntegerValueField(
+                        event, kCGKeyboardEventKeycode)
+                    if kc == vk:
+                        flags = CGEventGetFlags(event) & _MOD_MASK
+                        if flags == mod_flags:
+                            cb()
+                except Exception:
+                    pass
+                return event
 
-        self._monitor = Cocoa.NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
-            mask, _handler
-        )
-        return self._monitor is not None
+            tap = CGEventTapCreate(
+                kCGSessionEventTap,
+                kCGHeadInsertEventTap,
+                kCGEventTapOptionListenOnly,
+                (1 << kCGEventKeyDown),
+                _tap_cb,
+                None,
+            )
+            if tap is None:
+                log.error(
+                    "CGEventTapCreate failed — grant Accessibility permission "
+                    "in System Settings → Privacy & Security")
+                return
+
+            src = Quartz.CFMachPortCreateRunLoopSource(None, tap, 0)
+            self._run_loop = Quartz.CFRunLoopGetCurrent()
+            Quartz.CFRunLoopAddSource(
+                self._run_loop, src, Quartz.kCFRunLoopCommonModes)
+            CGEventTapEnable(tap, True)
+            self._tap = tap
+            self._ready.set()
+            Quartz.CFRunLoopRun()  # blocks until stop()
+        except Exception as exc:
+            log.error("Hotkey tap thread error: %s", exc)
 
     def stop(self):
-        if self._monitor is not None:
-            Cocoa.NSEvent.removeMonitor_(self._monitor)
-            self._monitor = None
+        if self._tap is not None:
+            try:
+                CGEventTapEnable(self._tap, False)
+            except Exception:
+                pass
+            self._tap = None
+        if self._run_loop is not None:
+            try:
+                Quartz.CFRunLoopStop(self._run_loop)
+            except Exception:
+                pass
+            self._run_loop = None
 
     def join(self, timeout: float = 2.0):
-        pass  # No thread to join — NSEvent monitor is run-loop based
+        if self._thread is not None:
+            self._thread.join(timeout=timeout)
+            self._thread = None
 
 
 # ── Notification observers ───────────────────────────────────────────────────
