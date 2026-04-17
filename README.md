@@ -55,7 +55,16 @@ cp config.json.example config.json
 python main.py
 ```
 
-> **macOS note:** On first launch, Jacky will ask for **Accessibility** permission (System Settings → Privacy & Security → Accessibility). This is needed for window interactions (move, resize, peek, minimize). The pet still works without it — window manipulation features will just be disabled.
+> **macOS permissions:** Jacky requires the following permissions on macOS:
+>
+> | Permission | Where to grant | What it enables |
+> |---|---|---|
+> | **Accessibility** | System Settings → Privacy & Security → Accessibility | Window manipulation (move, resize, peek, minimize). Jacky still runs without it — only these features are disabled. |
+> | **Input Monitoring** | System Settings → Privacy & Security → Input Monitoring | Global hotkey (push-to-talk). Without this, the voice hotkey will not respond while another app is in focus. |
+> | **Microphone** | System Settings → Privacy & Security → Microphone | Voice input (STT). Required to record your voice when the hotkey is pressed. |
+> | **Screen Recording** | System Settings → Privacy & Security → Screen Recording | Vision and screen interaction. Required to capture screenshots for LLM analysis and on-screen element targeting. |
+>
+> Jacky prompts for Accessibility, Microphone, and Screen Recording automatically when each feature is first used. **Input Monitoring must be granted manually** — macOS will not prompt for it automatically.
 
 ## Troubleshooting
 
@@ -83,6 +92,29 @@ After that, any remaining packages in `requirements.txt` can be installed normal
 ```bash
 pip install -r requirements.txt
 ```
+
+### macOS — Global hotkey not working (Input Monitoring)
+
+If the voice hotkey (`Ctrl+Shift+Space` by default / `Shift+G` etc.) does nothing when another app is in focus, and the log shows:
+
+```
+ERROR: CGEventTapCreate failed
+ERROR: CGEventTap thread failed to initialise
+ERROR: Failed to register global hotkey: ...
+```
+
+This is a **macOS Input Monitoring** permission issue. Even if the toggle appears ON in System Settings, the macOS TCC permission database sometimes caches the old "denied" state.
+
+**Fix — toggle the permission off and back on:**
+
+1. Open **System Settings → Privacy & Security → Input Monitoring**
+2. Toggle **Jacky** (and **python** if listed) **OFF**
+3. Wait 2 seconds
+4. Toggle them back **ON**
+5. **Fully quit Jacky** (right-click Dock icon → Quit, or Cmd+Q)
+6. Relaunch Jacky
+
+> **Why this happens:** macOS caches TCC permission decisions per process. Granting the permission while the app is running does not update the cached state for that process. Removing and re-adding the entry forces a fresh grant, which the next launch picks up correctly.
 
 ## Configuration
 
