@@ -26,11 +26,26 @@ a = Analysis(
         'PyQt6.QtWidgets',
         'PyQt6.QtCore',
         'PyQt6.QtGui',
+        'PyQt6.QtMultimedia',       # TTS audio playback (QMediaPlayer, QAudioOutput)
         # pyobjc frameworks used by pal/macos.py
         'Cocoa',
         'Quartz',
         'ApplicationServices',
         'objc',
+        # Microphone / STT
+        'pyaudio',
+        'websockets',
+        'websockets.sync',
+        'websockets.sync.client',
+        'assemblyai',
+        # Screen capture (vision & screen interaction)
+        'mss',
+        'mss.tools',
+        # VAD (silero on macOS) + its runtime dependency
+        'silero_vad',
+        'torch',
+        # HTTP (LLM providers, TTS, shop)
+        'requests',
     ],
     hookspath=[],
     hooksconfig={},
@@ -38,7 +53,7 @@ a = Analysis(
     excludes=[
         'tkinter',
         'matplotlib',
-        'numpy',
+        # 'numpy',  # needed by torch/silero-vad — do NOT exclude
         'pandas',
         'scipy',
         'pytest',
@@ -99,5 +114,8 @@ app = BUNDLE(
         'NSMicrophoneUsageDescription':
             'Jacky can listen to your voice for speech-to-text input. '
             'Microphone access is optional.',
+        'NSScreenCaptureUsageDescription':
+            'Jacky can look at your screen to help navigate and interact '
+            'with desktop elements. Screen recording access is optional.',
     },
 )
