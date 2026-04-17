@@ -41,9 +41,6 @@ a = Analysis(
         # Screen capture (vision & screen interaction)
         'mss',
         'mss.tools',
-        # VAD (silero on macOS) + its runtime dependency
-        'silero_vad',
-        'torch',
         # HTTP (LLM providers, TTS, shop)
         'requests',
     ],
@@ -53,7 +50,7 @@ a = Analysis(
     excludes=[
         'tkinter',
         'matplotlib',
-        # 'numpy',  # needed by torch/silero-vad — do NOT exclude
+        'numpy',   # no longer needed (silero-vad/torch removed to keep bundle small)
         'pandas',
         'scipy',
         'pytest',
