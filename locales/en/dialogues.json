@@ -291,6 +291,11 @@
             "Won't forget! I'll ping you at {time} about: {label}.",
             "Reminder set for {time}! {label}"
         ],
+        "reminder_duration_ack": [
+            "Noted! I'll remind you in {duration}: {label}.",
+            "Won't forget! I'll ping you in {duration} about: {label}.",
+            "Reminder set! In {duration}: {label}"
+        ],
         "alarm_ack": [
             "Alarm set for {time}!",
             "Alarm activated for {time}!",

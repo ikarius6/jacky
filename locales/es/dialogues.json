@@ -291,6 +291,11 @@
             "¡No se me olvida! A las {time} te aviso sobre: {label}.",
             "¡Recordatorio puesto para las {time}! {label}"
         ],
+        "reminder_duration_ack": [
+            "¡Anotado! Te recuerdo en {duration}: {label}.",
+            "¡No se me olvida! En {duration} te aviso: {label}.",
+            "¡Recordatorio puesto! En {duration}: {label}"
+        ],
         "alarm_ack": [
             "¡Alarma puesta para las {time}!",
             "¡Despertador activado a las {time}!",
