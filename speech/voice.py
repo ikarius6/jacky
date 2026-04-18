@@ -43,7 +43,7 @@ class ElevenLabsTTSClient(QObject):
     # Signal to notify when playback finishes (or errors)
     playback_finished = pyqtSignal()
     # Internal signal to safely transition from worker thread to main thread
-    _playback_ready = pyqtSignal(str)
+    _playback_ready = pyqtSignal(str, int)
 
     def __init__(self, api_key: str, voice_id: str = "U0W3edavfdI8ibPeeteQ", model_id: str = "eleven_flash_v2_5", allow_cache_func: Optional[Callable[[], bool]] = None):
         super().__init__()
@@ -57,6 +57,7 @@ class ElevenLabsTTSClient(QObject):
         self._player.mediaStatusChanged.connect(self._on_media_status_changed)
         self._playback_ready.connect(self._start_playback)
         self._current_temp_file: Optional[str] = None
+        self._speech_gen: int = 0
         
         self._cache_dir = os.path.join(tempfile.gettempdir(), "jacky_tts_cache")
         self._usage_file = os.path.join(self._cache_dir, "usage.json")
@@ -101,6 +102,9 @@ class ElevenLabsTTSClient(QObject):
             clean_text = clean_text.replace(e, "")
         clean_text = clean_text.strip()
             
+        self._speech_gen += 1
+        gen = self._speech_gen
+
         def _worker():
             try:
                 allow_cache = self._allow_cache_func() if self._allow_cache_func else True
@@ -113,7 +117,7 @@ class ElevenLabsTTSClient(QObject):
                     if os.path.exists(output_path) and _is_valid_mp3(output_path):
                         log.debug(f"Using cached TTS audio for text: {clean_text[:30]}...")
                         self._update_usage_record(filename)
-                        self._playback_ready.emit(output_path)
+                        self._playback_ready.emit(output_path, gen)
                         return
                     elif os.path.exists(output_path):
                         log.debug(f"Discarding corrupted cache file: {filename}")
@@ -150,7 +154,7 @@ class ElevenLabsTTSClient(QObject):
                         self._enforce_cache_limit()
                     
                     # Safely emit signal to transition to the main GUI thread
-                    self._playback_ready.emit(output_path)
+                    self._playback_ready.emit(output_path, gen)
                 else:
                     log.error(f"ElevenLabs TTS failed with HTTP {response.status_code}: {response.text}")
                     self.playback_finished.emit()
@@ -160,7 +164,10 @@ class ElevenLabsTTSClient(QObject):
 
         threading.Thread(target=_worker, daemon=True).start()
 
-    def _start_playback(self, file_path: str):
+    def _start_playback(self, file_path: str, gen: int):
+        if gen != self._speech_gen:
+            log.debug("Discarding stale TTS audio (gen %d, current %d)", gen, self._speech_gen)
+            return
         # Stop previous playback if any
         self._cleanup()
         self._current_temp_file = file_path
