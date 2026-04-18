@@ -188,6 +188,36 @@
         "unos",
         "unas"
     ],
+    "timer_keywords": {
+        "timer": [
+            "timer",
+            "temporizador",
+            "cuenta regresiva",
+            "cronómetro",
+            "pon un timer",
+            "ponme un timer",
+            "pon timer",
+            "cuenta atrás"
+        ],
+        "reminder": [
+            "recuérdame",
+            "recuerdame",
+            "recordar",
+            "recordatorio",
+            "avísame",
+            "avisame",
+            "no me dejes olvidar",
+            "acuérdame"
+        ],
+        "alarm": [
+            "alarma",
+            "despertador",
+            "pon alarma",
+            "ponme alarma",
+            "pon una alarma",
+            "ponme una alarma"
+        ]
+    },
     "vision_keywords": [
         "mira",
         "observa",

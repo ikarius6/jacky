@@ -279,6 +279,53 @@
             "There you go! All typed up.",
             "Written! *blows on fingers*",
             "Message sent! Well, typed :3"
+        ],
+        "timer_ack": [
+            "Timer set! I'll let you know in {duration}.",
+            "Got it! Counting {duration}...",
+            "Understood! I'll tell you when {duration} is up.",
+            "{duration}! Countdown starts now!"
+        ],
+        "reminder_ack": [
+            "Noted! I'll remind you at {time}: {label}.",
+            "Won't forget! I'll ping you at {time} about: {label}.",
+            "Reminder set for {time}! {label}"
+        ],
+        "alarm_ack": [
+            "Alarm set for {time}!",
+            "Alarm activated for {time}!",
+            "I'll wake you up at {time}! Not sleeping on the job!"
+        ],
+        "timer_fired": [
+            "⏰ Time's up! {label}!",
+            "⏰ RING RING! Your timer is done!",
+            "⏰ Hey! {duration} has passed!",
+            "⏰ Ding ding! *rings the bell*"
+        ],
+        "reminder_fired": [
+            "⏰ Remember: {label}!",
+            "⏰ Hey! You asked me to remind you: {label}",
+            "⏰ Don't forget! {label}",
+            "⏰ Psst! {label}"
+        ],
+        "alarm_fired": [
+            "⏰ ALARM! It's {time}!",
+            "⏰ RING RING RING! Wake up!",
+            "⏰ Hey, it's time! It's {time}!",
+            "⏰ Rise and shine! It's {time}!"
+        ],
+        "timer_cancelled": [
+            "Done, timer cancelled!",
+            "Cancelled! I won't bug you.",
+            "Gone! Timer removed."
+        ],
+        "timer_none_active": [
+            "No active timers right now.",
+            "All clear! No pending timers."
+        ],
+        "timer_limit_reached": [
+            "Too many timers! Cancel one first.",
+            "Timer limit reached! Max is {max}."
         ]
     },
     "app_groups": {

@@ -103,7 +103,27 @@
         "char_size": "{size} MB",
         "char_bundled": "Incluido",
         "char_update_available": "Actualización disponible",
-        "char_not_installed": "No instalado"
+        "char_not_installed": "No instalado",
+        "menu_timers": "⏰ Temporizadores",
+        "timer_dialog_title": "Temporizadores",
+        "timer_type_timer": "Timer (cuenta regresiva)",
+        "timer_type_reminder": "Recordatorio",
+        "timer_type_alarm": "Alarma",
+        "timer_label_duration": "Duración:",
+        "timer_label_time": "Hora:",
+        "timer_label_date": "Fecha:",
+        "timer_label_label": "Nota:",
+        "timer_label_repeat": "Repetir diario",
+        "timer_btn_create": "Crear",
+        "timer_col_type": "Tipo",
+        "timer_col_fires_at": "Dispara a las",
+        "timer_col_label": "Nota",
+        "timer_col_actions": "",
+        "timer_btn_cancel": "Cancelar",
+        "timer_empty": "No hay temporizadores activos",
+        "timer_hours": "h",
+        "timer_minutes": "m",
+        "timer_seconds": "s"
     },
     "permissions": {
         "allow_comment": {

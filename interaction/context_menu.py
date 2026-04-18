@@ -110,6 +110,10 @@ class PetContextMenu(QMenu):
         self._look_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._look_action)
 
+        self._timers_action = QAction(t("ui.menu_timers"), self)
+        self._timers_action.triggered.connect(self._open_timer_dialog)
+        self.addAction(self._timers_action)
+
         self.addSeparator()
 
         self._settings_action = QAction(t("ui.menu_settings"), self)
@@ -128,6 +132,11 @@ class PetContextMenu(QMenu):
             question = dlg.get_text().strip()
             if question:
                 self._pet_window.on_ask(question)
+
+    def _open_timer_dialog(self):
+        from interaction.timer_dialog import TimerDialog
+        dlg = TimerDialog(self._pet_window)
+        dlg.exec()
 
     def _open_settings(self):
         dlg = SettingsDialog(self._pet_window)

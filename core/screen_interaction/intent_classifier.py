@@ -1,7 +1,7 @@
 """LLM-based intent classification for user input.
 
 When keyword matching fails, this module asks the LLM to classify the
-user's intent into one of: click, close, minimize, navigate, vision, chat.
+user's intent into one of: click, close, minimize, navigate, timer, vision, chat.
 """
 
 import json
@@ -16,7 +16,7 @@ log = logging.getLogger("intent_classifier")
 
 # Valid interaction intents (ones that trigger screen interaction)
 _INTERACTION_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type"})
-_ALL_VALID_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type", "vision", "chat"})
+_ALL_VALID_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type", "timer", "vision", "chat"})
 
 # Fallback prompt in case the locale file doesn't have one
 _FALLBACK_PROMPT = (
@@ -27,12 +27,18 @@ _FALLBACK_PROMPT = (
     '- "minimize": minimize/hide a window\n'
     '- "navigate": find/go to/locate something on screen\n'
     '- "type": write/type text into a UI element (input field, search bar, etc.)\n'
+    '- "timer": set a timer (countdown), reminder (at a specific time with a message), or alarm\n'
     '- "vision": look at or describe the screen\n'
     '- "chat": general conversation or question\n\n'
     'User message: "{question}"\n\n'
     'Respond ONLY with JSON: {{"intent": "<type>", "confidence": <0_to_100>, '
     '"target": "<element description if interaction, else empty string>", '
-    '"text": "<text to type if intent is type, else empty string>"}}'
+    '"text": "<text to type if intent is type, else empty string>", '
+    '"timer_kind": "<timer|reminder|alarm if intent is timer>", '
+    '"timer_seconds": <duration_in_seconds_if_countdown_else_0>, '
+    '"timer_time": "<HH:MM if reminder/alarm>", '
+    '"timer_label": "<label if any>", '
+    '"timer_repeat": "<none|daily>"}}'
 )
 
 _SYSTEM_PROMPT = (
@@ -45,15 +51,27 @@ _SYSTEM_PROMPT = (
 @dataclass
 class IntentResult:
     """Structured result from LLM intent classification."""
-    intent: str          # click | close | minimize | navigate | type | vision | chat
+    intent: str          # click | close | minimize | navigate | type | timer | vision | chat
     confidence: int      # 0-100
     target: str          # target description (for interaction intents)
     type_text: str = ""  # text to type (only when intent="type")
+    # Timer-specific fields (only populated when intent="timer")
+    timer_kind: str = ""       # "timer" | "reminder" | "alarm"
+    timer_seconds: int = 0     # countdown duration in seconds (kind="timer")
+    timer_time: str = ""       # "HH:MM" 24h format (kind="reminder"/"alarm")
+    timer_date: str = ""       # "YYYY-MM-DD" optional date for reminder
+    timer_label: str = ""      # human label
+    timer_repeat: str = "none" # "none" | "daily"
 
     @property
     def is_interaction(self) -> bool:
         """True if this intent maps to a screen interaction action."""
         return self.intent in _INTERACTION_INTENTS
+
+    @property
+    def is_timer(self) -> bool:
+        """True if this intent is a timer/reminder/alarm request."""
+        return self.intent == "timer"
 
 
 def classify_intent(text: str, llm, callback: Callable[[Optional[IntentResult]], None]):
@@ -128,7 +146,27 @@ def parse_intent_response(raw_text: str) -> Optional[IntentResult]:
     target = str(parsed.get("target", "")).strip()
     type_text = str(parsed.get("text", "")).strip()
 
-    return IntentResult(intent=intent, confidence=confidence, target=target, type_text=type_text)
+    # Timer-specific fields
+    timer_kind = str(parsed.get("timer_kind", "")).strip().lower()
+    if timer_kind not in ("timer", "reminder", "alarm"):
+        timer_kind = ""
+    try:
+        timer_seconds = int(parsed.get("timer_seconds", 0))
+    except (ValueError, TypeError):
+        timer_seconds = 0
+    timer_time = str(parsed.get("timer_time", "")).strip()
+    timer_date = str(parsed.get("timer_date", "")).strip()
+    timer_label = str(parsed.get("timer_label", "")).strip()
+    timer_repeat = str(parsed.get("timer_repeat", "none")).strip().lower()
+    if timer_repeat not in ("none", "daily"):
+        timer_repeat = "none"
+
+    return IntentResult(
+        intent=intent, confidence=confidence, target=target, type_text=type_text,
+        timer_kind=timer_kind, timer_seconds=timer_seconds,
+        timer_time=timer_time, timer_date=timer_date,
+        timer_label=timer_label, timer_repeat=timer_repeat,
+    )
 
 
 def _parse_json(raw_text: str) -> Optional[dict]:

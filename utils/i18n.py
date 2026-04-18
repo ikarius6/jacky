@@ -150,6 +150,14 @@ def get_vision_keywords() -> set:
     return set(kw)
 
 
+def get_timer_keywords() -> dict:
+    """Return the timer/reminder/alarm keywords for the current language.
+
+    Returns a dict like ``{"timer": ["timer", ...], "reminder": [...], "alarm": [...]}``.
+    """
+    return _strings.get("timer_keywords", {})
+
+
 def get_interact_keywords() -> dict:
     """Return the screen-interaction keywords for the current language.
 

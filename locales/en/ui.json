@@ -103,7 +103,27 @@
         "char_size": "{size} MB",
         "char_bundled": "Bundled",
         "char_update_available": "Update available",
-        "char_not_installed": "Not installed"
+        "char_not_installed": "Not installed",
+        "menu_timers": "⏰ Timers",
+        "timer_dialog_title": "Timers",
+        "timer_type_timer": "Timer (countdown)",
+        "timer_type_reminder": "Reminder",
+        "timer_type_alarm": "Alarm",
+        "timer_label_duration": "Duration:",
+        "timer_label_time": "Time:",
+        "timer_label_date": "Date:",
+        "timer_label_label": "Note:",
+        "timer_label_repeat": "Repeat daily",
+        "timer_btn_create": "Create",
+        "timer_col_type": "Type",
+        "timer_col_fires_at": "Fires at",
+        "timer_col_label": "Note",
+        "timer_col_actions": "",
+        "timer_btn_cancel": "Cancel",
+        "timer_empty": "No active timers",
+        "timer_hours": "h",
+        "timer_minutes": "m",
+        "timer_seconds": "s"
     },
     "permissions": {
         "allow_comment": {

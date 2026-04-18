@@ -279,6 +279,53 @@
             "¡Ahí está! Ya escribí lo que pediste.",
             "¡Escrito! *sopla los dedos*",
             "¡Mensaje enviado! Bueno, escrito :3"
+        ],
+        "timer_ack": [
+            "¡Timer puesto! Te aviso en {duration}.",
+            "¡Listo! Contando {duration}...",
+            "¡Entendido! Te digo cuando pasen {duration}.",
+            "¡{duration}! ¡Empieza la cuenta regresiva!"
+        ],
+        "reminder_ack": [
+            "¡Anotado! Te recuerdo a las {time}: {label}.",
+            "¡No se me olvida! A las {time} te aviso sobre: {label}.",
+            "¡Recordatorio puesto para las {time}! {label}"
+        ],
+        "alarm_ack": [
+            "¡Alarma puesta para las {time}!",
+            "¡Despertador activado a las {time}!",
+            "¡A las {time} te aviso! ¡No me quedo dormido!"
+        ],
+        "timer_fired": [
+            "⏰ ¡Se acabó el tiempo! ¡{label}!",
+            "⏰ ¡RING RING! ¡Tu timer terminó!",
+            "⏰ ¡Hey! ¡Ya pasaron los {duration}!",
+            "⏰ ¡Tiempo! *suena la campana*"
+        ],
+        "reminder_fired": [
+            "⏰ ¡Recuerda: {label}!",
+            "⏰ ¡Hey! Me pediste que te recordara: {label}",
+            "⏰ ¡No lo olvides! {label}",
+            "⏰ ¡Psst! {label}"
+        ],
+        "alarm_fired": [
+            "⏰ ¡ALARMA! ¡Son las {time}!",
+            "⏰ ¡RING RING RING! ¡Despierta!",
+            "⏰ ¡Hey, es hora! ¡Las {time}!",
+            "⏰ ¡Arriba arriba! ¡Ya son las {time}!"
+        ],
+        "timer_cancelled": [
+            "¡Listo, timer cancelado!",
+            "¡Cancelado! Ya no te aviso.",
+            "¡Fuera! Timer eliminado."
+        ],
+        "timer_none_active": [
+            "No tienes timers activos ahorita.",
+            "¡Todo limpio! Sin timers pendientes."
+        ],
+        "timer_limit_reached": [
+            "¡Ya tienes muchos timers! Cancela alguno primero.",
+            "¡Demasiados timers! El límite es {max}."
         ]
     },
     "app_groups": {

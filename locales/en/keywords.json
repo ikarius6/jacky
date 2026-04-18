@@ -97,6 +97,30 @@
         "into",
         "onto"
     ],
+    "timer_keywords": {
+        "timer": [
+            "timer",
+            "countdown",
+            "set a timer",
+            "set timer",
+            "start a timer",
+            "start timer"
+        ],
+        "reminder": [
+            "remind me",
+            "reminder",
+            "remind",
+            "don't let me forget",
+            "notify me"
+        ],
+        "alarm": [
+            "alarm",
+            "set an alarm",
+            "set alarm",
+            "wake me",
+            "wake me up"
+        ]
+    },
     "vision_keywords": [
         "look",
         "see",
