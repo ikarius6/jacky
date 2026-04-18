@@ -21,7 +21,7 @@ log = logging.getLogger("timer_manager")
 
 _TIMERS_FILE = os.path.join(get_config_dir(), "timers.json")
 _MAX_ENTRIES = 20
-_CHECK_INTERVAL_MS = 15_000  # 15 seconds
+_CHECK_INTERVAL_MS = 1_000   # 1 second
 _MISSED_GRACE_S = 600  # fire missed one-shot entries up to 10 min old
 
 
