@@ -917,12 +917,6 @@ class PetWindow(QWidget):
         if self.pet.state in (PetState.DRAGGED, PetState.TALKING):
             return
 
-        # Check time for late-night comments
-        hour = datetime.datetime.now().hour
-        if hour >= 23 or hour < 5:
-            self._say(get_line("late_night", self.pet.name))
-            return
-
         if self._llm_enabled:
             if self._llm_pending:
                 log.debug("SCHED chat skipped — LLM request already pending")
@@ -931,7 +925,12 @@ class PetWindow(QWidget):
             context = self._build_llm_context(t("llm_prompts.idle_chat"))
             self._llm.generate(context, self._on_llm_response)
         else:
-            self._say(get_line("idle", self.pet.name))
+            # 20% chance of late-night comment when it's late
+            hour = datetime.datetime.now().hour
+            if (hour >= 23 or hour < 5) and random.random() < 0.2:
+                self._say(get_line("late_night", self.pet.name))
+            else:
+                self._say(get_line("idle", self.pet.name))
 
     # --- Speech ---
 
@@ -1018,7 +1017,7 @@ class PetWindow(QWidget):
             parts.append(f"Foreground app: {pick.title}")
         # Only mention time if it's notably late or early
         hour = datetime.datetime.now().hour
-        if hour >= 23 or hour < 6:
+        if hour >= 23 or hour < 5:
             parts.append(f"Current time: {datetime.datetime.now().strftime('%H:%M')}")
         return " | ".join(parts)
 
