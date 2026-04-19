@@ -538,7 +538,7 @@ class TimerDialog(QDialog):
             entry = self._timer_manager.create_timer(seconds, label)
             if entry:
                 from speech.dialogue import get_line
-                duration_str = _format_duration(seconds)
+                duration_str = _format_duration(seconds, spoken=True)
                 ack = get_line("timer_ack", self._pet_window.pet.name,
                                duration=duration_str)
                 self._pet_window._say(ack, force=True)

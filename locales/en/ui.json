@@ -125,7 +125,13 @@
         "timer_empty": "No active timers",
         "timer_hours": "h",
         "timer_minutes": "m",
-        "timer_seconds": "s"
+        "timer_seconds": "s",
+        "timer_hours_spoken": "hours",
+        "timer_hour_spoken": "hour",
+        "timer_minutes_spoken": "minutes",
+        "timer_minute_spoken": "minute",
+        "timer_seconds_spoken": "seconds",
+        "timer_second_spoken": "second"
     },
     "permissions": {
         "allow_comment": {

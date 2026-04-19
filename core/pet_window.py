@@ -702,7 +702,7 @@ class PetWindow(QWidget):
             if entry is None:
                 self._say_forced(get_line("timer_limit_reached", self.pet.name, max=20))
                 return
-            duration_str = _format_duration(seconds)
+            duration_str = _format_duration(seconds, spoken=True)
             ack = get_line("timer_ack", self.pet.name, duration=duration_str)
             self._say_forced(ack)
 
@@ -714,7 +714,7 @@ class PetWindow(QWidget):
                 if entry is None:
                     self._say_forced(get_line("timer_limit_reached", self.pet.name, max=20))
                     return
-                duration_str = _format_duration(result.timer_seconds)
+                duration_str = _format_duration(result.timer_seconds, spoken=True)
                 ack = get_line("reminder_duration_ack", self.pet.name, duration=duration_str, label=label) \
                     or get_line("timer_ack", self.pet.name, duration=duration_str)
                 self._say_forced(ack)
@@ -755,7 +755,7 @@ class PetWindow(QWidget):
                 if entry is None:
                     self._say_forced(get_line("timer_limit_reached", self.pet.name, max=20))
                     return
-                duration_str = _format_duration(result.timer_seconds)
+                duration_str = _format_duration(result.timer_seconds, spoken=True)
                 ack = get_line("timer_ack", self.pet.name, duration=duration_str)
                 self._say_forced(ack)
                 return

@@ -48,8 +48,33 @@ def _parse_iso(s: str) -> Optional[datetime]:
         return None
 
 
-def _format_duration(seconds: int) -> str:
-    """Human-readable duration string like '5 min', '1h 30min', '45s'."""
+def _format_duration(seconds: int, spoken: bool = False) -> str:
+    """Human-readable duration string like '5 min', '1h 30min', '45s'.
+
+    When *spoken* is True the abbreviations are replaced with full
+    translated words from the i18n system so that TTS engines pronounce
+    the duration naturally (e.g. "30 segundos" instead of "30s").
+    """
+    if spoken:
+        from utils.i18n import t
+        def _unit(key_singular: str, key_plural: str, n: int) -> str:
+            return t(key_plural) if n != 1 else t(key_singular)
+
+        h = seconds // 3600
+        remaining = seconds % 3600
+        m = remaining // 60
+        s = remaining % 60
+
+        parts: list[str] = []
+        if h:
+            parts.append(f"{h} {_unit('ui.timer_hour_spoken', 'ui.timer_hours_spoken', h)}")
+        if m:
+            parts.append(f"{m} {_unit('ui.timer_minute_spoken', 'ui.timer_minutes_spoken', m)}")
+        if s or not parts:
+            parts.append(f"{s} {_unit('ui.timer_second_spoken', 'ui.timer_seconds_spoken', s)}")
+        return " ".join(parts)
+
+    # Abbreviated form for text bubbles / UI
     if seconds < 60:
         return f"{seconds}s"
     minutes = seconds // 60
@@ -218,7 +243,7 @@ class TimerManager(QObject):
         """Emit the timer_fired signal with contextual info."""
         extra = ""
         if entry.kind == "timer":
-            extra = _format_duration(entry.original_seconds)
+            extra = _format_duration(entry.original_seconds, spoken=True)
         elif entry.kind in ("reminder", "alarm"):
             fire_dt = _parse_iso(entry.fire_at)
             if fire_dt:

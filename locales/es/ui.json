@@ -125,7 +125,13 @@
         "timer_empty": "No hay temporizadores activos",
         "timer_hours": "h",
         "timer_minutes": "m",
-        "timer_seconds": "s"
+        "timer_seconds": "s",
+        "timer_hours_spoken": "horas",
+        "timer_hour_spoken": "hora",
+        "timer_minutes_spoken": "minutos",
+        "timer_minute_spoken": "minuto",
+        "timer_seconds_spoken": "segundos",
+        "timer_second_spoken": "segundo"
     },
     "permissions": {
         "allow_comment": {
