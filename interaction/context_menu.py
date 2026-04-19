@@ -87,11 +87,22 @@ class PetContextMenu(QMenu):
 
         self.addSeparator()
 
+        self._modes_menu = QMenu(t("ui.menu_modes"), self)
+        self._modes_menu.setStyleSheet(self.styleSheet())
+
         self._silent_action = QAction(t("ui.menu_silent"), self)
         self._silent_action.setCheckable(True)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
         self._silent_action.triggered.connect(self._toggle_silent_mode)
-        self.addAction(self._silent_action)
+        self._modes_menu.addAction(self._silent_action)
+
+        self._gamer_action = QAction(t("ui.menu_gamer"), self)
+        self._gamer_action.setCheckable(True)
+        self._gamer_action.setChecked(self._pet_window._gamer_mode)
+        self._gamer_action.triggered.connect(self._toggle_gamer_mode)
+        self._modes_menu.addAction(self._gamer_action)
+
+        self.addMenu(self._modes_menu)
 
         self.addSeparator()
 
@@ -147,6 +158,12 @@ class PetContextMenu(QMenu):
         self._pet_window._config["silent_mode"] = checked
         self._pet_window._silent_mode = checked
 
+    def _toggle_gamer_mode(self, checked: bool):
+        """Toggle gamer mode — saves/restores settings via PetWindow."""
+        self._pet_window.toggle_gamer_mode(checked)
+        # Sync the silent checkbox since gamer mode changes it
+        self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
+
     def refresh_llm_state(self):
         """Update the Preguntar/Mirar actions enabled state after config reload."""
         self._ask_action.setEnabled(self._pet_window._llm_enabled)
@@ -155,12 +172,15 @@ class PetContextMenu(QMenu):
         self._look_action.setEnabled(self._pet_window._llm_enabled)
         self._look_action.setVisible(self._pet_window._llm_enabled and vision_allowed)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
+        self._gamer_action.setChecked(self._pet_window._gamer_mode)
         # Refresh all labels for current language
         self._pet_action.setText(t("ui.menu_pet", name=self._pet_name))
         self._feed_action.setText(t("ui.menu_feed"))
         self._attack_action.setText(t("ui.menu_attack"))
         self._peers_menu.setTitle(t("ui.menu_peers"))
+        self._modes_menu.setTitle(t("ui.menu_modes"))
         self._silent_action.setText(t("ui.menu_silent"))
+        self._gamer_action.setText(t("ui.menu_gamer"))
         self._ask_action.setText(t("ui.menu_ask"))
         self._listen_action.setText(t("ui.menu_listen"))
         self._look_action.setText(t("ui.menu_look"))

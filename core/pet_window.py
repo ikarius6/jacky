@@ -93,6 +93,8 @@ class PetWindow(QWidget):
         self._llm = create_llm_provider(self._config)
         self._llm_enabled = self._config.get("llm_enabled", False)
         self._silent_mode = self._config.get("silent_mode", False)
+        self._gamer_mode = False
+        self._gamer_saved: dict | None = None
         self._llm_pending = False
         self._pending_question = ""  # stashed for intent classification callback
         self._llm_text_ready.connect(self._say)
@@ -1073,6 +1075,42 @@ class PetWindow(QWidget):
         self.movement.set_position(self.movement.x, ground_y)
         self.move(self.movement.x, self.movement.y)
         self.pet.set_state(PetState.IDLE)
+
+    # --- Gamer mode ---
+
+    def toggle_gamer_mode(self, enabled: bool):
+        """Toggle gamer mode: suppress all distractions while gaming.
+
+        On activation, saves current values of always_on_top, window_push_enabled,
+        silent_mode, and gravity in memory, then disables everything (silent on).
+        On deactivation, restores the saved values.
+        """
+        if enabled and not self._gamer_mode:
+            # Save current values
+            self._gamer_saved = {
+                "always_on_top": self._config.get("always_on_top", True),
+                "window_push_enabled": self._config.get("window_push_enabled", True),
+                "silent_mode": self._config.get("silent_mode", False),
+                "gravity": self._config.get("gravity", False),
+            }
+            # Apply gamer settings
+            self._config["always_on_top"] = False
+            self._config["window_push_enabled"] = False
+            self._config["silent_mode"] = True
+            self._config["gravity"] = False
+            self._gamer_mode = True
+            self.reload_config()
+            log.info("GAMER_MODE enabled — saved %s", self._gamer_saved)
+
+        elif not enabled and self._gamer_mode:
+            # Restore saved values
+            if self._gamer_saved:
+                for key, val in self._gamer_saved.items():
+                    self._config[key] = val
+                self._gamer_saved = None
+            self._gamer_mode = False
+            self.reload_config()
+            log.info("GAMER_MODE disabled — settings restored")
 
     # --- Config reload ---
 
