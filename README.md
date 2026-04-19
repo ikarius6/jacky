@@ -1,6 +1,6 @@
 # Jacky — Desktop Virtual Pet
 
-A desktop pet application for **Windows** and **macOS**. Jacky is a cute chibi character who walks around your screen, interacts with windows, interacts with other Jackys, listens to your voice, talks back to you, can *see* your screen, and follows simple instructions.
+A desktop pet application for **Windows** and **macOS**. Jacky is a cute chibi character who walks around your screen, interacts with windows, interacts with other Jackys, listens to your voice, talks back to you, can *see* your screen, follows instructions (click, type, close, minimize windows), sets timers, reminders, and alarms, and reacts to system events like battery changes.
 
 ## Try it now!
 
@@ -21,16 +21,19 @@ https://github.com/user-attachments/assets/e34f4733-f044-4b01-8944-50e9c8e887cf
 
 - **Transparent frameless window** — only the pet sprite is visible
 - **Autonomous walking** — Jacky walks along the screen bottom and window title bars
+- **Gravity** — optional physics mode where Jacky walks on the ground and window-top platforms, falls when dropped in mid-air, and lands realistically
 - **Click interactions** — left-click to pet, right-click for context menu, drag to reposition
-- **Voice interaction (STT & TTS)** — press a hotkey  to speak to Jacky, and hear spoken responses
-- **Screen interaction** — Jacky can follow simple instructions to click on things on your screen
+- **Voice interaction (STT & TTS)** — press a hotkey to speak to Jacky, and hear spoken responses
+- **Screen interaction** — tell Jacky to **click**, **type text**, **close**, **minimize**, or **navigate to** any element on screen; uses a two-phase grid-based vision pipeline with LLM to locate targets accurately
 - **Speech bubbles** — contextual dialogue with predefined lines
 - **Window awareness** — detects open windows, reads titles, pushes windows, peeks from edges
 - **Vision** — Jacky can capture and analyze what's on your screen using multimodal LLM models (DPI-aware, multi-monitor)
+- **Timers, reminders & alarms** — set countdown timers, time-based reminders, and daily-repeating alarms via the context menu or voice; entries persist across restarts
+- **System events** — Jacky reacts to battery level changes (low, critical, charging, full), power cable plug/unplug, and welcomes you back after idle periods
 - **LLM integration** — three provider options: **Ollama** (local), **Groq** (cloud, with key rotation), and **OpenRouter** (cloud)
 - **Multi-instance / Peer interactions** — run multiple Jackys that discover each other and interact (greet, attack, chase, dance, fight)
 - **Multilanguage (i18n)** — ships with Spanish and English; add a new language by dropping a single JSON file in `locales/`
-- **Granular permissions** — toggle individual behaviours (comment, peek, sit, push, shake, minimize, resize, knock, drag, tidy, topple, vision)
+- **Granular permissions** — toggle individual behaviours (comment, peek, sit, push, shake, minimize, resize, knock, drag, tidy, topple, vision, screen interaction)
 - **System tray** — quick access to settings and quit
 
 ## Setup
@@ -134,6 +137,7 @@ Edit `config.json` or use the in-app Settings dialog (right-click Jacky → Sett
 | `groq_model` | Groq model identifier | `meta-llama/llama-4-scout-17b-16e-instruct` |
 | `openrouter_api_key` | OpenRouter API key | *(empty)* |
 | `openrouter_model` | OpenRouter model identifier | `google/gemma-4-26b-a4b-it:free` |
+| `gravity` | Enable gravity mode (walk on ground/platforms, fall) | `false` |
 | `window_interaction_enabled` | Enable window awareness | `true` |
 | `window_push_enabled` | Allow pushing windows | `true` |
 | `bubble_timeout` | Speech bubble duration (seconds) | `5` |
@@ -174,6 +178,30 @@ Jacky can listen to your voice and talk back!
 - Enable voice transcription via AssemblyAI. Press `Ctrl+Alt+Space` to toggle voice recording.
 - Enable voice synthesis via ElevenLabs. Jacky's responses will be spoken aloud!
 - Configure API keys, models, and voices directly in the Settings dialog (Voice tab).
+
+### Timers, Reminders & Alarms
+
+Jacky can manage countdown timers, time-based reminders, and alarms:
+- **Timers** — set a countdown (e.g. "5 minutes") with optional label; quick presets available
+- **Reminders** — fire at a specific date and time with a custom message
+- **Alarms** — fire at a time of day, optionally repeating daily
+
+Create and manage entries from the context menu (Timers dialog) or by voice. All entries persist to `timers.json` and are restored on startup — missed entries that expired within 10 minutes are fired immediately, and daily alarms auto-reschedule.
+
+### Gravity
+
+Toggle gravity mode in Settings. When enabled:
+- Jacky walks on the **screen bottom** and on top of **window title bars** as platforms
+- When dragged and dropped in mid-air, Jacky **falls** with a falling animation until landing
+- Without gravity, Jacky roams freely across all screen areas
+
+### System Events
+
+Jacky monitors system-level events and reacts with contextual dialogue (or LLM-generated responses when enabled):
+- **Battery low / critical** — warns you when battery drops below 20% or 10%
+- **Charging / discharging** — notices when the power cable is plugged in or unplugged
+- **Battery full** — celebrates when the battery reaches 100%
+- **User returned** — welcomes you back after 5+ minutes of inactivity
 
 ### Multi-instance & Peer Interactions
 
