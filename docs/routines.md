@@ -433,4 +433,3 @@ A routine that checks Bitcoin price and reacts based on the value:
 - **Use `output_var`** on every step — if you don't store the result, you can't use it later.
 - **Disable without deleting.** Set `"enabled": false` or rename the file to `.json.disabled`.
 - **Duplicate IDs are skipped.** If two files define the same `id`, only the first one (alphabetically by filename) is loaded.
-- **No new dependencies.** Routines use only `requests` (already installed) and Python standard library modules.
