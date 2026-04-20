@@ -1,0 +1,68 @@
+{
+  "id": "weather_example",
+  "title": "Weather Check",
+  "description": "Fetches current weather from wttr.in and tells you about it. Rename this file to .json to enable.",
+  "schedule": null,
+  "triggers": ["clima", "weather", "tiempo", "temperatura"],
+  "enabled": true,
+  "steps": [
+    {
+      "id": "get_weather",
+      "type": "request",
+      "method": "GET",
+      "url": "https://wttr.in/{{city}}?format=j1",
+      "headers": {},
+      "params": {},
+      "timeout": 10,
+      "output_var": "raw_weather"
+    },
+    {
+      "id": "parse_temp",
+      "type": "parse",
+      "input": "{{raw_weather}}",
+      "parser": "json",
+      "query": "current_condition.0.temp_C",
+      "output_var": "temp_c"
+    },
+    {
+      "id": "parse_desc",
+      "type": "parse",
+      "input": "{{raw_weather}}",
+      "parser": "json",
+      "query": "current_condition.0.weatherDesc.0.value",
+      "output_var": "weather_desc"
+    },
+    {
+      "id": "parse_humidity",
+      "type": "parse",
+      "input": "{{raw_weather}}",
+      "parser": "json",
+      "query": "current_condition.0.humidity",
+      "output_var": "humidity"
+    }
+  ],
+  "logic": [
+    {
+      "if": {
+        "var": "temp_c", "op": ">", "val": 30
+      },
+      "then": "action_hot",
+      "else": "action_normal"
+    }
+  ],
+  "actions": {
+    "action_hot": {
+      "type": "say",
+      "llm": "The weather in {{city}} is {{weather_desc}} at {{temp_c}}°C with {{humidity}}% humidity. It's really hot! Generate a fun warning about the heat.",
+      "nollm": "🌡️ {{city}}: {{temp_c}}°C — {{weather_desc}} ({{humidity}}% humidity). Stay hydrated!"
+    },
+    "action_normal": {
+      "type": "say",
+      "llm": "The weather in {{city}} is {{weather_desc}} at {{temp_c}}°C with {{humidity}}% humidity. Make a brief fun comment about it.",
+      "nollm": "🌤️ {{city}}: {{temp_c}}°C — {{weather_desc}} ({{humidity}}% humidity)"
+    }
+  },
+  "variables": {
+    "city": "Queretaro"
+  }
+}

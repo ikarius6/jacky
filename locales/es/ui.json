@@ -131,7 +131,8 @@
         "timer_minutes_spoken": "minutos",
         "timer_minute_spoken": "minuto",
         "timer_seconds_spoken": "segundos",
-        "timer_second_spoken": "segundo"
+        "timer_second_spoken": "segundo",
+        "menu_routines": "📋 Rutinas"
     },
     "permissions": {
         "allow_comment": {

@@ -125,6 +125,12 @@ class PetContextMenu(QMenu):
         self._timers_action.triggered.connect(self._open_timer_dialog)
         self.addAction(self._timers_action)
 
+        # Routines submenu (dynamic, rebuilt on each show)
+        self._routines_menu = QMenu(t("ui.menu_routines"), self)
+        self._routines_menu.setStyleSheet(self.styleSheet())
+        self._routines_action = self.addMenu(self._routines_menu)
+        self._routines_action.setVisible(False)
+
         self.addSeparator()
 
         self._settings_action = QAction(t("ui.menu_settings"), self)
@@ -179,6 +185,7 @@ class PetContextMenu(QMenu):
         self._attack_action.setText(t("ui.menu_attack"))
         self._peers_menu.setTitle(t("ui.menu_peers"))
         self._modes_menu.setTitle(t("ui.menu_modes"))
+        self._routines_menu.setTitle(t("ui.menu_routines"))
         self._silent_action.setText(t("ui.menu_silent"))
         self._gamer_action.setText(t("ui.menu_gamer"))
         self._ask_action.setText(t("ui.menu_ask"))
@@ -189,6 +196,7 @@ class PetContextMenu(QMenu):
 
     def show_at(self, pos: QPoint):
         self._rebuild_peers_menu()
+        self._rebuild_routines_menu()
         self.popup(pos)
 
     def _rebuild_peers_menu(self):
@@ -230,6 +238,53 @@ class PetContextMenu(QMenu):
             peer_sub.addAction(fight)
 
             self._peers_menu.addMenu(peer_sub)
+
+    def _rebuild_routines_menu(self):
+        """Rebuild the Rutinas submenu with loaded routines."""
+        self._routines_menu.clear()
+        pw = self._pet_window
+        if not hasattr(pw, '_routine_manager'):
+            self._routines_action.setVisible(False)
+            return
+
+        items = pw._routine_manager.list_routines()
+        if not items:
+            self._routines_action.setVisible(False)
+            return
+
+        self._routines_action.setVisible(True)
+        manual = [(r, s) for r, s in items if r.is_manual]
+        auto = [(r, s) for r, s in items if r.is_automatic]
+
+        for routine, status in manual:
+            label = f"▶ {routine.title}"
+            if status == "running":
+                label = f"⏳ {routine.title}"
+            action = QAction(label, self._routines_menu)
+            if status == "running":
+                action.setEnabled(False)
+            else:
+                rid = routine.id
+                action.triggered.connect(lambda checked, _rid=rid: pw._routine_manager.run_routine(_rid))
+            self._routines_menu.addAction(action)
+
+        if manual and auto:
+            self._routines_menu.addSeparator()
+
+        for routine, status in auto:
+            interval = routine.schedule.interval if routine.schedule else 0
+            if interval >= 3600:
+                interval_str = f"{interval // 3600}h"
+            elif interval >= 60:
+                interval_str = f"{interval // 60}min"
+            else:
+                interval_str = f"{interval}s"
+            label = f"⏱ {routine.title} ({interval_str})"
+            if status != "idle":
+                label += f" — {status}"
+            action = QAction(label, self._routines_menu)
+            action.setEnabled(False)
+            self._routines_menu.addAction(action)
 
 
 class AskDialog(QDialog):

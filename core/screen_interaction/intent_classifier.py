@@ -1,7 +1,7 @@
 """LLM-based intent classification for user input.
 
 When keyword matching fails, this module asks the LLM to classify the
-user's intent into one of: click, close, minimize, navigate, timer, vision, chat.
+user's intent into one of: click, close, minimize, navigate, timer, vision, routine, chat.
 """
 
 import json
@@ -16,7 +16,7 @@ log = logging.getLogger("intent_classifier")
 
 # Valid interaction intents (ones that trigger screen interaction)
 _INTERACTION_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type"})
-_ALL_VALID_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type", "timer", "vision", "chat"})
+_ALL_VALID_INTENTS = frozenset({"click", "close", "minimize", "navigate", "type", "timer", "vision", "routine", "chat"})
 
 # Fallback prompt in case the locale file doesn't have one
 _FALLBACK_PROMPT = (
@@ -29,6 +29,7 @@ _FALLBACK_PROMPT = (
     '- "type": write/type text into a UI element (input field, search bar, etc.)\n'
     '- "timer": set a timer (countdown), reminder (at a specific time with a message), or alarm\n'
     '- "vision": look at or describe the screen\n'
+    '- "routine": run a predefined routine/workflow (only if it matches one of the available routines)\n'
     '- "chat": general conversation or question\n\n'
     'User message: "{question}"\n\n'
     'Respond ONLY with JSON: {{"intent": "<type>", "confidence": <0_to_100>, '
@@ -38,7 +39,8 @@ _FALLBACK_PROMPT = (
     '"timer_seconds": <duration_in_seconds_if_countdown_else_0>, '
     '"timer_time": "<HH:MM if reminder/alarm>", '
     '"timer_label": "<label if any>", '
-    '"timer_repeat": "<none|daily>"}}'
+    '"timer_repeat": "<none|daily>", '
+    '"routine_id": "<routine id if intent is routine, else empty string>"}}'
 )
 
 _SYSTEM_PROMPT = (
@@ -51,10 +53,11 @@ _SYSTEM_PROMPT = (
 @dataclass
 class IntentResult:
     """Structured result from LLM intent classification."""
-    intent: str          # click | close | minimize | navigate | type | timer | vision | chat
+    intent: str          # click | close | minimize | navigate | type | timer | vision | routine | chat
     confidence: int      # 0-100
     target: str          # target description (for interaction intents)
     type_text: str = ""  # text to type (only when intent="type")
+    routine_id: str = "" # routine ID (only when intent="routine")
     # Timer-specific fields (only populated when intent="timer")
     timer_kind: str = ""       # "timer" | "reminder" | "alarm"
     timer_seconds: int = 0     # countdown duration in seconds (kind="timer")
@@ -74,7 +77,8 @@ class IntentResult:
         return self.intent == "timer"
 
 
-def classify_intent(text: str, llm, callback: Callable[[Optional[IntentResult]], None]):
+def classify_intent(text: str, llm, callback: Callable[[Optional[IntentResult]], None],
+                    routine_context: str = ""):
     """Ask the LLM to classify user intent in a background thread.
 
     Parameters
@@ -87,9 +91,17 @@ def classify_intent(text: str, llm, callback: Callable[[Optional[IntentResult]],
         Called with an ``IntentResult`` on success or ``None`` on failure.
         Called from the LLM thread — the caller is responsible for
         marshalling to the GUI thread (e.g. via pyqtSignal).
+    routine_context : str
+        Optional description of available routines to inject into the prompt.
     """
     prompt_template = get_intent_classify_prompt() or _FALLBACK_PROMPT
     user_prompt = prompt_template.replace("{question}", text)
+    # Inject available routines so the LLM can match "routine" intent
+    if routine_context:
+        user_prompt = user_prompt.replace(
+            'User message:',
+            f'Available routines:\n{routine_context}\n\nUser message:',
+        )
 
     def _on_llm_response(raw_text: Optional[str]):
         if not raw_text:
@@ -161,8 +173,12 @@ def parse_intent_response(raw_text: str) -> Optional[IntentResult]:
     if timer_repeat not in ("none", "daily"):
         timer_repeat = "none"
 
+    # Routine-specific field
+    routine_id = str(parsed.get("routine_id", "")).strip()
+
     return IntentResult(
         intent=intent, confidence=confidence, target=target, type_text=type_text,
+        routine_id=routine_id,
         timer_kind=timer_kind, timer_seconds=timer_seconds,
         timer_time=timer_time, timer_date=timer_date,
         timer_label=timer_label, timer_repeat=timer_repeat,

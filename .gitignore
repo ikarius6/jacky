@@ -10,3 +10,4 @@ downloads/
 settings.json
 settings.json.orig
 timers.json
+routines/*.json

@@ -21,6 +21,7 @@ from core.screen_interaction import ScreenInteractionHandler
 from core.screen_interaction.intent_classifier import classify_intent, IntentResult
 from core.screen_interaction.constants import INTENT_CONFIDENCE_THRESHOLD
 from core.timer_manager import TimerManager, _format_duration, _format_time, _parse_iso
+from core.routines.manager import RoutineManager
 from core.screen_interaction.debug import set_enabled as _set_debug_enabled
 from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
@@ -111,6 +112,12 @@ class PetWindow(QWidget):
         self._screen_interaction = ScreenInteractionHandler(self)
         self._timer_manager = TimerManager(self)
         self._timer_manager.timer_fired.connect(self._on_timer_fired)
+        self._routine_manager = RoutineManager(self)
+        self._routine_manager.routine_say.connect(self._on_routine_say)
+        self._routine_manager.routine_notify.connect(self._on_routine_notify)
+        self._routine_manager.routine_log.connect(self._on_routine_log)
+        self._routine_manager.routine_failed.connect(self._on_routine_failed)
+        self._routine_manager.load()
         self._bubble = SpeechBubble()
 
         # Voice and Hotkey
@@ -594,9 +601,20 @@ class PetWindow(QWidget):
         3. Based on LLM result → screen interaction, vision, or chat
         """
         if not self._llm_enabled:
+            # Even without LLM, try running manual routines (nollm fallback)
+            matched_routine = self._routine_manager.try_match_keyword(question)
+            if matched_routine:
+                self._routine_manager.run_routine(matched_routine.id)
             return
 
-        # ── Fast path: keyword matching ──
+        # ── Fast path: routine keyword matching ──
+        matched_routine = self._routine_manager.try_match_keyword(question)
+        if matched_routine:
+            self._show_thinking()
+            self._routine_manager.run_routine(matched_routine.id)
+            return
+
+        # ── Fast path: screen interaction keyword matching ──
         parsed = self._screen_interaction.try_parse_interaction(question)
         if parsed:
             action_type, target_desc, type_text_content = parsed
@@ -616,7 +634,8 @@ class PetWindow(QWidget):
             # Emit signal for thread-safe delivery to main thread
             self._intent_ready.emit(result)
 
-        classify_intent(question, self._llm, _on_result)
+        routine_ctx = self._routine_manager.get_routine_context_for_llm()
+        classify_intent(question, self._llm, _on_result, routine_context=routine_ctx)
 
     def _on_intent_classified(self, result):
         """Handle the LLM intent classification result (runs on main thread via signal)."""
@@ -643,6 +662,15 @@ class PetWindow(QWidget):
             self._llm_pending = False
             self._bubble.hide()
             self._handle_timer_intent(result)
+        elif result.intent == "routine" and result.routine_id:
+            # Routine intent — run the matched routine
+            self._llm_pending = False
+            routine = self._routine_manager.get_routine_by_id(result.routine_id)
+            if routine:
+                log.info("INTENT routine id=%s", result.routine_id)
+                self._routine_manager.run_routine(routine.id)
+            else:
+                self._ask_direct_or_vision(question)
         elif result.intent == "vision":
             # Vision intent — use the vision flow with the original question
             if self._perm("allow_vision"):
@@ -818,6 +846,7 @@ class PetWindow(QWidget):
         self._peer_discovery.stop()
         self._window_awareness.stop()
         self._timer_manager.stop()
+        self._routine_manager.stop()
         self._bubble.hide()
         self._tray.hide()
         QApplication.instance().quit()
@@ -1039,6 +1068,28 @@ class PetWindow(QWidget):
         else:
             self._llm_ask_ready.emit(t("ui.llm_error"))
 
+    # --- Routines ---
+
+    def _on_routine_say(self, routine_id: str, text: str, use_llm: bool):
+        """Handle a routine 'say' action."""
+        if use_llm and self._llm_enabled:
+            context = self._build_llm_context(text)
+            self._llm.generate(context, self._on_ask_response)
+        else:
+            self._say(text, force=True)
+
+    def _on_routine_notify(self, routine_id: str, title: str, message: str):
+        """Handle a routine 'notification' action — show a tray notification."""
+        self._tray.showMessage(title, message)
+
+    def _on_routine_log(self, routine_id: str, message: str):
+        """Handle a routine 'log' action — write to the log only."""
+        log.info("ROUTINE_LOG id=%s: %s", routine_id, message)
+
+    def _on_routine_failed(self, routine_id: str, error_msg: str):
+        """Handle a routine failure — log and optionally inform the user."""
+        log.error("ROUTINE_FAILED id=%s: %s", routine_id, error_msg)
+
     # --- State changes ---
 
     def _on_state_change(self, old: PetState, new: PetState):
@@ -1098,6 +1149,7 @@ class PetWindow(QWidget):
             self._config["silent_mode"] = True
             self._config["gravity"] = False
             self._gamer_mode = True
+            self._routine_manager.pause_all()
             self.reload_config()
             log.info("GAMER_MODE enabled — saved %s", self._gamer_saved)
 
@@ -1108,6 +1160,7 @@ class PetWindow(QWidget):
                     self._config[key] = val
                 self._gamer_saved = None
             self._gamer_mode = False
+            self._routine_manager.resume_all()
             self.reload_config()
             log.info("GAMER_MODE disabled — settings restored")
 
@@ -1166,6 +1219,9 @@ class PetWindow(QWidget):
 
         # Re-apply scheduler intervals (register handles cleanup of old timers)
         self._setup_scheduler()
+
+        # Reload routines (picks up new/changed/removed routine files)
+        self._routine_manager.load()
 
         # Toggle logging level at runtime
         debug_on = self._config.get("debug_logging", False)
