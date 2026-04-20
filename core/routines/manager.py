@@ -23,9 +23,9 @@ class RoutineManager(QObject):
     """Central manager for all routines."""
 
     # action_type: "say" | "notification" | "log"
-    # text: the resolved message/prompt
-    # use_llm: True if the action has an llm prompt
-    routine_say = pyqtSignal(str, str, bool)          # routine_id, text, use_llm
+    # llm_text: the prompt for the LLM
+    # nollm_text: the literal fallback string if LLM is disabled
+    routine_say = pyqtSignal(str, str, str)           # routine_id, llm_text, nollm_text
     routine_notify = pyqtSignal(str, str, str)         # routine_id, title, message
     routine_log = pyqtSignal(str, str)                 # routine_id, message
     routine_failed = pyqtSignal(str, str)              # routine_id, error_msg
@@ -192,10 +192,8 @@ class RoutineManager(QObject):
             return
 
         if action.type == "say":
-            if action.llm:
-                self.routine_say.emit(result.routine_id, action.llm, True)
-            elif action.nollm:
-                self.routine_say.emit(result.routine_id, action.nollm, False)
+            if action.llm or action.nollm:
+                self.routine_say.emit(result.routine_id, action.llm or "", action.nollm or "")
             else:
                 self.routine_done.emit(result.routine_id)
         elif action.type == "notification":

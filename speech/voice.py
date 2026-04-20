@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import time
 import logging
 import tempfile
@@ -85,6 +86,36 @@ class ElevenLabsTTSClient(QObject):
             except Exception as e:
                  log.warning(f"Failed to update usage record: {e}")
 
+    EMOJI_PATTERN = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map
+        "\U0001F1E0-\U0001F1FF"  # flags
+        "\U00002700-\U000027BF"  # dingbats
+        "\U0001F900-\U0001F9FF"  # supplemental symbols
+        "\U00002600-\U000026FF"  # misc symbols
+        "\U0001FA00-\U0001FA6F"  # chess, etc.
+        "\U0001FA70-\U0001FAFF"  # food, etc.
+        "\uFE00-\uFE0F"          # variation selectors
+        "\U0000200D"             # zero-width joiner
+        "]+",
+        flags=re.UNICODE
+    )
+
+    EMOTICONS = frozenset([
+        ":3", "^_^", ":)", ":(", ":D", ":P", ":O", ";)", "T_T",
+        "-_-", "o_o", "O_O", "UwU", "uwu", "OwO", "owo", "<3", "~_~", "u_u"
+    ])
+
+    def _clean_text(self, text: str) -> str:
+        # Remove Unicode emojis
+        clean = self.EMOJI_PATTERN.sub("", text)
+        # Remove text emoticons
+        for e in self.EMOTICONS:
+            clean = clean.replace(e, "")
+        return clean.strip()
+
     def play_tts(self, text: str):
         """Fetch TTS in a background thread and play it."""
         if not self._api_key:
@@ -93,14 +124,7 @@ class ElevenLabsTTSClient(QObject):
             return
             
         # Clean up text for TTS: remove common text emoticons the pet uses
-        emoticons = [
-            ":3", "^_^", ":)", ":(", ":D", ":P", ":O", ";)", "T_T", 
-            "-_-", "o_o", "O_O", "UwU", "uwu", "OwO", "owo", "<3", "~_~", "u_u"
-        ]
-        clean_text = text
-        for e in emoticons:
-            clean_text = clean_text.replace(e, "")
-        clean_text = clean_text.strip()
+        clean_text = self._clean_text(text)
             
         self._speech_gen += 1
         gen = self._speech_gen

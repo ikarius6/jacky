@@ -1070,13 +1070,15 @@ class PetWindow(QWidget):
 
     # --- Routines ---
 
-    def _on_routine_say(self, routine_id: str, text: str, use_llm: bool):
+    def _on_routine_say(self, routine_id: str, llm_text: str, nollm_text: str):
         """Handle a routine 'say' action."""
-        if use_llm and self._llm_enabled:
-            context = self._build_llm_context(text)
+        if llm_text and self._llm_enabled:
+            context = self._build_llm_context(llm_text)
             self._llm.generate(context, self._on_ask_response)
-        else:
-            self._say(text, force=True)
+        elif nollm_text:
+            self._say(nollm_text, force=True)
+        elif llm_text:
+            self._say(llm_text, force=True)
 
     def _on_routine_notify(self, routine_id: str, title: str, message: str):
         """Handle a routine 'notification' action — show a tray notification."""
