@@ -29,6 +29,7 @@ https://github.com/user-attachments/assets/e34f4733-f044-4b01-8944-50e9c8e887cf
 - **Window awareness** — detects open windows, reads titles, pushes windows, peeks from edges
 - **Vision** — Jacky can capture and analyze what's on your screen using multimodal LLM models (DPI-aware, multi-monitor)
 - **Timers, reminders & alarms** — set countdown timers, time-based reminders, and daily-repeating alarms via the context menu or voice; entries persist across restarts
+- **Routines** — let your pet fetch data from APIs, parse responses, and speak or notify you based on custom logic via JSON files
 - **System events** — Jacky reacts to battery level changes (low, critical, charging, full), power cable plug/unplug, and welcomes you back after idle periods
 - **LLM integration** — three provider options: **Ollama** (local), **Groq** (cloud, with key rotation), and **OpenRouter** (cloud)
 - **Multi-instance / Peer interactions** — run multiple Jackys that discover each other and interact (greet, attack, chase, dance, fight)
@@ -187,6 +188,18 @@ Jacky can manage countdown timers, time-based reminders, and alarms:
 - **Alarms** — fire at a time of day, optionally repeating daily
 
 Create and manage entries from the context menu (Timers dialog) or by voice. All entries persist to `timers.json` and are restored on startup — missed entries that expired within 10 minutes are fired immediately, and daily alarms auto-reschedule.
+
+### Routines
+
+Jacky can run custom routines defined as JSON files in the `routines/` directory without writing any code. Routines can be triggered manually (via context menu or keywords) or automatically on a repeating timer.
+
+With Routines, Jacky can:
+- **Fetch Data** — Make HTTP requests to external APIs.
+- **Parse Responses** — Extract data using JSON paths, XML tags, or Regex.
+- **Evaluate Logic** — Follow IF/THEN branching logic based on the extracted variable values.
+- **Take Action** — Emit system tray notifications, silent logs, or have Jacky use the LLM to speak about the results.
+
+📖 **[Routines — JSON API deep dive & examples](docs/routines.md)**
 
 ### Gravity
 
