@@ -275,13 +275,18 @@ The pet says the result via speech bubble (and optionally TTS).
 | `llm` | LLM is enabled | Sent as a prompt to the LLM. The LLM generates a natural response. |
 | `nollm` | LLM is disabled | Displayed directly as-is. Also used as fallback if `llm` is empty. |
 
-Both fields support `{{variables}}`.
+**Multilingual Support:** All text fields in an action (`llm`, `nollm`, and `message`) can be a simple string or a dictionary of language codes (like `"en"`, `"es"`). The engine will automatically pick the right translation based on Jacky's current language (falling back to `"en"` or the first available option if a translation is missing).
+
+Both fields also support `{{variables}}`.
 
 ```json
 {
   "type": "say",
   "llm": "The current temp is {{temp_c}}°C. Make a fun comment about it.",
-  "nollm": "🌡️ Temperature: {{temp_c}}°C"
+  "nollm": {
+    "es": "🌡️ Temperatura: {{temp_c}}°C",
+    "en": "🌡️ Temperature: {{temp_c}}°C"
+  }
 }
 ```
 
