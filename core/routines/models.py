@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 log = logging.getLogger("routines.models")
 
@@ -32,9 +32,9 @@ class RoutineAction:
     """An action to execute at the end of a routine."""
     name: str
     type: str                                # "say" | "log" | "notification"
-    llm: str = ""                            # prompt for LLM
-    nollm: str = ""                          # fallback when LLM disabled
-    message: str = ""                        # for log / notification
+    llm: Union[str, Dict[str, str]] = ""       # prompt for LLM
+    nollm: Union[str, Dict[str, str]] = ""     # fallback when LLM disabled
+    message: Union[str, Dict[str, str]] = ""   # for log / notification
 
 
 @dataclass
@@ -122,9 +122,9 @@ class RoutineDefinition:
             actions[aname] = RoutineAction(
                 name=str(aname),
                 type=str(aval.get("type", "say")),
-                llm=str(aval.get("llm", "")),
-                nollm=str(aval.get("nollm", "")),
-                message=str(aval.get("message", "")),
+                llm=aval.get("llm", ""),
+                nollm=aval.get("nollm", ""),
+                message=aval.get("message", ""),
             )
 
         # Logic

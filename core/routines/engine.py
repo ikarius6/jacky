@@ -141,21 +141,27 @@ def run_routine(routine: RoutineDefinition) -> RoutineResult:
     action: Optional[RoutineAction] = None
     if action_name and action_name in routine.actions:
         action = routine.actions[action_name]
-        # Interpolate action fields
-        if action.llm:
-            action = RoutineAction(
-                name=action.name, type=action.type,
-                llm=interpolate(action.llm, context),
-                nollm=interpolate(action.nollm, context),
-                message=interpolate(action.message, context),
-            )
-        elif action.nollm or action.message:
-            action = RoutineAction(
-                name=action.name, type=action.type,
-                llm=action.llm,
-                nollm=interpolate(action.nollm, context),
-                message=interpolate(action.message, context),
-            )
+        
+        from utils.i18n import current_language
+        lang = current_language()
+        
+        def _get_localized(val: Any) -> str:
+            if isinstance(val, dict):
+                if lang in val:
+                    return str(val[lang])
+                if "en" in val:
+                    return str(val["en"])
+                if val:
+                    return str(next(iter(val.values())))
+                return ""
+            return str(val or "")
+            
+        action = RoutineAction(
+            name=action.name, type=action.type,
+            llm=interpolate(_get_localized(action.llm), context),
+            nollm=interpolate(_get_localized(action.nollm), context),
+            message=interpolate(_get_localized(action.message), context),
+        )
     elif action_name:
         log.warning("Action '%s' not found in routine '%s'", action_name, rid)
 

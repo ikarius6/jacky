@@ -59,7 +59,10 @@
     "action_normal": {
       "type": "say",
       "llm": "The weather in {{city}} is {{weather_desc}} at {{temp_c}}°C with {{humidity}}% humidity. Make a brief fun comment about it.",
-      "nollm": "🌤️ {{city}}: {{temp_c}}°C — {{weather_desc}} ({{humidity}}% humidity)"
+      "nollm": {
+        "es": "🌤️ {{city}}: {{temp_c}}°C — ({{humidity}}% humedad)",
+        "en": "🌤️ {{city}}: {{temp_c}}°C — {{weather_desc}} ({{humidity}}% humidity)"
+      }
     }
   },
   "variables": {
