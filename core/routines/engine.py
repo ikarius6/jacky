@@ -131,12 +131,10 @@ def run_routine(routine: RoutineDefinition) -> RoutineResult:
         action_name = resolve_action(routine.logic, context)
         log.debug("LOGIC resolved action: %s", action_name)
 
-    # Fallback: use "default" action or first action
+    # Fallback: use "default" action only (do NOT pick the first arbitrary action)
     if action_name is None:
         if "default" in routine.actions:
             action_name = "default"
-        elif routine.actions:
-            action_name = next(iter(routine.actions))
 
     action: Optional[RoutineAction] = None
     if action_name and action_name in routine.actions:

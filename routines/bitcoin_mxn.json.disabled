@@ -1,0 +1,56 @@
+{
+  "id": "btc_price_mxn",
+  "title": "Precio Bitcoin MXN",
+  "description": "Checks the current BTC price in Mexican pesos from CoinGecko",
+  "schedule": null,
+  "triggers": ["bitcoin", "btc", "crypto", "cripto"],
+  "enabled": true,
+  "steps": [
+    {
+      "id": "fetch_price_mxn",
+      "type": "request",
+      "method": "GET",
+      "url": "https://api.coingecko.com/api/v3/simple/price",
+      "params": {
+        "ids": "bitcoin",
+        "vs_currencies": "mxn"
+      },
+      "timeout": 10,
+      "output_var": "raw_price_mxn"
+    },
+    {
+      "id": "parse_price_mxn",
+      "type": "parse",
+      "input": "{{raw_price_mxn}}",
+      "parser": "json",
+      "query": "bitcoin.mxn",
+      "output_var": "btc_mxn"
+    }
+  ],
+  "logic": [
+    {
+      "if": { "var": "btc_mxn", "op": ">", "val": 2000000 },
+      "then": "moon",
+      "else": "normal"
+    }
+  ],
+  "actions": {
+    "moon": {
+      "type": "say",
+      "llm": "El Bitcoin está en ${{btc_mxn}} pesos mexicanos! ¡Está por encima de los 2 millones! Reacciona emocionadamente, incluye el valor.",
+      "nollm": {
+        "es": "🚀 BTC: ${{btc_mxn}} MXN — ¡A la luna!",
+        "en": "🚀 BTC: ${{btc_mxn}} MXN — To the moon!"
+      }
+    },
+    "normal": {
+      "type": "say",
+      "llm": "El Bitcoin está actualmente en ${{btc_mxn}} pesos mexicanos. Haz un comentario breve al respecto, incluye el valor.",
+      "nollm": {
+        "es": "₿ BTC: ${{btc_mxn}} MXN",
+        "en": "₿ BTC: ${{btc_mxn}} MXN"
+      }
+    }
+  },
+  "variables": {}
+}
