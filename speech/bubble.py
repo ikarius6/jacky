@@ -276,6 +276,9 @@ class ConfirmButtons(QWidget):
 
     def show_at(self, anchor_x: int, anchor_y: int, pet_height: int = 0):
         """Show the buttons anchored below the pet sprite."""
+        from utils.i18n import t
+        self._btn_yes.setText(t("ui.btn_yes"))
+        self._btn_no.setText(t("ui.btn_no"))
         self._anchor = QPoint(anchor_x, anchor_y)
         self._pet_height = pet_height
         self.adjustSize()
