@@ -218,6 +218,19 @@
             "ponme una alarma"
         ]
     },
+    "confirm_words": {
+        "affirm": [
+            "sí", "si", "dale", "va", "ok", "okay",
+            "adelante", "hazlo", "claro", "por favor", "porfa",
+            "ándale", "andale", "órale", "orale", "venga",
+            "yes", "sure", "do it", "go ahead", "yep", "yup"
+        ],
+        "deny": [
+            "no", "nah", "nel", "nope", "cancela", "cancel",
+            "olvídalo", "olvidalo", "mejor no", "dejalo", "déjalo",
+            "forget it", "stop", "detente", "para", "ni de chiste"
+        ]
+    },
     "vision_keywords": [
         "mira",
         "observa",

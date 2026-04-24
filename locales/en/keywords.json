@@ -121,6 +121,18 @@
             "wake me up"
         ]
     },
+    "confirm_words": {
+        "affirm": [
+            "yes", "yeah", "yep", "yup", "ok", "okay", "sure",
+            "do it", "go ahead", "go for it", "absolutely",
+            "please", "let's go", "proceed", "confirmed", "affirmative"
+        ],
+        "deny": [
+            "no", "nah", "nope", "cancel", "stop",
+            "forget it", "never mind", "don't", "abort",
+            "skip", "pass", "leave it", "no way", "no thanks"
+        ]
+    },
     "vision_keywords": [
         "look",
         "see",

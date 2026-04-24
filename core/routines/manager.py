@@ -28,6 +28,7 @@ class RoutineManager(QObject):
     routine_say = pyqtSignal(str, str, str)           # routine_id, llm_text, nollm_text
     routine_notify = pyqtSignal(str, str, str)         # routine_id, title, message
     routine_log = pyqtSignal(str, str)                 # routine_id, message
+    routine_organize = pyqtSignal(str, str, str)       # routine_id, files_json, confirm_msg
     routine_failed = pyqtSignal(str, str)              # routine_id, error_msg
     routine_done = pyqtSignal(str)                     # routine_id
 
@@ -203,6 +204,10 @@ class RoutineManager(QObject):
         elif action.type == "log":
             msg = action.message or action.nollm or ""
             self.routine_log.emit(result.routine_id, msg)
+        elif action.type == "organize":
+            files_json = result.context.get("file_list", "[]")
+            confirm_msg = action.confirm_msg or ""
+            self.routine_organize.emit(result.routine_id, files_json, confirm_msg)
         else:
             log.warning("Unknown action type '%s' in routine '%s'",
                         action.type, result.routine_id)

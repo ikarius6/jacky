@@ -331,6 +331,45 @@
         "timer_limit_reached": [
             "Too many timers! Cancel one first.",
             "Timer limit reached! Max is {max}."
+        ],
+        "organize_scanning": [
+            "🔍 Give me a moment, scanning your desktop...",
+            "🔍 Let me see what's on your desktop...",
+            "🔍 Scanning files... almost done!"
+        ],
+        "organize_empty": [
+            "🗂️ Your desktop is already clean, no loose files found.",
+            "🗂️ Nothing to organize! Your desktop is spotless.",
+            "🗂️ Wow, clean desktop! Nothing for me to do here."
+        ],
+        "organize_proposal": [
+            "🗂️ Here's what I found: {summary}. Say 'go ahead' to organize or 'cancel' to skip. You can also click the buttons.",
+            "🗂️ Plan: {summary}. Want me to do it? Say 'do it' or 'forget it'. Or use the buttons.",
+            "🗂️ I can organize: {summary}. Say 'go ahead' or 'cancel' to continue."
+        ],
+        "organize_executing": [
+            "🗂️ On it! Moving files...",
+            "🗂️ Let's do this! Organizing...",
+            "🗂️ Got it! Let me move everything..."
+        ],
+        "organize_done": [
+            "🗂️ Done! Moved {moved} files into folders. Clean desktop!",
+            "🗂️ All set! {moved} files organized. Much better!",
+            "🗂️ Finished! {moved} files in place. *dusts off hands*"
+        ],
+        "organize_done_partial": [
+            "🗂️ Moved {moved} files, but {errors} had errors.",
+            "🗂️ Almost done! {moved} moved, {errors} couldn't be moved."
+        ],
+        "organize_cancelled": [
+            "🗂️ Ok, not touching anything! Your desktop stays as is.",
+            "🗂️ Got it, cancelled. Your mess is your mess! :3",
+            "🗂️ Alright, leaving it as is!"
+        ],
+        "organize_confirm_retry": [
+            "🤔 I didn't catch that... Say 'go ahead' or 'cancel'. Or use the buttons.",
+            "🤔 Is that a yes or a no? Say 'do it' or 'forget it'.",
+            "🤔 Do it or not? Say 'go ahead' or 'cancel'."
         ]
     },
     "app_groups": {

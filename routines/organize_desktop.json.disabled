@@ -1,0 +1,49 @@
+{
+  "id": "organize_desktop",
+  "title": "Organizar Escritorio",
+  "description": "Escanea el escritorio y organiza los archivos en carpetas",
+  "schedule": {},
+  "triggers": [
+    "organiza el escritorio",
+    "organize desktop",
+    "ordena mi escritorio",
+    "organiza mi escritorio",
+    "limpia el escritorio",
+    "clean my desktop",
+    "organize my desktop",
+    "ordena el escritorio"
+  ],
+  "enabled": true,
+  "steps": [
+    {
+      "id": "scan_desktop",
+      "type": "filesystem",
+      "query": "list_desktop",
+      "output_var": "file_list"
+    }
+  ],
+  "logic": [
+    {
+      "if": { "var": "file_list", "op": "!=", "val": "[]" },
+      "then": "propose",
+      "else": "empty"
+    }
+  ],
+  "actions": {
+    "propose": {
+      "type": "organize",
+      "confirm_msg": {
+        "es": "Dame un momento para revisar tu escritorio... 🔍",
+        "en": "Give me a moment to scan your desktop... 🔍"
+      }
+    },
+    "empty": {
+      "type": "say",
+      "nollm": {
+        "es": "🗂️ Tu escritorio ya está limpio, no hay archivos sueltos.",
+        "en": "🗂️ Your desktop is already clean, no loose files found."
+      }
+    }
+  },
+  "variables": {}
+}

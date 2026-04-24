@@ -331,6 +331,45 @@
         "timer_limit_reached": [
             "¡Ya tienes muchos timers! Cancela alguno primero.",
             "¡Demasiados timers! El límite es {max}."
+        ],
+        "organize_scanning": [
+            "🔍 Dame un momento, estoy revisando tu escritorio...",
+            "🔍 A ver qué tienes en el escritorio...",
+            "🔍 Escaneando archivos... ¡ya casi!"
+        ],
+        "organize_empty": [
+            "🗂️ Tu escritorio ya está limpio, no hay archivos sueltos.",
+            "🗂️ ¡No hay nada que organizar! Tu escritorio está impecable.",
+            "🗂️ ¡Wow, escritorio limpio! No tengo nada que hacer aquí."
+        ],
+        "organize_proposal": [
+            "🗂️ Encontré esto: {summary}. Dime 'adelante' para organizar o 'cancela' si no. También puedes usar los botones.",
+            "🗂️ Plan: {summary}. ¿Le doy? Dime 'hazlo' o 'mejor no'. O usa los botones.",
+            "🗂️ Puedo organizar: {summary}. Dime 'dale' o 'cancela' para continuar."
+        ],
+        "organize_executing": [
+            "🗂️ ¡Ahí voy! Moviendo archivos...",
+            "🗂️ ¡Manos a la obra! Organizando...",
+            "🗂️ ¡Entendido! Déjame mover todo..."
+        ],
+        "organize_done": [
+            "🗂️ ¡Listo! Moví {moved} archivos a sus carpetas. ¡Escritorio limpio!",
+            "🗂️ ¡Hecho! {moved} archivos organizados. ¡Mucho mejor!",
+            "🗂️ ¡Terminé! {moved} archivos en su lugar. *se sacude las manos*"
+        ],
+        "organize_done_partial": [
+            "🗂️ Moví {moved} archivos, pero {errors} tuvieron errores.",
+            "🗂️ ¡Casi listo! {moved} movidos, {errors} no se pudieron mover."
+        ],
+        "organize_cancelled": [
+            "🗂️ ¡Ok, no toco nada! Tu escritorio se queda como está.",
+            "🗂️ Entendido, cancelado. ¡Tu desorden es tu desorden! :3",
+            "🗂️ ¡Bueno, lo dejamos así!"
+        ],
+        "organize_confirm_retry": [
+            "🤔 No entendí... Dime 'adelante' o 'cancela'. O usa los botones.",
+            "🤔 ¿Eso es un sí o un no? Dime 'hazlo' o 'mejor no'.",
+            "🤔 ¿Le doy o no? Dime 'dale' o 'cancela'."
         ]
     },
     "app_groups": {

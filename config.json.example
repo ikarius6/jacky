@@ -53,6 +53,7 @@
     "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
     "response_mode": "text",
     "listen_shortcut": "ctrl+shift+space",
+    "listen_timeout_seconds": 15,
     "assemblyai_api_key": "",
     "assemblyai_model": "universal-streaming-multilingual",
     "elevenlabs_api_key": "",

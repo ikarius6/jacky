@@ -144,6 +144,14 @@ def get_permission_defs() -> dict:
     return _strings.get("permissions", {})
 
 
+def get_confirm_words() -> tuple[set[str], set[str]]:
+    """Return ``(affirm_words, deny_words)`` sets for the current language."""
+    cw = _strings.get("confirm_words", {})
+    affirm = set(cw.get("affirm", []))
+    deny = set(cw.get("deny", []))
+    return affirm, deny
+
+
 def get_vision_keywords() -> set:
     """Return the set of vision-trigger keywords for the current language."""
     kw = _strings.get("vision_keywords", [])

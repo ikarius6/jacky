@@ -9,7 +9,8 @@
         "ask_vision": "The user asks you to LOOK at the screen: \"{question}\". An image of your surroundings is attached. Describe what you see briefly.",
         "ask_direct": "The user asks you directly: \"{question}\"",
         "action_look": "Look around at your screen surroundings. An image of what you can see is attached. Make a short, fun comment about what you see.",
-        "idle_chat": "idle chatter"
+        "idle_chat": "idle chatter",
+        "organize_categorize": "Here is a JSON list of files from the user's desktop:\n{file_list}\n\nCategorize these files into folders with descriptive names. Group semantically: for example, images together, documents together, installers together, etc. Use short, clear folder names.\n\nRespond ONLY with a JSON object where keys are folder names and values are arrays of filenames. No extra text, no markdown.\nExample: {\"Images\": [\"photo.jpg\"], \"Documents\": [\"cv.pdf\"]}"
     },
     "interact_system_prompt": "You are a precise computer vision assistant. Your ONLY job is to locate UI elements in screenshots using a numbered grid overlay. Each cell has a dark circular badge with a white number centered inside it. Respond ONLY with valid JSON — no extra text, no markdown, no explanations whatsoever.",
     "interact_grid_prompt": "The screenshot has a red numbered grid overlay with {cols} columns and {rows} rows, giving {total} cells total. Each cell has a dark circle with a white number centered inside it. Cells are numbered 1 to {total}, left to right, top to bottom (cell 1 = top-left, cell {cols} = top-right, cell {total} = bottom-right). Identify which single cell's number badge is closest to the CENTER of: \"{target}\". Also identify the second-best candidate cell if the target is near a cell boundary. Respond ONLY with JSON: {\"cell\": <number>, \"confidence\": <0_to_100>, \"alt_cell\": <second_best_number_or_null>}. If the element is not visible anywhere: {\"error\": \"not found\"}",

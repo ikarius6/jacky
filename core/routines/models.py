@@ -31,10 +31,11 @@ class RoutineStep:
 class RoutineAction:
     """An action to execute at the end of a routine."""
     name: str
-    type: str                                # "say" | "log" | "notification"
+    type: str                                # "say" | "log" | "notification" | "organize"
     llm: Union[str, Dict[str, str]] = ""       # prompt for LLM
     nollm: Union[str, Dict[str, str]] = ""     # fallback when LLM disabled
     message: Union[str, Dict[str, str]] = ""   # for log / notification
+    confirm_msg: Union[str, Dict[str, str]] = ""   # what Jacky says while scanning (organize)
 
 
 @dataclass
@@ -96,7 +97,7 @@ class RoutineDefinition:
                 continue
             sid = s.get("id", "")
             stype = s.get("type", "")
-            if stype not in ("request", "parse"):
+            if stype not in ("request", "parse", "filesystem"):
                 log.warning("Unknown step type '%s' in routine '%s'", stype, rid)
                 continue
             steps.append(RoutineStep(
@@ -125,6 +126,7 @@ class RoutineDefinition:
                 llm=aval.get("llm", ""),
                 nollm=aval.get("nollm", ""),
                 message=aval.get("message", ""),
+                confirm_msg=aval.get("confirm_msg", ""),
             )
 
         # Logic

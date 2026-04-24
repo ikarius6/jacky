@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
-from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF
+from PyQt6.QtCore import Qt, QTimer, QPoint, QRectF, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor, QFont, QPainterPath, QBrush, QPen
 
 from pal import remove_dwm_border, set_topmost
@@ -206,3 +206,102 @@ class SpeechBubble(QWidget):
     def mousePressEvent(self, event):
         """Click the bubble to dismiss it."""
         self.hide()
+
+
+class ConfirmButtons(QWidget):
+    """Small floating widget with Yes/No buttons for organize confirmation.
+
+    Shown alongside the speech bubble when the pet asks the user to confirm
+    an action.  Provides a reliable GUI fallback when STT struggles with
+    very short words like "sí" / "no".
+    """
+
+    confirmed = pyqtSignal(bool)  # True = yes, False = no
+
+    BTN_STYLE = """
+        QPushButton {{
+            background-color: {bg};
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            min-width: 54px;
+        }}
+        QPushButton:hover {{
+            background-color: {hover};
+        }}
+        QPushButton:pressed {{
+            background-color: {pressed};
+        }}
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+
+        from PyQt6.QtWidgets import QHBoxLayout, QPushButton
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(6, 4, 6, 4)
+        layout.setSpacing(8)
+
+        self._btn_yes = QPushButton("✔ Sí")
+        self._btn_no = QPushButton("✘ No")
+
+        self._btn_yes.setStyleSheet(self.BTN_STYLE.format(
+            bg="#4CAF50", hover="#43A047", pressed="#388E3C"))
+        self._btn_no.setStyleSheet(self.BTN_STYLE.format(
+            bg="#F44336", hover="#E53935", pressed="#C62828"))
+
+        self._btn_yes.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_no.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        layout.addWidget(self._btn_yes)
+        layout.addWidget(self._btn_no)
+
+        self._btn_yes.clicked.connect(lambda: self.confirmed.emit(True))
+        self._btn_no.clicked.connect(lambda: self.confirmed.emit(False))
+
+        self._anchor = QPoint(0, 0)
+        self._pet_height = 0
+
+    def show_at(self, anchor_x: int, anchor_y: int, pet_height: int = 0):
+        """Show the buttons anchored below the pet sprite."""
+        self._anchor = QPoint(anchor_x, anchor_y)
+        self._pet_height = pet_height
+        self.adjustSize()
+        self._reposition()
+        self.show()
+        wid = int(self.winId())
+        remove_dwm_border(wid)
+        if sys.platform == "darwin":
+            set_topmost(wid)
+
+    def update_position(self, anchor_x: int, anchor_y: int):
+        """Update the anchor position (call when the pet moves)."""
+        self._anchor = QPoint(anchor_x, anchor_y)
+        if self.isVisible():
+            self._reposition()
+
+    def _reposition(self):
+        w = self.width()
+        x = self._anchor.x() - w // 2
+        y = self._anchor.y() + self._pet_height + 4
+
+        from pal import get_screen_size
+        try:
+            sw, sh = get_screen_size()
+            x = max(0, min(x, sw - w))
+            if y + self.height() > sh:
+                y = self._anchor.y() - self.height() - 4
+        except Exception:
+            pass
+        self.move(x, y)

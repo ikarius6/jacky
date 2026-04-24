@@ -27,7 +27,7 @@ from interaction.click_handler import ClickHandler
 from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS, PERMISSION_DEFS
 from interaction.window_awareness import WindowAwareness
 from interaction.peer_discovery import PeerDiscovery
-from speech.bubble import SpeechBubble
+from speech.bubble import SpeechBubble, ConfirmButtons
 from speech.dialogue import get_line
 from speech.llm_provider import create_llm_provider
 from speech.voice import ElevenLabsTTSClient, AssemblyAISTTClient
@@ -35,7 +35,7 @@ from interaction.hotkey import GlobalHotkey
 from utils.config_manager import load_config
 from pal import remove_dwm_border, set_topmost
 from utils.screen_capture import capture_vision_area
-from utils.i18n import load_language, t, get_vision_keywords, current_language
+from utils.i18n import load_language, t, get_vision_keywords, get_confirm_words, current_language
 
 log = logging.getLogger("pet_window")
 
@@ -46,6 +46,7 @@ class PetWindow(QWidget):
     _llm_text_ready = pyqtSignal(str)
     _llm_ask_ready = pyqtSignal(str)
     _intent_ready = pyqtSignal(object)  # IntentResult or None
+    _organize_ready = pyqtSignal(str)   # LLM categorization JSON response
     _voice_transcript_ready = pyqtSignal(str)
     _voice_error_ready = pyqtSignal(str)
 
@@ -98,8 +99,10 @@ class PetWindow(QWidget):
         self._gamer_saved: dict | None = None
         self._llm_pending = False
         self._pending_question = ""  # stashed for intent classification callback
+        self._pending_organize: dict | None = None  # stashed organize plan awaiting user confirmation
         self._llm_text_ready.connect(self._say)
         self._llm_ask_ready.connect(self._say_forced)
+        self._organize_ready.connect(self._on_organize_llm_response)
         self._intent_ready.connect(self._on_intent_classified)
 
         # Interaction components
@@ -116,9 +119,12 @@ class PetWindow(QWidget):
         self._routine_manager.routine_say.connect(self._on_routine_say)
         self._routine_manager.routine_notify.connect(self._on_routine_notify)
         self._routine_manager.routine_log.connect(self._on_routine_log)
+        self._routine_manager.routine_organize.connect(self._on_organize_proposal)
         self._routine_manager.routine_failed.connect(self._on_routine_failed)
         self._routine_manager.load()
         self._bubble = SpeechBubble()
+        self._confirm_buttons = ConfirmButtons()
+        self._confirm_buttons.confirmed.connect(self._on_confirm_button)
 
         # Voice and Hotkey
         self._tts_client = ElevenLabsTTSClient(
@@ -136,6 +142,9 @@ class PetWindow(QWidget):
         self._voice_error_ready.connect(lambda err: self._say(f"STT Error: {err}", force=True, skip_voice=True))
         self._stt_client.on_transcript_callback = self._voice_transcript_ready.emit
         self._stt_client.on_error_callback = self._voice_error_ready.emit
+        self._listen_timeout = QTimer(self)
+        self._listen_timeout.setSingleShot(True)
+        self._listen_timeout.timeout.connect(self._on_listen_timeout)
         
         self._global_hotkey = GlobalHotkey(
             shortcut=self._config.get("listen_shortcut", "ctrl+shift+space")
@@ -560,11 +569,21 @@ class PetWindow(QWidget):
             return
 
         if getattr(self._stt_client, "_is_recording", False):
+            self._listen_timeout.stop()
             self._bubble.hide()
             self._stt_client.stop_listening()
         else:
-            self._say(t("ui.listening"), force=True, timeout_ms=30000, skip_voice=True)
+            max_sec = self._config.get("listen_timeout_seconds", 60)
+            self._say(t("ui.listening"), force=True, timeout_ms=max_sec * 1000, skip_voice=True)
             self._stt_client.start_listening()
+            self._listen_timeout.start(max_sec * 1000)
+
+    def _on_listen_timeout(self):
+        """Auto-stop listening when the max recording duration expires."""
+        if getattr(self._stt_client, "_is_recording", False):
+            log.info("Listen timeout reached, auto-stopping STT")
+            self._bubble.hide()
+            self._stt_client.stop_listening()
 
     def _start_screen_task(self, action_type: str, target_desc: str,
                             type_text_content: str = None):
@@ -596,10 +615,16 @@ class PetWindow(QWidget):
         """User asked a direct question via the Preguntar dialog.
 
         Flow:
+        0. If there's a pending organize plan, check for yes/no confirmation
         1. Fast path — keyword matching (no LLM call)
         2. Fallback — LLM intent classification
         3. Based on LLM result → screen interaction, vision, or chat
         """
+        # ── Organize confirmation interception ──
+        if self._pending_organize is not None:
+            self._handle_organize_confirmation(question)
+            return
+
         if not self._llm_enabled:
             # Even without LLM, try running manual routines (nollm fallback)
             matched_routine = self._routine_manager.try_match_keyword(question)
@@ -972,6 +997,8 @@ class PetWindow(QWidget):
         """
         if not text:
             return
+        if self._pending_organize is not None:
+            return
         if self._silent_mode and not force:
             return
             
@@ -1029,11 +1056,12 @@ class PetWindow(QWidget):
         self._reassert_topmost()
 
     def _update_bubble_pos(self):
+        anchor_x = self.x() + self._sprite_size // 2
+        anchor_y = self.y()
         if self._bubble.isVisible():
-            self._bubble.update_position(
-                self.x() + self._sprite_size // 2,
-                self.y()
-            )
+            self._bubble.update_position(anchor_x, anchor_y)
+        if self._confirm_buttons.isVisible():
+            self._confirm_buttons.update_position(anchor_x, anchor_y)
 
     # --- LLM ---
 
@@ -1091,6 +1119,194 @@ class PetWindow(QWidget):
     def _on_routine_failed(self, routine_id: str, error_msg: str):
         """Handle a routine failure — log and optionally inform the user."""
         log.error("ROUTINE_FAILED id=%s: %s", routine_id, error_msg)
+
+    # --- Desktop organize ---
+
+    _AFFIRM_FALLBACK = {"yes", "ok", "sure", "sí", "si", "dale", "adelante"}
+    _DENY_FALLBACK = {"no", "nope", "cancel", "cancela"}
+
+    @staticmethod
+    def _match_words(q_lower: str, word_set: set[str]) -> bool:
+        """Check if *q_lower* matches any word/phrase in *word_set*.
+
+        Single words are matched against individual tokens (split); multi-word
+        phrases are matched as substrings.
+        """
+        tokens = [tk.strip(".,;:!?¿¡\"'()") for tk in q_lower.split()]
+        q_clean = " ".join(tokens)
+        for w in word_set:
+            if " " in w:
+                if w in q_clean:
+                    return True
+            else:
+                if w in tokens:
+                    return True
+        return False
+
+    def _on_organize_proposal(self, routine_id: str, files_json: str, confirm_msg: str):
+        """Handle the organize action from the routine engine.
+
+        1. Say the confirm_msg while processing.
+        2. If LLM enabled → ask it to categorize the files.
+        3. If LLM disabled → use extension-based fallback.
+        4. Present the proposal and wait for user confirmation.
+        """
+        import json as _json
+        try:
+            files = _json.loads(files_json)
+        except (ValueError, TypeError):
+            files = []
+
+        if not files:
+            self._say(get_line("organize_empty", self.pet.name), force=True)
+            return
+
+        # Keep the real file list so we can validate LLM output later
+        self._organize_real_files = files
+
+        # Show scanning message
+        if confirm_msg:
+            self._say(confirm_msg, force=True)
+        else:
+            self._say(get_line("organize_scanning", self.pet.name), force=True)
+
+        if self._llm_enabled:
+            # Ask LLM to categorize
+            file_list_str = _json.dumps(files, ensure_ascii=False)
+            prompt = t("llm_prompts.organize_categorize", file_list=file_list_str)
+            context = self._build_llm_context(prompt)
+
+            def _on_result(text):
+                if text:
+                    self._organize_ready.emit(text)
+                else:
+                    self._organize_ready.emit("")
+
+            self._llm.generate(context, _on_result)
+        else:
+            from utils.desktop_organizer import categorize_by_extension
+            plan = categorize_by_extension(files)
+            self._present_organize_plan(plan)
+
+    def _on_organize_llm_response(self, response: str):
+        """Handle the LLM categorization response (main thread via signal)."""
+        import json as _json
+        from utils.desktop_organizer import categorize_by_extension
+
+        real_files = getattr(self, "_organize_real_files", [])
+        real_names = {f["name"] for f in real_files}
+
+        plan = None
+        if response:
+            try:
+                plan = _json.loads(response)
+            except (ValueError, TypeError):
+                import re
+                match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response)
+                if match:
+                    try:
+                        plan = _json.loads(match.group())
+                    except (ValueError, TypeError):
+                        pass
+
+        # Validate LLM plan: every filename must exist in the real scan
+        if plan and isinstance(plan, dict):
+            validated: dict[str, list[str]] = {}
+            matched = 0
+            for folder, names in plan.items():
+                if not isinstance(names, list):
+                    continue
+                good = [n for n in names if n in real_names]
+                matched += len(good)
+                if good:
+                    validated[folder] = good
+            # Accept only if the LLM matched at least half the real files
+            if matched >= len(real_names) // 2 and validated:
+                plan = validated
+                log.info("LLM organize plan validated: %d/%d files matched",
+                         matched, len(real_names))
+            else:
+                log.warning("LLM plan matched only %d/%d files, falling back",
+                            matched, len(real_names))
+                plan = None
+
+        if not plan:
+            plan = categorize_by_extension(real_files)
+
+        self._present_organize_plan(plan)
+
+    def _present_organize_plan(self, plan: dict):
+        """Show the organize plan to the user and wait for confirmation."""
+        from utils.desktop_organizer import format_plan_summary
+        # Filter out empty categories
+        plan = {k: v for k, v in plan.items() if v}
+        if not plan:
+            self._say(get_line("organize_empty", self.pet.name), force=True)
+            return
+
+        summary = format_plan_summary(plan)
+        proposal_line = get_line("organize_proposal", self.pet.name, summary=summary)
+        if not proposal_line:
+            proposal_line = f"🗂️ {summary} — ¿Lo hago?"
+        self._say(proposal_line, force=True, timeout_ms=15000)
+        # Set AFTER _say so the guard in _say doesn't block our own proposal,
+        # but all subsequent external _say calls will be suppressed.
+        self._pending_organize = plan
+        # Show clickable Yes/No buttons (reliable fallback for short-word STT)
+        self._confirm_buttons.show_at(
+            self.x() + self._sprite_size // 2,
+            self.y(),
+            pet_height=self._sprite_size,
+        )
+
+    def _on_confirm_button(self, accepted: bool):
+        """Handle click on the GUI Yes/No buttons."""
+        self._confirm_buttons.hide()
+        if self._pending_organize is None:
+            return
+        self._handle_organize_confirmation("sí" if accepted else "no")
+
+    def _handle_organize_confirmation(self, question: str):
+        """Check if user said yes or no to the pending organize plan."""
+        import threading
+        q_lower = question.strip().lower()
+        plan = self._pending_organize
+
+        affirm, deny = get_confirm_words()
+        affirm = affirm or self._AFFIRM_FALLBACK
+        deny = deny or self._DENY_FALLBACK
+
+        if self._match_words(q_lower, affirm):
+            self._confirm_buttons.hide()
+            self._pending_organize = None
+            self._say(get_line("organize_executing", self.pet.name), force=True)
+
+            def _do_move():
+                from utils.desktop_organizer import execute_organize_plan
+                result = execute_organize_plan(plan)
+                moved_count = len(result.get("moved", []))
+                error_count = len(result.get("errors", []))
+                if error_count:
+                    line = get_line("organize_done_partial", self.pet.name,
+                                    moved=moved_count, errors=error_count)
+                else:
+                    line = get_line("organize_done", self.pet.name, moved=moved_count)
+                if not line:
+                    line = f"🗂️ ¡Listo! Moví {moved_count} archivos."
+                self._llm_ask_ready.emit(line)
+
+            t = threading.Thread(target=_do_move, name="organize-exec", daemon=True)
+            t.start()
+
+        elif self._match_words(q_lower, deny):
+            self._confirm_buttons.hide()
+            self._pending_organize = None
+            self._say(get_line("organize_cancelled", self.pet.name), force=True)
+        else:
+            # Unrecognized — ask again (clear before _say, re-set after)
+            self._pending_organize = None
+            self._say(get_line("organize_confirm_retry", self.pet.name), force=True)
+            self._pending_organize = plan
 
     # --- State changes ---
 

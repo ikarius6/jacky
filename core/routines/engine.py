@@ -87,6 +87,18 @@ def _execute_parse(step: RoutineStep, context: Dict[str, Any]) -> str:
     return parse_value(raw_input, step.parser, step.query)
 
 
+def _execute_filesystem(step: RoutineStep, context: Dict[str, Any]) -> str:
+    """Execute a filesystem step and return a JSON result."""
+    query = step.query
+    if query == "list_desktop":
+        from utils.desktop_organizer import list_desktop_files
+        entries = list_desktop_files()
+        return json.dumps(entries, ensure_ascii=False)
+    else:
+        log.warning("Unknown filesystem query '%s'", query)
+        return "[]"
+
+
 def run_routine(routine: RoutineDefinition) -> RoutineResult:
     """Execute a routine synchronously.  Call from a worker thread.
 
@@ -109,6 +121,8 @@ def run_routine(routine: RoutineDefinition) -> RoutineResult:
                 result = _execute_request(step, context)
             elif step.type == "parse":
                 result = _execute_parse(step, context)
+            elif step.type == "filesystem":
+                result = _execute_filesystem(step, context)
             else:
                 log.warning("Unknown step type '%s' in routine '%s'", step.type, rid)
                 continue
@@ -159,6 +173,7 @@ def run_routine(routine: RoutineDefinition) -> RoutineResult:
             llm=interpolate(_get_localized(action.llm), context),
             nollm=interpolate(_get_localized(action.nollm), context),
             message=interpolate(_get_localized(action.message), context),
+            confirm_msg=interpolate(_get_localized(action.confirm_msg), context),
         )
     elif action_name:
         log.warning("Action '%s' not found in routine '%s'", action_name, rid)

@@ -29,6 +29,7 @@ DEFAULT_CONFIG = {
     "groq_model": "meta-llama/llama-4-scout-17b-16e-instruct",
     "language": "es",
     "gravity": False,
+    "listen_timeout_seconds": 60,
     "shop_url": "https://hackers.army/jacky/shop.json",
 }
 
@@ -58,6 +59,7 @@ _SCHEMA = {
     "max_peer_instances":         (int,   1,    20,   None),
     "language":                   (str,   None, None, None),
     "gravity":                    (bool,  None, None, None),
+    "listen_timeout_seconds":     (int,   10,   300,  None),
     "shop_url":                   (str,   None, None, None),
 }
 
