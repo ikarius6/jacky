@@ -248,13 +248,14 @@ class ConfirmButtons(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
         from PyQt6.QtWidgets import QHBoxLayout, QPushButton
+        from utils.i18n import t
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
         layout.setSpacing(8)
 
-        self._btn_yes = QPushButton("✔ Sí")
-        self._btn_no = QPushButton("✘ No")
+        self._btn_yes = QPushButton(t("ui.btn_yes"))
+        self._btn_no = QPushButton(t("ui.btn_no"))
 
         self._btn_yes.setStyleSheet(self.BTN_STYLE.format(
             bg="#4CAF50", hover="#43A047", pressed="#388E3C"))

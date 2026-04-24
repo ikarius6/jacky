@@ -23,6 +23,8 @@
         "btn_send": "Send",
         "btn_cancel": "Cancel",
         "btn_save": "Save",
+        "btn_yes": "✔ Yes",
+        "btn_no": "✘ No",
         "settings_title": "Settings for {name}",
         "tab_character": "Character",
         "tab_settings": "Settings",
