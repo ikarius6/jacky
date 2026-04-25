@@ -129,6 +129,14 @@
             "*bosteza* Es muy tarde...",
             "¡Ya vete a dormir!"
         ],
+        "witching_hour": [
+            "¿Escuchaste eso...?",
+            "No me gusta esta hora... hay algo detrás de ti.",
+            "*mira nervioso a los lados* ...nada, nada.",
+            "Son las 3... la hora del diablo. No voltees.",
+            "Algo me está observando... y no eres tú.",
+            "Shhh... ¿sentiste eso?"
+        ],
         "battery_low": [
             "¡Oye! La batería está al {pct}%... ¡conecta el cargador!",
             "¡Alerta! Batería baja ({pct}%). ¡No me dejes morir!",

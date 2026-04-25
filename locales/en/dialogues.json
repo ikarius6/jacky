@@ -129,6 +129,14 @@
             "*yawns* It's so late...",
             "Go to bed already!"
         ],
+        "witching_hour": [
+            "Did you hear that...?",
+            "I don't like this hour... there's something behind you.",
+            "*looks around nervously* ...nothing, nothing.",
+            "It's 3 AM... the witching hour. Don't turn around.",
+            "Something is watching me... and it's not you.",
+            "Shhh... did you feel that?"
+        ],
         "battery_low": [
             "Hey! Battery is at {pct}%... plug in the charger!",
             "Alert! Low battery ({pct}%). Don't let me die!",

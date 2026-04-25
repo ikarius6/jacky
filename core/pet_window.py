@@ -987,6 +987,17 @@ class PetWindow(QWidget):
         if self.pet.state in (PetState.DRAGGED, PetState.TALKING):
             return
 
+        # --- Witching hour easter egg (3 AM, 50% chance) ---
+        hour = datetime.datetime.now().hour
+        if hour == 3 and random.random() < 0.5:
+            if random.random() < 0.7:
+                self._say(get_line("witching_hour", self.pet.name))
+            else:
+                log.info("EASTER witching_hour possessed animation")
+                self.pet.set_state(PetState.DYING)
+                self._temp_state_timer.start(2500)
+            return
+
         if self._llm_enabled:
             if self._llm_pending:
                 log.debug("SCHED chat skipped — LLM request already pending")
@@ -996,7 +1007,6 @@ class PetWindow(QWidget):
             self._llm.generate(context, self._on_llm_response)
         else:
             # 20% chance of late-night comment when it's late
-            hour = datetime.datetime.now().hour
             if (hour >= 23 or hour < 5) and random.random() < 0.2:
                 self._say(get_line("late_night", self.pet.name))
             else:
