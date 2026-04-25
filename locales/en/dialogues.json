@@ -417,6 +417,16 @@
             "You can't stop the beat! *dances*",
             "Dance party! *busts a move*"
         ],
+        "easter_peer_fusion": [
+            "FUSION! ...it didn't work. 😅",
+            "FUUUUSION! *glows* ...nope, still the same.",
+            "Fusion dance! *dramatic pose* ...nothing happened."
+        ],
+        "easter_peer_fusion_react": [
+            "What was that!? *checks self* ...I'm still me.",
+            "*glows for a second* ...what just happened?",
+            "I felt something weird! ...did it not work?"
+        ],
         "dizzy": [
             "Stop! I'm getting dizzy! 😵‍💫",
             "Aaagh, everything's spinning!",

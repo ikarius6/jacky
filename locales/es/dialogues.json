@@ -417,6 +417,16 @@
             "¡No puedes parar el ritmo! *baila*",
             "¡Fiesta! *se avienta unos pasos*"
         ],
+        "easter_peer_fusion": [
+            "¡FUSIÓN! ...no funcionó. 😅",
+            "¡FUUUUSIÓN! *brilla* ...nah, sigue igual.",
+            "¡Danza de la fusión! *pose dramática* ...nada pasó."
+        ],
+        "easter_peer_fusion_react": [
+            "¿¡Qué fue eso!? *se revisa* ...sigo igual.",
+            "*brilla por un segundo* ...¿qué acaba de pasar?",
+            "¡Sentí algo raro! ...¿no funcionó?"
+        ],
         "dizzy": [
             "¡Para! ¡Me estoy mareando! 😵‍💫",
             "¡Aaagh, todo da vueltas!",

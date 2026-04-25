@@ -104,6 +104,20 @@ class PeerInteractionHandler:
     def do_dance(self, target: PeerInfo):
         """Start dancing and invite the peer to dance too."""
         pw = self._pw
+
+        # Fusion dance easter egg: 10% chance when within 80px
+        dx = pw.x() - target.x
+        dy = pw.y() - target.y
+        distance = (dx * dx + dy * dy) ** 0.5
+        if distance < 80 and random.random() < 0.10:
+            log.info("EASTER fusion dance triggered with '%s'", target.display_name)
+            pw.pet.set_state(PetState.DANCE)
+            pw._say(get_line("easter_peer_fusion", pw.pet.name,
+                             peer_name=target.display_name))
+            pw._peer_discovery.send_event(target.pid, "fusion")
+            pw._temp_state_timer.start(5000)
+            return
+
         pw.pet.set_state(PetState.DANCE)
         pw._say(get_line("peer_dance", pw.pet.name, peer_name=target.display_name))
         pw._peer_discovery.send_event(target.pid, "dance")
@@ -415,6 +429,14 @@ class PeerInteractionHandler:
         pw.pet.set_state(PetState.DANCE)
         pw._say(get_line("peer_dance_response", pw.pet.name, peer_name=name))
         pw._temp_state_timer.start(4000)
+
+    def _react_to_fusion(self, event: PeerEvent):
+        """Fusion dance easter egg — the other Jacky tried to fuse with us."""
+        pw = self._pw
+        name = self._get_source_name(event)
+        pw.pet.set_state(PetState.DANCE)
+        pw._say(get_line("easter_peer_fusion_react", pw.pet.name, peer_name=name))
+        pw._temp_state_timer.start(5000)
 
     def _react_to_fight(self, event: PeerEvent):
         """Received a fight initiation — prepare as responder."""
