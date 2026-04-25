@@ -108,7 +108,6 @@ class PetContextMenu(QMenu):
 
         self._ask_action = QAction(t("ui.menu_ask"), self)
         self._ask_action.triggered.connect(self._open_ask_dialog)
-        self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self.addAction(self._ask_action)
 
         self._listen_action = QAction(t("ui.menu_listen"), self)
@@ -172,7 +171,6 @@ class PetContextMenu(QMenu):
 
     def refresh_llm_state(self):
         """Update the Preguntar/Mirar actions enabled state after config reload."""
-        self._ask_action.setEnabled(self._pet_window._llm_enabled)
         self._listen_action.setEnabled(self._pet_window._llm_enabled and bool(self._pet_window._config.get("assemblyai_api_key", "").strip()))
         vision_allowed = self._pet_window._perm("allow_vision")
         self._look_action.setEnabled(self._pet_window._llm_enabled)
