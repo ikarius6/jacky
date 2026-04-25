@@ -36,6 +36,7 @@ https://github.com/user-attachments/assets/e34f4733-f044-4b01-8944-50e9c8e887cf
 - **Multilanguage (i18n)** — ships with Spanish and English; add a new language by dropping a single JSON file in `locales/`
 - **Granular permissions** — toggle individual behaviours (comment, peek, sit, push, shake, minimize, resize, knock, drag, tidy, topple, vision, screen interaction)
 - **System tray** — quick access to settings and quit
+- **Easter eggs** — 10+ hidden secrets to discover
 
 ## Setup
 
