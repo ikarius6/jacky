@@ -159,6 +159,24 @@
             "dance for me",
             "do a dance",
             "bust a move"
+        ],
+        "evil": [
+            "evil",
+            "dark",
+            "666",
+            "go evil",
+            "go dark",
+            "be evil",
+            "dark mode",
+            "turn evil"
+        ],
+        "glitch": [
+            "glitch",
+            "error",
+            "bug",
+            "glitch out",
+            "go glitchy",
+            "have a glitch"
         ]
     }
 }

@@ -266,6 +266,28 @@
             "baila para mi",
             "échate un baile",
             "echate un baile"
+        ],
+        "evil": [
+            "evil",
+            "dark",
+            "666",
+            "malvado",
+            "oscuro",
+            "modo oscuro",
+            "modo evil",
+            "vuélvete malvado",
+            "vuelvete malvado"
+        ],
+        "glitch": [
+            "glitch",
+            "error",
+            "bug",
+            "modo glitch",
+            "modo error",
+            "fállate",
+            "fallate",
+            "glichéate",
+            "glicheate"
         ]
     }
 }

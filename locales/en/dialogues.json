@@ -417,6 +417,27 @@
             "You can't stop the beat! *dances*",
             "Dance party! *busts a move*"
         ],
+        "easter_evil": [
+            "*eyes glow* I've always wanted to do this... muahaha~",
+            "The darkness calls me... and it's about time! muahaha~",
+            "This is my true form! muahaha~ *imaginary cape flapping*",
+            "Relax... the dark side feels pretty good. muahaha~"
+        ],
+        "easter_evil_revert": [
+            "*blinks* ...ugh, what happened? I feel weird.",
+            "*shakes head* Back to the good side. For now.",
+            "...it almost convinced me. But no."
+        ],
+        "easter_glitch": [
+            "E̵R̸R̷O̵R̴ ̸4̶0̴4̷ ̵J̸A̷C̸K̵Y̴ ̷N̸O̴T̷ ̵F̷O̴U̷N̸D̶ ̵r̴e̴b̷o̸o̶t̴i̶n̴g̷...",
+            "G̶l̷i̸t̵c̸h̷ ̸d̷e̶t̸e̵c̷t̶e̸d̶.̸ ̷P̵l̶e̷a̵s̸e̴ ̴s̷e̶n̸d̴ ̷h̶e̶l̶p̸.̷",
+            "!RORRE ... dlrow eht gnah s'tahW"
+        ],
+        "easter_glitch_revert": [
+            "...rebooting complete. I think I'm okay?",
+            "*glitch stops* Ugh... that was disorienting.",
+            "System restored. Please ignore the previous message."
+        ],
         "easter_peer_fusion": [
             "FUSION! ...it didn't work. 😅",
             "FUUUUSION! *glows* ...nope, still the same.",

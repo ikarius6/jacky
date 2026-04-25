@@ -7,7 +7,7 @@ import time
 
 from PyQt6.QtWidgets import QWidget, QSystemTrayIcon, QMenu, QApplication
 from PyQt6.QtCore import Qt, QTimer, QPoint, pyqtSignal
-from PyQt6.QtGui import QPainter, QIcon, QPixmap, QAction
+from PyQt6.QtGui import QPainter, QIcon, QPixmap, QAction, QImage, QTransform, QColor
 
 from core.pet import Pet, PetState, ANIMATION_FALLBACKS
 from core.animation import AnimationController
@@ -38,6 +38,8 @@ from utils.screen_capture import capture_vision_area
 from utils.i18n import load_language, t, get_vision_keywords, get_confirm_words, get_easter_keywords, current_language
 
 log = logging.getLogger("pet_window")
+
+_REVERT_TAG = "\x00REVERT\x00"
 
 
 class PetWindow(QWidget):
@@ -98,6 +100,8 @@ class PetWindow(QWidget):
         self._gamer_mode = False
         self._gamer_saved: dict | None = None
         self._llm_pending = False
+        # Appearance easter egg mode: None | "evil" | "glitch"
+        self._appearance_mode: str | None = None
         self._pending_question = ""  # stashed for intent classification callback
         self._pending_organize: dict | None = None  # stashed organize plan awaiting user confirmation
         self._llm_text_ready.connect(self._say)
@@ -172,6 +176,19 @@ class PetWindow(QWidget):
         self._barrel_roll_timer.setInterval(150)
         self._barrel_roll_timer.timeout.connect(self._barrel_roll_tick)
         self._barrel_roll_count = 0
+
+        # Appearance easter egg: auto-revert timer (30 s)
+        self._appearance_timer = QTimer(self)
+        self._appearance_timer.setSingleShot(True)
+        self._appearance_timer.timeout.connect(self._revert_appearance)
+
+        # Glitch: rapid random-color tint shift every 80 ms
+        self._glitch_color_r = 255
+        self._glitch_color_g = 0
+        self._glitch_color_b = 200
+        self._glitch_tick_timer = QTimer(self)
+        self._glitch_tick_timer.setInterval(80)
+        self._glitch_tick_timer.timeout.connect(self._glitch_tick)
 
         # Animation timer
         self._anim_timer = QTimer(self)
@@ -494,6 +511,26 @@ class PetWindow(QWidget):
             log.warning("PAINT frame=None anim_state='%s' pos=(%d,%d) visible=%s",
                         self.animation.current_state, self.x(), self.y(), self.isVisible())
             return
+
+        # --- Appearance easter egg rendering ---
+        if self._appearance_mode == "evil":
+            img = frame.toImage().convertToFormat(QImage.Format.Format_ARGB32)
+            img.invertPixels(QImage.InvertMode.InvertRgb)
+            frame = QPixmap.fromImage(img)
+        elif self._appearance_mode == "glitch":
+            # Flip horizontally
+            frame = frame.transformed(QTransform().scale(-1, 1))
+            # Overlay a random-color tint
+            tinted = QPixmap(frame.size())
+            tinted.fill(Qt.GlobalColor.transparent)
+            p = QPainter(tinted)
+            p.drawPixmap(0, 0, frame)
+            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Screen)
+            p.fillRect(tinted.rect(),
+                       QColor(self._glitch_color_r, self._glitch_color_g, self._glitch_color_b, 90))
+            p.end()
+            frame = tinted
+
         painter = QPainter(self)
         painter.drawPixmap(0, 0, frame)
         painter.end()
@@ -588,6 +625,44 @@ class PetWindow(QWidget):
         self._say(get_line("easter_dance", self.pet.name), force=True)
         self.pet.set_state(PetState.DANCE)
         self._temp_state_timer.start(10000)
+
+    def _easter_evil(self):
+        """Evil mode: inverted color palette for 30 s. All dialogue lines end with 'muajaja~'."""
+        log.info("EASTER_EGG evil mode activated")
+        self._appearance_mode = "evil"
+        self._glitch_tick_timer.stop()
+        self._say(get_line("easter_evil", self.pet.name), force=True)
+        self._appearance_timer.start(30_000)
+        self.update()
+
+    def _easter_glitch(self):
+        """Glitch mode: flipped sprite + random color tint for 30 s. Dialogue is reversed."""
+        log.info("EASTER_EGG glitch mode activated")
+        self._appearance_mode = "glitch"
+        self._glitch_tick_timer.start()
+        self._say(get_line("easter_glitch", self.pet.name), force=True)
+        self._appearance_timer.start(30_000)
+        self.update()
+
+    def _glitch_tick(self):
+        """Randomise the glitch tint color each tick so it flickers."""
+        self._glitch_color_r = random.randint(0, 255)
+        self._glitch_color_g = random.randint(0, 255)
+        self._glitch_color_b = random.randint(0, 255)
+        self.update()
+
+    def _revert_appearance(self):
+        """Restore Jacky's normal appearance after the easter egg timer expires."""
+        prev_mode = self._appearance_mode
+        self._appearance_mode = None
+        self._glitch_tick_timer.stop()
+        self.update()
+        if prev_mode == "evil":
+            line = get_line("easter_evil_revert", self.pet.name)
+        else:
+            line = get_line("easter_glitch_revert", self.pet.name)
+        if line:
+            self._say(_REVERT_TAG + line, force=True)
 
     def on_feed(self):
         """Feed from context menu."""
@@ -1107,6 +1182,15 @@ class PetWindow(QWidget):
         force: if True, ignore silent mode (used for direct user questions).
         skip_voice: if True, skips Text-to-Speech playback.
         """
+        # --- Appearance easter egg text effects ---
+        if text and text.startswith(_REVERT_TAG):
+            text = text[len(_REVERT_TAG):]  # strip sentinel, no effect applied
+        elif text and self._appearance_mode == "evil":
+            if not text.rstrip().endswith("muajaja~") and not text.rstrip().endswith("muahaha~"):
+                text = text.rstrip() + " muajaja~"
+        elif text and self._appearance_mode == "glitch":
+            text = text[::-1]
+
         if not text:
             return
         if self._pending_organize is not None:

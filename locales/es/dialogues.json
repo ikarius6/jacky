@@ -417,6 +417,27 @@
             "¡No puedes parar el ritmo! *baila*",
             "¡Fiesta! *se avienta unos pasos*"
         ],
+        "easter_evil": [
+            "*ojos brillantes* Siempre quise hacer esto... muajaja~",
+            "La oscuridad me llama... ¡y ya era hora! muajaja~",
+            "¡Este es mi verdadero yo! muajaja~ *capa imaginaria al viento*",
+            "Relajate... estar del lado oscuro se siente bien. muajaja~"
+        ],
+        "easter_evil_revert": [
+            "*parpadea* ...ugh, ¿qué pasó? Me siento raro.",
+            "*sacude la cabeza* De regreso al lado bueno. Por ahora.",
+            "...casi me convence. Pero no."
+        ],
+        "easter_glitch": [
+            "E̵R̸R̷O̵R̴ ̸4̶0̴4̷ ̵J̸A̷C̸K̵Y̴ ̷N̸O̴T̷ ̵F̷O̴U̷N̸D̶ ̵r̴e̴b̷o̸o̶t̴i̶n̴g̷...",
+            "G̶l̷i̸t̵c̸h̷ ̸d̷e̶t̸e̵c̷t̶e̸d̶.̸ ̷P̵l̶e̷a̵s̸e̴ ̴s̷e̶n̸d̴ ̷h̶e̶l̶p̸.̷",
+            "!RORRÉ ̸... em sedin anu see opme"
+        ],
+        "easter_glitch_revert": [
+            "...reinicio completo. ¿Creo que estoy bien?",
+            "*el glitch para* Ugh... eso fue desorientador.",
+            "Sistema restaurado. Por favor ignoren el mensaje anterior."
+        ],
         "easter_peer_fusion": [
             "¡FUSIÓN! ...no funcionó. 😅",
             "¡FUUUUSIÓN! *brilla* ...nah, sigue igual.",
