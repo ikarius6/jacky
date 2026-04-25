@@ -469,6 +469,42 @@
             "Ok... ya estoy bien. Creo. No me toques.",
             "¿Ya terminaste? Porque yo casi termino en el piso. 😒",
             "*respira profundo* ...grosero."
+        ],
+        "bored_callout": [
+            "...¿holaaaa?",
+            "¿Hay alguien ahí?",
+            "¡Oye! ¡No me ignores!",
+            "...¿me dejaron solo?",
+            "¡Hola! ¿Sigues ahí?",
+            "*toca la pantalla* ¿Hola?"
+        ],
+        "bored_erratic": [
+            "Bueno, yo me entretengo solo...",
+            "Si nadie me habla, camino.",
+            "Me aburrooo *camina en círculos*",
+            "Voy a dar una vuelta... solo... como siempre...",
+            "*camina sin rumbo* La la la~"
+        ],
+        "bored_selftalk": [
+            "Bien, me entretengo solo.",
+            "¿Sabías que las nubes saben a algodón de azúcar? ...bueno, tal vez no.",
+            "*hablando solo* y entonces le dije...",
+            "Si un árbol cae en el bosque y nadie lo oye... ¿le importa al árbol?",
+            "*se mira las manos* ...¿desde cuándo tengo manos?",
+            "Nota mental: conseguir un hobby. Nota mental dos: ¿qué es un hobby?"
+        ],
+        "bored_asleep": [
+            "*bosteza mucho* ...zzz",
+            "Ya que nadie me pela... *se duerme*",
+            "zzz... zzz...",
+            "*se acurruca* Buenas noches a nadie en particular... zzz"
+        ],
+        "bored_wakeup": [
+            "*despierta de golpe* ¡¿Qué?! ¡Estoy despierto!",
+            "¡Oh! ¡Volviste! *se estira*",
+            "¿Eh? ¿Me quedé dormido?",
+            "*salta* ¡No estaba dormido! ¡Estaba... descansando los ojos!",
+            "¡Al fin! ¡Pensé que te habías olvidado de mí!"
         ]
     },
     "app_groups": {

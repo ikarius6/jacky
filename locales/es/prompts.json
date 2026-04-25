@@ -10,6 +10,7 @@
         "ask_direct": "El usuario te pregunta directamente: \"{question}\"",
         "action_look": "Mira a tu alrededor en el entorno de tu pantalla. Se adjunta una imagen de lo que puedes ver. Haz un comentario breve y divertido sobre lo que ves.",
         "idle_chat": "charla casual",
+        "idle_selftalk": "Nadie te ha hablado en mucho rato. Estás solo y aburrido. Habla contigo mismo sobre algo random y absurdo, como si pensaras en voz alta. Sé gracioso y divagante.",
         "organize_categorize": "Aquí hay una lista de archivos del escritorio del usuario en formato JSON:\n{file_list}\n\nCategoriza estos archivos en carpetas con nombres descriptivos en español. Agrupa semánticamente: por ejemplo, imágenes juntas, documentos juntos, instaladores juntos, etc. Usa nombres de carpeta cortos y claros.\n\nResponde SOLO con un objeto JSON donde las claves son nombres de carpeta y los valores son arrays de nombres de archivo. Sin texto extra, sin markdown.\nEjemplo: {\"Imágenes\": [\"foto.jpg\"], \"Documentos\": [\"cv.pdf\"]}"
     },
     "interact_system_prompt": "You are a precise computer vision assistant. Your ONLY job is to locate UI elements in screenshots using a numbered grid overlay. Each cell has a dark circular badge with a white number centered inside it. Respond ONLY with valid JSON — no extra text, no markdown, no explanations whatsoever.",

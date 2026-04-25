@@ -469,6 +469,42 @@
             "Ok... I'm fine now. I think. Don't touch me.",
             "Are you done? Because I almost hit the floor. 😒",
             "*takes a deep breath* ...rude."
+        ],
+        "bored_callout": [
+            "...hellooo?",
+            "Is anyone there?",
+            "Hey! Don't ignore me!",
+            "...did they leave me alone?",
+            "Hello! You still there?",
+            "*taps the screen* Hello?"
+        ],
+        "bored_erratic": [
+            "Fine, I'll keep myself busy...",
+            "If nobody talks to me, I walk.",
+            "I'm boooored *walks in circles*",
+            "Gonna take a walk... alone... as always...",
+            "*wanders aimlessly* La la la~"
+        ],
+        "bored_selftalk": [
+            "Fine, I'll entertain myself.",
+            "Did you know clouds taste like cotton candy? ...well, maybe not.",
+            "*talking to himself* and then I said...",
+            "If a tree falls in the forest and nobody hears it... does the tree care?",
+            "*looks at hands* ...since when do I have hands?",
+            "Mental note: get a hobby. Mental note two: what's a hobby?"
+        ],
+        "bored_asleep": [
+            "*yawns a lot* ...zzz",
+            "Since nobody cares... *falls asleep*",
+            "zzz... zzz...",
+            "*curls up* Good night to nobody in particular... zzz"
+        ],
+        "bored_wakeup": [
+            "*wakes up suddenly* What?! I'm awake!",
+            "Oh! You're back! *stretches*",
+            "Huh? Did I fall asleep?",
+            "*jumps* I wasn't sleeping! I was... resting my eyes!",
+            "Finally! I thought you forgot about me!"
         ]
     },
     "app_groups": {

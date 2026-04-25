@@ -10,6 +10,7 @@
         "ask_direct": "The user asks you directly: \"{question}\"",
         "action_look": "Look around at your screen surroundings. An image of what you can see is attached. Make a short, fun comment about what you see.",
         "idle_chat": "idle chatter",
+        "idle_selftalk": "Nobody has talked to you in a long time. You're alone and bored. Talk to yourself about something random and absurd, as if thinking out loud. Be funny and rambling.",
         "organize_categorize": "Here is a JSON list of files from the user's desktop:\n{file_list}\n\nCategorize these files into folders with descriptive names. Group semantically: for example, images together, documents together, installers together, etc. Use short, clear folder names.\n\nRespond ONLY with a JSON object where keys are folder names and values are arrays of filenames. No extra text, no markdown.\nExample: {\"Images\": [\"photo.jpg\"], \"Documents\": [\"cv.pdf\"]}"
     },
     "interact_system_prompt": "You are a precise computer vision assistant. Your ONLY job is to locate UI elements in screenshots using a numbered grid overlay. Each cell has a dark circular badge with a white number centered inside it. Respond ONLY with valid JSON — no extra text, no markdown, no explanations whatsoever.",

@@ -190,6 +190,21 @@ class PetWindow(QWidget):
         self._glitch_tick_timer.setInterval(80)
         self._glitch_tick_timer.timeout.connect(self._glitch_tick)
 
+        # Boredom escalation (idle neglect easter egg)
+        self._BOREDOM_CALLOUT_MIN = 10
+        self._BOREDOM_ERRATIC_MIN = 20
+        self._BOREDOM_SELFTALK_MIN = 30
+        self._BOREDOM_ASLEEP_MIN = 60
+        self._BOREDOM_SELFTALK_INTERVAL_S = 120  # self-talk every 2 min
+        self._last_user_interaction: float = time.monotonic()
+        self._boredom_level: int = 0       # 0=normal, 1=callout, 2=erratic, 3=selftalk, 4=asleep
+        self._boredom_asleep: bool = False
+        self._last_selftalk: float = 0.0
+        self._boredom_timer = QTimer(self)
+        self._boredom_timer.setInterval(60_000)  # check every 60s
+        self._boredom_timer.timeout.connect(self._check_boredom)
+        self._boredom_timer.start()
+
         # Animation timer
         self._anim_timer = QTimer(self)
         self._anim_timer.timeout.connect(self._on_anim_tick)
@@ -358,6 +373,8 @@ class PetWindow(QWidget):
 
     def _on_system_event(self, event: SystemEvent, data: dict):
         """React to a system-level event with speech (and optionally LLM)."""
+        if event == SystemEvent.USER_RETURNED:
+            self._touch_user_interaction()
         if self._silent_mode:
             return
         if self.pet.state == PetState.DRAGGED:
@@ -538,6 +555,7 @@ class PetWindow(QWidget):
     # --- Mouse events ---
 
     def mousePressEvent(self, event):
+        self._touch_user_interaction()
         self._click_handler.handle_press(event)
 
     def mouseMoveEvent(self, event):
@@ -550,6 +568,7 @@ class PetWindow(QWidget):
 
     def on_pet_clicked(self):
         """Left-click: pet reaction."""
+        self._touch_user_interaction()
         if self._screen_interaction.is_active:
             self._screen_interaction.cancel()
             return
@@ -664,8 +683,105 @@ class PetWindow(QWidget):
         if line:
             self._say(_REVERT_TAG + line, force=True)
 
+    # --- Boredom escalation ---
+
+    def _touch_user_interaction(self):
+        """Record that the user just interacted with Jacky. Resets boredom and wakes if asleep."""
+        self._last_user_interaction = time.monotonic()
+        if self._boredom_asleep:
+            self._wake_up()
+        elif self._boredom_level > 0:
+            log.info("BOREDOM reset (was level %d)", self._boredom_level)
+            self._boredom_level = 0
+
+    def _check_boredom(self):
+        """Periodic check (every 60s) — escalate boredom if user hasn't interacted."""
+        if self._gamer_mode or self._boredom_asleep:
+            return
+        elapsed_min = (time.monotonic() - self._last_user_interaction) / 60.0
+
+        if elapsed_min >= self._BOREDOM_ASLEEP_MIN and self._boredom_level < 4:
+            self._boredom_level = 4
+            self._boredom_sleep()
+        elif elapsed_min >= self._BOREDOM_SELFTALK_MIN and self._boredom_level < 3:
+            self._boredom_level = 3
+            self._say(get_line("bored_selftalk", self.pet.name))
+            self.pet.set_state(PetState.IDLE)
+            self._last_selftalk = time.monotonic()
+        elif elapsed_min >= self._BOREDOM_SELFTALK_MIN and self._boredom_level == 3:
+            # Already in self-talk stage — fire another monologue if interval elapsed
+            now = time.monotonic()
+            if (now - self._last_selftalk) >= self._BOREDOM_SELFTALK_INTERVAL_S:
+                self._boredom_selftalk()
+                self._last_selftalk = now
+        elif elapsed_min >= self._BOREDOM_ERRATIC_MIN and self._boredom_level < 2:
+            self._boredom_level = 2
+            self._boredom_erratic_walk()
+        elif elapsed_min >= self._BOREDOM_CALLOUT_MIN and self._boredom_level < 1:
+            self._boredom_level = 1
+            log.info("BOREDOM callout (%.1f min idle)", elapsed_min)
+            self._say(get_line("bored_callout", self.pet.name))
+
+    def _boredom_erratic_walk(self):
+        """Boredom level 2: walk erratically with random direction changes."""
+        log.info("BOREDOM erratic walk")
+        self._say(get_line("bored_erratic", self.pet.name))
+        self.movement.pick_random_target()
+        self.pet.set_state(PetState.WALKING)
+        # Schedule a few extra direction flips
+        for i in range(3):
+            QTimer.singleShot(2000 * (i + 1), self._boredom_erratic_step)
+
+    def _boredom_erratic_step(self):
+        """One step of erratic walking: pick a new random target and flip direction."""
+        if self._boredom_level < 2 or self._boredom_asleep:
+            return
+        if self.pet.state not in (PetState.IDLE, PetState.WALKING):
+            return
+        self.pet.direction = -self.pet.direction
+        self.movement.pick_random_target()
+        if self.pet.state == PetState.IDLE:
+            self.pet.set_state(PetState.WALKING)
+
+    def _boredom_selftalk(self):
+        """Boredom level 3: LLM self-talk monologue or predefined fallback."""
+        if self._llm_enabled and not self._llm_pending:
+            self._llm_pending = True
+            context = self._build_llm_context(t("llm_prompts.idle_selftalk"))
+            self._llm.generate(context, self._on_selftalk_response)
+        else:
+            self._say(get_line("bored_selftalk", self.pet.name))
+
+    def _on_selftalk_response(self, text: str | None):
+        """Callback from LLM for self-talk — thread-safe via signal."""
+        self._llm_pending = False
+        if text:
+            self._llm_text_ready.emit(text)
+        else:
+            fallback = get_line("bored_selftalk", self.pet.name) or "..."
+            self._llm_text_ready.emit(fallback)
+
+    def _boredom_sleep(self):
+        """Boredom level 4: fall asleep — DYING animation, pause scheduler."""
+        log.info("BOREDOM asleep")
+        self._boredom_asleep = True
+        self._say(get_line("bored_asleep", self.pet.name))
+        self.pet.set_state(PetState.DYING)
+        self.scheduler.pause_all()
+
+    def _wake_up(self):
+        """Wake Jacky from boredom sleep — HAPPY animation, resume scheduler."""
+        log.info("BOREDOM wakeup")
+        self._boredom_asleep = False
+        self._boredom_level = 0
+        self.scheduler.resume_all()
+        self.pet.set_state(PetState.HAPPY)
+        self._temp_state_timer.start(3000)
+        self._say(get_line("bored_wakeup", self.pet.name), force=True)
+
     def on_feed(self):
         """Feed from context menu."""
+        self._touch_user_interaction()
         if self._screen_interaction.is_active:
             self._screen_interaction.cancel()
         log.info("ACTION on_feed pos=(%d,%d)", self.x(), self.y())
@@ -675,6 +791,7 @@ class PetWindow(QWidget):
 
     def on_attack(self):
         """Attack from context menu: shooting if available, else slashing."""
+        self._touch_user_interaction()
         if self._screen_interaction.is_active:
             self._screen_interaction.cancel()
         log.info("ACTION on_attack pos=(%d,%d)", self.x(), self.y())
@@ -714,6 +831,7 @@ class PetWindow(QWidget):
 
     def on_listen_toggle(self):
         """Toggle microphone recording for voice STT."""
+        self._touch_user_interaction()
         if not self._config.get("assemblyai_api_key", "").strip():
             return
 
@@ -769,6 +887,7 @@ class PetWindow(QWidget):
         2. Fallback — LLM intent classification
         3. Based on LLM result → screen interaction, vision, or chat
         """
+        self._touch_user_interaction()
         # ── Organize confirmation interception ──
         if self._pending_organize is not None:
             self._handle_organize_confirmation(question)
@@ -864,6 +983,7 @@ class PetWindow(QWidget):
 
     def on_look(self):
         """Context-menu action: pet looks at the screen and comments on what it sees."""
+        self._touch_user_interaction()
         if not self._llm_enabled:
             self._say(t("ui.no_llm"), force=True)
             return
@@ -1035,6 +1155,7 @@ class PetWindow(QWidget):
                 self._say(line)
 
     def show_context_menu(self, pos: QPoint):
+        self._touch_user_interaction()
         self._context_menu.show_at(pos)
 
     def on_quit(self):
@@ -1044,6 +1165,7 @@ class PetWindow(QWidget):
 
     def _do_quit(self):
         self.scheduler.stop_all()
+        self._boredom_timer.stop()
         self._system_events.stop()
         self._peer_discovery.stop()
         self._window_awareness.stop()
@@ -1131,6 +1253,8 @@ class PetWindow(QWidget):
     # --- Scheduled events ---
 
     def _scheduled_walk(self):
+        if self._boredom_asleep:
+            return
         if self.pet.state not in (PetState.IDLE,):
             return
         log.info("SCHED walk from pos=(%d,%d)", self.x(), self.y())
@@ -1143,6 +1267,8 @@ class PetWindow(QWidget):
 
     def _scheduled_chat(self):
         log.info("SCHED chat state=%s pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
+        if self._boredom_asleep:
+            return
         if self._silent_mode:
             return
         if self.pet.state in (PetState.DRAGGED, PetState.TALKING):
@@ -1574,6 +1700,7 @@ class PetWindow(QWidget):
                     self._config[key] = val
                 self._gamer_saved = None
             self._gamer_mode = False
+            self._last_user_interaction = time.monotonic()  # reset boredom clock
             self._routine_manager.resume_all()
             self.reload_config()
             log.info("GAMER_MODE disabled — settings restored")
