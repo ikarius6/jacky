@@ -370,6 +370,20 @@
             "🤔 No entendí... Dime 'adelante' o 'cancela'. O usa los botones.",
             "🤔 ¿Eso es un sí o un no? Dime 'hazlo' o 'mejor no'.",
             "🤔 ¿Le doy o no? Dime 'dale' o 'cancela'."
+        ],
+        "dizzy": [
+            "¡Para! ¡Me estoy mareando! 😵‍💫",
+            "¡Aaagh, todo da vueltas!",
+            "¡Basta basta basta! 🌀",
+            "¡Me vas a romper! ¡Para ya!",
+            "¡Oye! ¡Que me mareo!"
+        ],
+        "dizzy_recover": [
+            "Ugh... ya pasó. No vuelvas a hacer eso. 😤",
+            "*sacude la cabeza* ...creo que vi estrellas.",
+            "Ok... ya estoy bien. Creo. No me toques.",
+            "¿Ya terminaste? Porque yo casi termino en el piso. 😒",
+            "*respira profundo* ...grosero."
         ]
     },
     "app_groups": {

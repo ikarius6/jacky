@@ -515,6 +515,22 @@ class PetWindow(QWidget):
         self._say(get_line("petted", self.pet.name))
         self._temp_state_timer.start(2000)
 
+    def on_dizzy(self):
+        """Easter egg: rapid clicks or long drag made Jacky dizzy."""
+        if self.pet.state == PetState.HURT:
+            return  # already dizzy
+        log.info("EASTER_EGG dizzy meltdown pos=(%d,%d)", self.x(), self.y())
+        self.pet.set_state(PetState.HURT)
+        self._say(get_line("dizzy", self.pet.name))
+        self._temp_state_timer.start(5000)
+        QTimer.singleShot(5000, self._dizzy_recover)
+
+    def _dizzy_recover(self):
+        """Recovery line after dizzy meltdown."""
+        line = get_line("dizzy_recover", self.pet.name)
+        if line:
+            self._say(line)
+
     def on_feed(self):
         """Feed from context menu."""
         if self._screen_interaction.is_active:

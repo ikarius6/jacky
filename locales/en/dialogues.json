@@ -370,6 +370,20 @@
             "🤔 I didn't catch that... Say 'go ahead' or 'cancel'. Or use the buttons.",
             "🤔 Is that a yes or a no? Say 'do it' or 'forget it'.",
             "🤔 Do it or not? Say 'go ahead' or 'cancel'."
+        ],
+        "dizzy": [
+            "Stop! I'm getting dizzy! 😵‍💫",
+            "Aaagh, everything's spinning!",
+            "Stop stop stop! 🌀",
+            "You're gonna break me! Cut it out!",
+            "Hey! I'm getting nauseous here!"
+        ],
+        "dizzy_recover": [
+            "Ugh... it's over. Don't do that again. 😤",
+            "*shakes head* ...I think I saw stars.",
+            "Ok... I'm fine now. I think. Don't touch me.",
+            "Are you done? Because I almost hit the floor. 😒",
+            "*takes a deep breath* ...rude."
         ]
     },
     "app_groups": {
