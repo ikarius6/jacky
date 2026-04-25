@@ -936,6 +936,29 @@ class PetWindow(QWidget):
             self.pet.set_state(PetState.IDLE)
         self.scheduler.resume_all()  # resume paused timers, don't re-register
 
+        # Easter egg: protest when dropped near a screen edge/corner
+        self._check_corner_exile(pos.x(), pos.y())
+
+    def _check_corner_exile(self, x: int, y: int):
+        """Easter egg: protest if dropped within 20px of a screen edge/corner."""
+        margin = 20
+        geo = self._screen_geo()
+        left = geo.x()
+        top = geo.y()
+        right = geo.x() + geo.width() - self._sprite_size
+        bottom = geo.y() + geo.height() - self._sprite_size
+
+        near_edge = (
+            x - left <= margin
+            or right - x <= margin
+            or y - top <= margin
+            or bottom - y <= margin
+        )
+        if near_edge:
+            line = get_line("corner_exile", self.pet.name)
+            if line:
+                self._say(line)
+
     def show_context_menu(self, pos: QPoint):
         self._context_menu.show_at(pos)
 
