@@ -397,6 +397,26 @@
         "name_game_chatgpt": [
             "No necesito la nube para ser encantador. 😎"
         ],
+        "easter_barrel_roll": [
+            "¡WIIIII! *gira como loco*",
+            "¡Barrel roll! *da vueltas*",
+            "¡Soy un helicóptero! ¡WHOOOOSH!"
+        ],
+        "easter_play_dead": [
+            "*se desploma dramáticamente* ...X_X",
+            "*cae al piso* Díganle a mi familia... que los amé...",
+            "Ugh... la luz... se apaga... X_X"
+        ],
+        "easter_play_dead_revive": [
+            "¡Es broma, estoy vivo! ¡Te la creíste!",
+            "*salta* ¡Ja! ¡Caíste!",
+            "...¡era mentira! ¡Soy inmortal!"
+        ],
+        "easter_dance": [
+            "¡A bailar se ha dicho! *baila como loco*",
+            "¡No puedes parar el ritmo! *baila*",
+            "¡Fiesta! *se avienta unos pasos*"
+        ],
         "dizzy": [
             "¡Para! ¡Me estoy mareando! 😵‍💫",
             "¡Aaagh, todo da vueltas!",

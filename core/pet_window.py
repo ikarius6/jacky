@@ -35,7 +35,7 @@ from interaction.hotkey import GlobalHotkey
 from utils.config_manager import load_config
 from pal import remove_dwm_border, set_topmost
 from utils.screen_capture import capture_vision_area
-from utils.i18n import load_language, t, get_vision_keywords, get_confirm_words, current_language
+from utils.i18n import load_language, t, get_vision_keywords, get_confirm_words, get_easter_keywords, current_language
 
 log = logging.getLogger("pet_window")
 
@@ -166,6 +166,12 @@ class PetWindow(QWidget):
         self._fall_safety_timer = QTimer(self)
         self._fall_safety_timer.setSingleShot(True)
         self._fall_safety_timer.timeout.connect(self._force_land)
+
+        # Barrel-roll easter egg: rapid L→R sprite flipping
+        self._barrel_roll_timer = QTimer(self)
+        self._barrel_roll_timer.setInterval(150)
+        self._barrel_roll_timer.timeout.connect(self._barrel_roll_tick)
+        self._barrel_roll_count = 0
 
         # Animation timer
         self._anim_timer = QTimer(self)
@@ -531,6 +537,58 @@ class PetWindow(QWidget):
         if line:
             self._say(line)
 
+    # --- Easter eggs ---
+
+    def _check_easter_egg(self, question: str) -> bool:
+        """Match *question* against easter-egg trigger phrases.
+
+        Returns True if an easter egg was triggered (caller should return early).
+        """
+        q_lower = question.lower().strip()
+        easter_kw = get_easter_keywords()
+        for egg_name, phrases in easter_kw.items():
+            phrase_set = set(phrases)
+            if self._match_words(q_lower, phrase_set):
+                handler = getattr(self, f"_easter_{egg_name}", None)
+                if handler:
+                    log.info("EASTER_EGG %s triggered by '%s'", egg_name, question[:60])
+                    handler()
+                    return True
+        return False
+
+    def _easter_barrel_roll(self):
+        """Barrel roll: rapid sprite flip L→R→L→R (6 flips, 150ms each)."""
+        self._say(get_line("easter_barrel_roll", self.pet.name), force=True)
+        self._barrel_roll_count = 0
+        self._barrel_roll_timer.start()
+
+    def _barrel_roll_tick(self):
+        """One tick of the barrel-roll flip animation."""
+        self._barrel_roll_count += 1
+        self.pet.direction = -self.pet.direction
+        if self._barrel_roll_count >= 8:
+            self._barrel_roll_timer.stop()
+            self._barrel_roll_count = 0
+
+    def _easter_play_dead(self):
+        """Play dead: DYING animation for 5s, then revive with a joke."""
+        self._say(get_line("easter_play_dead", self.pet.name), force=True)
+        self.pet.set_state(PetState.DYING)
+        self._temp_state_timer.start(5000)
+        QTimer.singleShot(5000, self._play_dead_revive)
+
+    def _play_dead_revive(self):
+        """Revive after playing dead."""
+        line = get_line("easter_play_dead_revive", self.pet.name)
+        if line:
+            self._say(line, force=True)
+
+    def _easter_dance(self):
+        """Forced dance for 10 seconds."""
+        self._say(get_line("easter_dance", self.pet.name), force=True)
+        self.pet.set_state(PetState.DANCE)
+        self._temp_state_timer.start(10000)
+
     def on_feed(self):
         """Feed from context menu."""
         if self._screen_interaction.is_active:
@@ -639,6 +697,11 @@ class PetWindow(QWidget):
         # ── Organize confirmation interception ──
         if self._pending_organize is not None:
             self._handle_organize_confirmation(question)
+            return
+
+        # ── Easter egg fast path ──
+        easter_hit = self._check_easter_egg(question)
+        if easter_hit:
             return
 
         if not self._llm_enabled:

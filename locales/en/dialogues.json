@@ -397,6 +397,26 @@
         "name_game_chatgpt": [
             "I don't need the cloud to be charming. 😎"
         ],
+        "easter_barrel_roll": [
+            "WHEEE! *spins wildly*",
+            "Do a barrel roll! *spins*",
+            "I'm a helicopter! WHOOOOSH!"
+        ],
+        "easter_play_dead": [
+            "*collapses dramatically* ...X_X",
+            "*falls over* Tell my family... I loved them...",
+            "Ugh... the light... it's fading... X_X"
+        ],
+        "easter_play_dead_revive": [
+            "Jk, I'm alive! Got you!",
+            "*jumps up* Ha! You fell for it!",
+            "...just kidding! I'm immortal!"
+        ],
+        "easter_dance": [
+            "Let's groove! *dances wildly*",
+            "You can't stop the beat! *dances*",
+            "Dance party! *busts a move*"
+        ],
         "dizzy": [
             "Stop! I'm getting dizzy! 😵‍💫",
             "Aaagh, everything's spinning!",

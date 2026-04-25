@@ -144,5 +144,21 @@
         "view",
         "mira",
         "pantalla"
-    ]
+    ],
+    "easter_keywords": {
+        "barrel_roll": [
+            "do a barrel roll",
+            "barrel roll"
+        ],
+        "play_dead": [
+            "play dead",
+            "drop dead"
+        ],
+        "dance": [
+            "dance",
+            "dance for me",
+            "do a dance",
+            "bust a move"
+        ]
+    }
 }

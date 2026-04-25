@@ -166,6 +166,14 @@ def get_timer_keywords() -> dict:
     return _strings.get("timer_keywords", {})
 
 
+def get_easter_keywords() -> dict:
+    """Return the easter-egg trigger keywords for the current language.
+
+    Returns a dict like ``{"barrel_roll": ["do a barrel roll", ...], ...}``.
+    """
+    return _strings.get("easter_keywords", {})
+
+
 def get_interact_keywords() -> dict:
     """Return the screen-interaction keywords for the current language.
 

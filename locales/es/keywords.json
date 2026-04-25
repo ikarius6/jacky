@@ -242,5 +242,30 @@
         "mirar",
         "observar",
         "miras"
-    ]
+    ],
+    "easter_keywords": {
+        "barrel_roll": [
+            "do a barrel roll",
+            "barrel roll",
+            "haz una maroma",
+            "da una vuelta",
+            "gira"
+        ],
+        "play_dead": [
+            "play dead",
+            "hazte el muerto",
+            "finge tu muerte",
+            "muérete",
+            "muerete"
+        ],
+        "dance": [
+            "baila",
+            "bailar",
+            "dance",
+            "baila para mí",
+            "baila para mi",
+            "échate un baile",
+            "echate un baile"
+        ]
+    }
 }
