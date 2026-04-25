@@ -1495,6 +1495,8 @@ class PetWindow(QWidget):
 
     # --- Greeting ---
 
+    _NAME_GAME_KEYS = ("clippy", "cortana", "alexa", "siri", "navi", "chatgpt")
+
     def start(self):
         """Show the pet and say hello."""
         self.show()
@@ -1503,7 +1505,10 @@ class PetWindow(QWidget):
         if self._config.get("peer_interaction_enabled", True):
             max_peers = self._config.get("max_peer_instances", 5)
             self._peer_discovery.start(poll_interval_ms=500, max_peers=max_peers)
-        QTimer.singleShot(500, lambda: self._say(get_line("greeting", self.pet.name)))
+        name_lower = self.pet.name.lower()
+        egg = get_line(f"name_game_{name_lower}", self.pet.name) if name_lower in self._NAME_GAME_KEYS else None
+        greeting = egg if egg else get_line("greeting", self.pet.name)
+        QTimer.singleShot(500, lambda: self._say(greeting))
 
     def _remove_dwm_border(self):
         """Remove the DWM shadow/border and apply platform-specific topmost level.

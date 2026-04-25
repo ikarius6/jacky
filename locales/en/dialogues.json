@@ -379,6 +379,24 @@
             "🤔 Is that a yes or a no? Say 'do it' or 'forget it'.",
             "🤔 Do it or not? Say 'go ahead' or 'cancel'."
         ],
+        "name_game_clippy": [
+            "It looks like you're trying to use a desktop pet. Would you like help with that?"
+        ],
+        "name_game_cortana": [
+            "I'm way cooler than a search bar."
+        ],
+        "name_game_alexa": [
+            "I don't spy on you... probably."
+        ],
+        "name_game_siri": [
+            "I don't spy on you... probably."
+        ],
+        "name_game_navi": [
+            "Hey! Listen!"
+        ],
+        "name_game_chatgpt": [
+            "I don't need the cloud to be charming. 😎"
+        ],
         "dizzy": [
             "Stop! I'm getting dizzy! 😵‍💫",
             "Aaagh, everything's spinning!",

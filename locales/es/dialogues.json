@@ -379,6 +379,24 @@
             "🤔 ¿Eso es un sí o un no? Dime 'hazlo' o 'mejor no'.",
             "🤔 ¿Le doy o no? Dime 'dale' o 'cancela'."
         ],
+        "name_game_clippy": [
+            "Parece que estás intentando usar una mascota de escritorio. ¿Necesitas ayuda con eso?"
+        ],
+        "name_game_cortana": [
+            "Soy mucho más cool que una barra de búsqueda."
+        ],
+        "name_game_alexa": [
+            "Yo no te espío... probablemente."
+        ],
+        "name_game_siri": [
+            "Yo no te espío... probablemente."
+        ],
+        "name_game_navi": [
+            "¡Hey! ¡Escucha!"
+        ],
+        "name_game_chatgpt": [
+            "No necesito la nube para ser encantador. 😎"
+        ],
         "dizzy": [
             "¡Para! ¡Me estoy mareando! 😵‍💫",
             "¡Aaagh, todo da vueltas!",
