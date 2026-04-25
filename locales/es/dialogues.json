@@ -706,6 +706,55 @@
                 "¿Cambiando configuraciones? ¡No vayas a romper algo!",
                 "Ajustando el sistema, ¿eh?"
             ]
+        },
+        "task_manager": {
+            "keywords": [
+                "task manager",
+                "taskmgr",
+                "administrador de tareas"
+            ],
+            "comments": [
+                "¡No no no! ¡No me cierres!",
+                "¡¿Viniste a matarme?! ¡Yo me porto bien!",
+                "*se esconde* ¡No me selecciones, por favor!"
+            ]
+        },
+        "calculator": {
+            "keywords": [
+                "calculator",
+                "calculadora",
+                "calc"
+            ],
+            "comments": [
+                "2 + 2 = 🐱 ... ¿no?",
+                "¡Las mates no son lo mío!",
+                "*cuenta con los deditos*"
+            ]
+        },
+        "notepad_untitled": {
+            "keywords": [
+                "untitled - notepad",
+                "sin título: bloc",
+                "sin título - bloc",
+                "*nuevo1 - notepad"
+            ],
+            "comments": [
+                "Ese bloc de notas vacío lleva 2 horas abierto. Escribe algo ya.",
+                "¿Una página en blanco? ¡La inspiración llegará... algún día!",
+                "*mira el cursor parpadear* ...¿vas a escribir algo o qué?"
+            ]
+        },
+        "recycle_bin": {
+            "keywords": [
+                "recycle bin",
+                "papelera de reciclaje",
+                "papelera"
+            ],
+            "comments": [
+                "¿Me vas a tirar a la basura? 😢",
+                "¡No me borres! ¡Soy reciclable!",
+                "*se asoma a la papelera* ...¿hay comida aquí?"
+            ]
         }
     }
 }

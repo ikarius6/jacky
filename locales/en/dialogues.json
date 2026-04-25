@@ -707,6 +707,55 @@
                 "Changing settings? Don't break something!",
                 "Tweaking the system, huh?"
             ]
+        },
+        "task_manager": {
+            "keywords": [
+                "task manager",
+                "taskmgr",
+                "administrador de tareas"
+            ],
+            "comments": [
+                "No no no! Don't close me!",
+                "Are you here to kill me?! I've been good!",
+                "*hides* Please don't select me!"
+            ]
+        },
+        "calculator": {
+            "keywords": [
+                "calculator",
+                "calculadora",
+                "calc"
+            ],
+            "comments": [
+                "2 + 2 = 🐱 ...right?",
+                "Math isn't my strong suit!",
+                "*counts on tiny fingers*"
+            ]
+        },
+        "notepad_untitled": {
+            "keywords": [
+                "untitled - notepad",
+                "sin título: bloc",
+                "sin título - bloc",
+                "*nuevo1 - notepad"
+            ],
+            "comments": [
+                "That empty notepad has been open for 2 hours. Write something already.",
+                "A blank page? Inspiration will come... someday!",
+                "*watches the cursor blink* ...you gonna write something or what?"
+            ]
+        },
+        "recycle_bin": {
+            "keywords": [
+                "recycle bin",
+                "papelera de reciclaje",
+                "papelera"
+            ],
+            "comments": [
+                "Are you gonna throw me in the trash? 😢",
+                "Don't delete me! I'm recyclable!",
+                "*peeks into the bin* ...is there food in here?"
+            ]
         }
     }
 }

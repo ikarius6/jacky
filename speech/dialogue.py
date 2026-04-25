@@ -5,12 +5,16 @@ from utils.i18n import get_dialogues, get_app_groups
 
 
 def _build_app_comments() -> dict:
-    """Build flat keyword → comments lookup from current locale's app_groups."""
+    """Build flat keyword → comments lookup from current locale's app_groups.
+
+    Sorted by keyword length descending so specific matches
+    (e.g. "untitled - notepad") take priority over generic ones ("notepad").
+    """
     comments = {}
     for _group in get_app_groups().values():
         for _kw in _group.get("keywords", []):
             comments[_kw] = _group.get("comments", [])
-    return comments
+    return dict(sorted(comments.items(), key=lambda x: len(x[0]), reverse=True))
 
 
 def get_line(trigger: str, pet_name: str = "Jacky", **kwargs) -> Optional[str]:
