@@ -505,6 +505,25 @@
             "¿Eh? ¿Me quedé dormido?",
             "*salta* ¡No estaba dormido! ¡Estaba... descansando los ojos!",
             "¡Al fin! ¡Pensé que te habías olvidado de mí!"
+        ],
+        "collectible_spotted": [
+            "¡Oh! ¿Qué es eso? ¡Veo un {sprite_name} en tu escritorio!",
+            "¡Mira! ¡Apareció un {sprite_name}! ¡Haz clic para recogerlo!",
+            "¡¿Eso es un {sprite_name}?! ¡No lo dejes escapar!",
+            "✨ ¡Un {sprite_name} misterioso apareció! ¡Recógelo!",
+            "¡Ooh! ¡Encontré un {sprite_name}! ¡Dale clic antes de que desaparezca!"
+        ],
+        "collectible_collected": [
+            "¡Lo atrapaste! ¡Veamos qué es...!",
+            "¡Buen ojo! ¡A ver qué encontramos!",
+            "¡Recogido! ¡Momento de descubrir qué es!",
+            "¡Ooh! ¡Déjame ver eso de cerca!"
+        ],
+        "collectible_added": [
+            "¡Añadido a tu colección! 🎒",
+            "¡Uno más para la colección! ¡Sigue así!",
+            "¡Guardado! Tu colección crece y crece~",
+            "¡Coleccionable guardado! ¿Cuántos llevas ya?"
         ]
     },
     "app_groups": {

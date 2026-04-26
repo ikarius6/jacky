@@ -11,3 +11,4 @@ settings.json
 settings.json.orig
 timers.json
 routines/*.json
+collectibles/collection.json

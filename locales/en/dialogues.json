@@ -505,6 +505,25 @@
             "Huh? Did I fall asleep?",
             "*jumps* I wasn't sleeping! I was... resting my eyes!",
             "Finally! I thought you forgot about me!"
+        ],
+        "collectible_spotted": [
+            "Oh! What's that? I see a {sprite_name} on your desktop!",
+            "Look! A {sprite_name} appeared! Click it to pick it up!",
+            "Is that a {sprite_name}?! Don't let it escape!",
+            "✨ A mysterious {sprite_name} appeared! Grab it!",
+            "Ooh! I found a {sprite_name}! Click it before it disappears!"
+        ],
+        "collectible_collected": [
+            "You caught it! Let's see what it is...!",
+            "Nice eye! Let's see what we found!",
+            "Picked up! Time to find out what it is!",
+            "Ooh! Let me take a closer look!"
+        ],
+        "collectible_added": [
+            "Added to your collection! 🎒",
+            "One more for the collection! Keep it up!",
+            "Saved! Your collection grows and grows~",
+            "Collectible saved! How many do you have now?"
         ]
     },
     "app_groups": {

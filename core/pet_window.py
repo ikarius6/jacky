@@ -43,6 +43,7 @@ from core.mixins.organize_mixin import OrganizeMixin
 from core.mixins.routine_mixin import RoutineMixin
 from core.mixins.timer_intent_mixin import TimerIntentMixin
 from core.mixins.config_mixin import ConfigMixin
+from core.mixins.collectible_mixin import CollectibleMixin
 
 log = logging.getLogger("pet_window")
 
@@ -50,7 +51,7 @@ log = logging.getLogger("pet_window")
 class PetWindow(
     ConfigMixin, WindowMixin, TrayMixin, SpeechMixin, LlmMixin,
     BoredomMixin, EasterEggMixin, AskMixin, OrganizeMixin,
-    RoutineMixin, TimerIntentMixin,
+    RoutineMixin, TimerIntentMixin, CollectibleMixin,
     QWidget,
 ):
     """Main transparent frameless window that IS the pet."""
@@ -61,6 +62,7 @@ class PetWindow(
     _organize_ready = pyqtSignal(str)    # LLM categorization JSON response
     _voice_transcript_ready = pyqtSignal(str)
     _voice_error_ready = pyqtSignal(str)
+    _collectible_card_ready = pyqtSignal(str, str)  # (sprite_key, raw_json)
 
     def __init__(self):
         super().__init__()
@@ -124,6 +126,7 @@ class PetWindow(
         self._llm_ask_ready.connect(self._say_forced)
         self._organize_ready.connect(self._on_organize_llm_response)
         self._intent_ready.connect(self._on_intent_classified)
+        self._collectible_card_ready.connect(self._on_collectible_card_llm)
 
         # Interaction components
         self._click_handler = ClickHandler(self)
@@ -246,6 +249,7 @@ class PetWindow(
         self._system_events = SystemEventsMonitor(self)
         self._setup_system_events()
         self._setup_tray()
+        self._init_collectibles()
         self._init_position()
 
     # --- Setup helpers ---
@@ -432,6 +436,7 @@ class PetWindow(
         self._window_awareness.stop()
         self._timer_manager.stop()
         self._routine_manager.stop()
+        self._cleanup_collectibles()
         self._bubble.hide()
         self._tray.hide()
         QApplication.instance().quit()

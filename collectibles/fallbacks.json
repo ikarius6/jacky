@@ -1,0 +1,16 @@
+{
+    "es": [
+        {"name": "Un objeto misterioso", "description": "Su origen es desconocido. Dicen que apareció de la nada.", "rarity_pool": [1,1,1,2,2,3]},
+        {"name": "Una reliquia sin nombre", "description": "Nadie sabe de dónde viene esto. Quizás sea mejor así.", "rarity_pool": [1,1,2,2,3,3]},
+        {"name": "Algo curioso", "description": "Parece importante, pero nadie lo ha reclamado.", "rarity_pool": [1,1,1,1,2,2]},
+        {"name": "Un cachivache raro", "description": "Lo encontré por ahí tirado. ¿Será valioso?", "rarity_pool": [1,1,2,2,2,3]},
+        {"name": "Una cosita brillante", "description": "Brilla un poco. Solo un poco.", "rarity_pool": [1,1,1,2,3,4]}
+    ],
+    "en": [
+        {"name": "A mysterious object", "description": "Its origin is unknown. They say it appeared out of thin air.", "rarity_pool": [1,1,1,2,2,3]},
+        {"name": "A nameless relic", "description": "Nobody knows where this came from. Perhaps it's better that way.", "rarity_pool": [1,1,2,2,3,3]},
+        {"name": "Something curious", "description": "It looks important, but nobody has claimed it.", "rarity_pool": [1,1,1,1,2,2]},
+        {"name": "A weird thingamajig", "description": "Found it lying around. Could it be valuable?", "rarity_pool": [1,1,2,2,2,3]},
+        {"name": "A shiny little thing", "description": "It shines a little. Just a little.", "rarity_pool": [1,1,1,2,3,4]}
+    ]
+}

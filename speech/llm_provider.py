@@ -71,7 +71,8 @@ class OllamaProvider:
             },
         }
 
-    def generate(self, context: str, callback: Callable[[Optional[str]], None]):
+    def generate(self, context: str, callback: Callable[[Optional[str]], None],
+                 system_prompt: Optional[str] = None):
         """
         Generate a response in a background thread.
         context: description of what's happening (e.g., "User clicked on me. Open windows: Chrome, VS Code").
@@ -79,7 +80,7 @@ class OllamaProvider:
         """
         def _worker():
             try:
-                payload = self._build_payload(context)
+                payload = self._build_payload(context, system_prompt=system_prompt)
                 resp = requests.post(self.chat_url, json=payload, timeout=30)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -202,13 +203,14 @@ class OpenRouterProvider:
         except (KeyError, IndexError):
             return None
 
-    def generate(self, context: str, callback: Callable[[Optional[str]], None]):
+    def generate(self, context: str, callback: Callable[[Optional[str]], None],
+                 system_prompt: Optional[str] = None):
         """Generate a response in a background thread (same interface as OllamaProvider)."""
         def _worker():
             import time
             t0 = time.monotonic()
             try:
-                payload = self._build_payload(context)
+                payload = self._build_payload(context, system_prompt=system_prompt)
                 resp = requests.post(
                     self.API_URL,
                     headers=self._headers(),
@@ -430,10 +432,11 @@ class GroqProvider:
             log.warning("Groq request error: %s", e)
             return None
 
-    def generate(self, context: str, callback: Callable[[Optional[str]], None]):
+    def generate(self, context: str, callback: Callable[[Optional[str]], None],
+                 system_prompt: Optional[str] = None):
         def _worker():
             t0 = time.monotonic()
-            payload = self._build_payload(context)
+            payload = self._build_payload(context, system_prompt=system_prompt)
             text = self._do_request(payload)
             elapsed = time.monotonic() - t0
             log.debug("Groq OK %.1fs text=%r", elapsed, text[:80] if text else None)

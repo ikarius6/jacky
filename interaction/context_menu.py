@@ -132,6 +132,17 @@ class PetContextMenu(QMenu):
 
         self.addSeparator()
 
+        self._collection_action = QAction(t("ui.menu_collection"), self)
+        self._collection_action.triggered.connect(self._open_collection)
+        self.addAction(self._collection_action)
+
+        self._spawn_collectible_action = QAction(t("ui.menu_spawn_collectible"), self)
+        self._spawn_collectible_action.triggered.connect(self._spawn_collectible)
+        self._spawn_collectible_action.setVisible(self._pet_window._config.get("debug_logging", False))
+        self.addAction(self._spawn_collectible_action)
+
+        self.addSeparator()
+
         self._settings_action = QAction(t("ui.menu_settings"), self)
         self._settings_action.triggered.connect(self._open_settings)
         self.addAction(self._settings_action)
@@ -163,6 +174,15 @@ class PetContextMenu(QMenu):
         self._pet_window._config["silent_mode"] = checked
         self._pet_window._silent_mode = checked
 
+    def _open_collection(self):
+        from interaction.collectible_widgets import CollectionPanel
+        dlg = CollectionPanel(self._pet_window._collection, self._pet_window)
+        dlg.deleted.connect(self._pet_window._on_collectible_deleted)
+        dlg.exec()
+
+    def _spawn_collectible(self):
+        self._pet_window.force_spawn_collectible()
+
     def _toggle_gamer_mode(self, checked: bool):
         """Toggle gamer mode — saves/restores settings via PetWindow."""
         self._pet_window.toggle_gamer_mode(checked)
@@ -189,6 +209,8 @@ class PetContextMenu(QMenu):
         self._ask_action.setText(t("ui.menu_ask"))
         self._listen_action.setText(t("ui.menu_listen"))
         self._look_action.setText(t("ui.menu_look"))
+        self._collection_action.setText(t("ui.menu_collection"))
+        self._spawn_collectible_action.setText(t("ui.menu_spawn_collectible"))
         self._settings_action.setText(t("ui.menu_settings"))
         self._quit_action.setText(t("ui.menu_quit"))
 
