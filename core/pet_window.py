@@ -100,6 +100,7 @@ class PetWindow(QWidget):
         self._gamer_mode = False
         self._gamer_saved: dict | None = None
         self._llm_pending = False
+        self._is_speaking = False  # True while bubble is visible or TTS is playing
         # Appearance easter egg mode: None | "evil" | "glitch"
         self._appearance_mode: str | None = None
         self._pending_question = ""  # stashed for intent classification callback
@@ -137,6 +138,7 @@ class PetWindow(QWidget):
             model_id=self._config.get("elevenlabs_model", "eleven_flash_v2_5"),
             allow_cache_func=lambda: self._perm("allow_cache"),
         )
+        self._tts_client.playback_finished.connect(self._on_tts_finished)
         self._stt_client = AssemblyAISTTClient(
             api_key=self._config.get("assemblyai_api_key", ""),
             model=self._config.get("assemblyai_model", "universal-streaming-multilingual")
@@ -1271,6 +1273,9 @@ class PetWindow(QWidget):
             return
         if self._silent_mode:
             return
+        if self._is_speaking:
+            log.debug("SCHED chat skipped — already speaking")
+            return
         if self.pet.state in (PetState.DRAGGED, PetState.TALKING):
             return
 
@@ -1323,6 +1328,9 @@ class PetWindow(QWidget):
             return
         if self._silent_mode and not force:
             return
+
+        # Mark Jacky as speaking so autonomous events don't interrupt
+        self._is_speaking = True
             
         mode = self._config.get("response_mode", "both")
         if mode in ("voice", "both") and not skip_voice:
@@ -1365,9 +1373,15 @@ class PetWindow(QWidget):
         self._say(text, force=True)
 
     def _end_talk_to_idle(self):
+        self._is_speaking = False
         if self.pet.state == PetState.TALKING:
             log.debug("END_TALK -> IDLE pos=(%d,%d)", self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
+
+    def _on_tts_finished(self):
+        """Called when ElevenLabs TTS playback ends — release the speaking lock."""
+        self._is_speaking = False
+        log.debug("TTS_DONE speaking lock released")
 
     def _show_thinking(self):
         """Show animated thinking indicator in the speech bubble."""

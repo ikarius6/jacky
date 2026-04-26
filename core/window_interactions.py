@@ -61,6 +61,9 @@ class WindowInteractionHandler:
         pw = self._pw
         if pw._silent_mode:
             return
+        if pw._is_speaking:
+            log.debug("SCHED window_interact skipped — already speaking")
+            return
         if pw.pet.state in (PetState.DRAGGED, PetState.FALLING, PetState.PEEKING):
             return
 
