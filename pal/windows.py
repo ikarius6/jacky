@@ -260,11 +260,22 @@ class _WinHotkeyHandle:
         self._thread.start()
         return True
 
+    _RETRY_INTERVAL = 3.0  # seconds between registration retries
+
     def _run(self):
-        if not _user32.RegisterHotKey(None, self.key_id,
+        # Retry loop: another instance may hold the hotkey; keep trying.
+        while self._running:
+            if _user32.RegisterHotKey(None, self.key_id,
                                       self.modifiers | MOD_NOREPEAT, self.vk):
-            log.error("Unable to register hotkey id=%d", self.key_id)
-            self._running = False
+                break
+            log.debug("Hotkey id=%d busy, retrying in %.0fs…",
+                      self.key_id, self._RETRY_INTERVAL)
+            # Sleep in small chunks so stop() is responsive
+            for _ in range(int(self._RETRY_INTERVAL / 0.1)):
+                if not self._running:
+                    return
+                time.sleep(0.1)
+        if not self._running:
             return
         self._thread_id = threading.current_thread().native_id
         try:
