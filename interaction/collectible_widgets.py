@@ -511,8 +511,19 @@ class CollectibleCardDialog(QWidget):
         self.deleteLater()
 
     def mousePressEvent(self, event):
-        # Allow dragging or just ignore
-        pass
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton and hasattr(self, '_drag_pos'):
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and hasattr(self, '_drag_pos'):
+            del self._drag_pos
+            event.accept()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
