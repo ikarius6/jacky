@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (QWidget, QLabel, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtCore import (Qt, QTimer, QPropertyAnimation, QEasingCurve,
                           pyqtSignal, QSize, QRectF)
 from PyQt6.QtGui import (QPixmap, QPainter, QColor, QFont, QBrush, QPen,
-                         QPainterPath, QLinearGradient)
+                         QPainterPath, QLinearGradient, QImage)
 
 from pal import remove_dwm_border, set_topmost
 from utils.i18n import t
@@ -193,10 +193,11 @@ class CollectibleItemWidget(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        self.setFixedSize(self.ITEM_SIZE + 8, self.ITEM_SIZE + 8)
+        self.setFixedSize(self.ITEM_SIZE + 20, self.ITEM_SIZE + 20)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self._pixmap = get_sprite_pixmap(sprite_key, self.ITEM_SIZE, glitch=(appearance_mode == "glitch"))
+        self._glow_pixmap = self._build_contour_glow()
 
         # Fade-in
         self._opacity = QGraphicsOpacityEffect(self)
@@ -262,14 +263,47 @@ class CollectibleItemWidget(QWidget):
             self._bounce_dir = -self._bounce_dir
         self.move(self.x(), self._base_y + self._bounce_offset)
 
+    def _build_contour_glow(self) -> QPixmap:
+        """Build a glow pixmap that follows the sprite's alpha silhouette."""
+        sw, sh = self._pixmap.width(), self._pixmap.height()
+        if sw == 0 or sh == 0:
+            return QPixmap()
+
+        # Create gold silhouette masked by sprite alpha
+        silhouette = QImage(sw, sh, QImage.Format.Format_ARGB32)
+        silhouette.fill(QColor(255, 215, 0, 200))
+        sp = QPainter(silhouette)
+        sp.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
+        sp.drawPixmap(0, 0, self._pixmap)
+        sp.end()
+        sil_pix = QPixmap.fromImage(silhouette)
+
+        # Paint silhouette at multiple offsets to create a soft blur
+        ww, wh = self.width(), self.height()
+        canvas = QImage(ww, wh, QImage.Format.Format_ARGB32)
+        canvas.fill(Qt.GlobalColor.transparent)
+        ox = (ww - sw) // 2
+        oy = (wh - sh) // 2
+        spread = 8
+
+        cp = QPainter(canvas)
+        cp.setRenderHint(QPainter.RenderHint.Antialiasing)
+        for dx in range(-spread, spread + 1):
+            for dy in range(-spread, spread + 1):
+                dist_sq = dx * dx + dy * dy
+                if dist_sq <= spread * spread:
+                    dist = dist_sq ** 0.5
+                    cp.setOpacity(0.055 * (1.0 - dist / (spread + 1)))
+                    cp.drawPixmap(ox + dx, oy + dy, sil_pix)
+        cp.end()
+        return QPixmap.fromImage(canvas)
+
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Soft glow behind
-        glow = QColor(255, 215, 0, 60)
-        p.setBrush(QBrush(glow))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawEllipse(0, 0, self.width(), self.height())
+        # Contour glow behind
+        if not self._glow_pixmap.isNull():
+            p.drawPixmap(0, 0, self._glow_pixmap)
         # Sprite
         px = (self.width() - self._pixmap.width()) // 2
         py = (self.height() - self._pixmap.height()) // 2
