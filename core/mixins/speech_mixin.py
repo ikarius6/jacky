@@ -114,6 +114,8 @@ class SpeechMixin:
             self._bubble.update_position(anchor_x, anchor_y)
         if self._confirm_buttons.isVisible():
             self._confirm_buttons.update_position(anchor_x, anchor_y)
+        if hasattr(self, '_music_player') and self._music_player.isVisible():
+            self._music_player.update_position(anchor_x, anchor_y)
 
     # ── STT / listen toggle ───────────────────────────────────────────────────
 

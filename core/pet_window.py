@@ -24,6 +24,7 @@ from interaction.context_menu import PetContextMenu, DEFAULT_PERMISSIONS
 from interaction.window_awareness import WindowAwareness
 from interaction.peer_discovery import PeerDiscovery
 from speech.bubble import SpeechBubble, ConfirmButtons
+from speech.music_player_widget import MusicPlayerWidget
 from speech.dialogue import get_line
 from speech.llm_provider import create_llm_provider
 from speech.voice import ElevenLabsTTSClient, AssemblyAISTTClient
@@ -44,6 +45,7 @@ from core.mixins.routine_mixin import RoutineMixin
 from core.mixins.timer_intent_mixin import TimerIntentMixin
 from core.mixins.config_mixin import ConfigMixin
 from core.mixins.collectible_mixin import CollectibleMixin
+from core.mixins.music_mixin import MusicMixin
 
 log = logging.getLogger("pet_window")
 
@@ -51,7 +53,7 @@ log = logging.getLogger("pet_window")
 class PetWindow(
     ConfigMixin, WindowMixin, TrayMixin, SpeechMixin, LlmMixin,
     BoredomMixin, EasterEggMixin, AskMixin, OrganizeMixin,
-    RoutineMixin, TimerIntentMixin, CollectibleMixin,
+    RoutineMixin, TimerIntentMixin, CollectibleMixin, MusicMixin,
     QWidget,
 ):
     """Main transparent frameless window that IS the pet."""
@@ -63,6 +65,7 @@ class PetWindow(
     _voice_transcript_ready = pyqtSignal(str)
     _voice_error_ready = pyqtSignal(str)
     _collectible_card_ready = pyqtSignal(str, str)  # (sprite_key, raw_json)
+    _music_info_ready = pyqtSignal(object)  # MediaInfo or None
 
     def __init__(self):
         super().__init__()
@@ -108,6 +111,7 @@ class PetWindow(
         self._silent_mode = self._config.get("silent_mode", False)
         self._gamer_mode = False
         self._gamer_saved: dict | None = None
+        self._music_mode = False
         self._llm_pending = False
         self._is_speaking = False
         self._pending_question = ""
@@ -148,6 +152,10 @@ class PetWindow(
         self._bubble = SpeechBubble()
         self._confirm_buttons = ConfirmButtons()
         self._confirm_buttons.confirmed.connect(self._on_confirm_button)
+        self._music_player = MusicPlayerWidget()
+        self._music_player.prev_clicked.connect(self._music_prev)
+        self._music_player.play_pause_clicked.connect(self._music_play_pause)
+        self._music_player.next_clicked.connect(self._music_next)
 
         # Voice and hotkey
         self._tts_client = ElevenLabsTTSClient(
@@ -250,6 +258,7 @@ class PetWindow(
         self._setup_system_events()
         self._setup_tray()
         self._init_collectibles()
+        self._init_music()
         self._init_position()
 
     # --- Setup helpers ---
@@ -363,6 +372,11 @@ class PetWindow(
         if self._screen_interaction.is_active:
             self._screen_interaction.cancel()
             return
+        if self._music_mode and self._current_song:
+            title, artist = self._current_song
+            text = t("ui.music_now_playing", title=title, artist=artist)
+            self._say(text, force=True, timeout_ms=5000, skip_voice=True)
+            return
         log.info("ACTION on_pet_clicked pos=(%d,%d)", self.x(), self.y())
         self.pet.set_state(PetState.GETTING_PET)
         self._say(get_line("petted", self.pet.name))
@@ -429,6 +443,8 @@ class PetWindow(
         QTimer.singleShot(2000, self._do_quit)
 
     def _do_quit(self):
+        if self._music_mode:
+            self.toggle_music_mode(False)
         self.scheduler.stop_all()
         self._boredom_timer.stop()
         self._system_events.stop()
@@ -438,6 +454,7 @@ class PetWindow(
         self._routine_manager.stop()
         self._cleanup_collectibles()
         self._bubble.hide()
+        self._music_player.hide()
         self._tray.hide()
         QApplication.instance().quit()
 

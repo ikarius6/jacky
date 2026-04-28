@@ -44,7 +44,8 @@
         "allow_topple": true,
         "allow_vision": true,
         "allow_screen_interact": true,
-        "allow_cache": true
+        "allow_cache": true,
+        "allow_comment_music": true
     },
     "llm_provider": "ollama",
     "openrouter_api_key": "",

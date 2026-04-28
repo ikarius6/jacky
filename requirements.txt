@@ -6,6 +6,7 @@ assemblyai[extras]>=0.25.0
 # Windows only
 pywin32>=306; sys_platform == "win32"
 webrtcvad>=2.0.10; sys_platform == "win32"
+winsdk>=1.0.0b10; sys_platform == "win32"
 
 # macOS only
 pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"

@@ -146,7 +146,10 @@
         "timer_minute_spoken": "minuto",
         "timer_seconds_spoken": "segundos",
         "timer_second_spoken": "segundo",
-        "menu_routines": "📋 Rutinas"
+        "menu_routines": "📋 Rutinas",
+        "menu_music": "🎵 Modo música",
+        "music_now_playing": "🎵 {title} — {artist}",
+        "music_no_session": "No hay música reproduciéndose"
     },
     "permissions": {
         "allow_comment": {
@@ -203,7 +206,11 @@
         },
         "allow_cache": {
             "label": "Permitir caché de voz",
-            "desc": "Guardar archivos de texto a voz para uso futuro"
+            "desc": "Guardar archivos de texto-a-voz para uso futuro"
+        },
+        "allow_comment_music": {
+            "label": "Comentar canciones",
+            "desc": "Hacer comentarios sobre la canción que se está reproduciendo en modo música"
         }
     }
 }

@@ -102,6 +102,12 @@ class PetContextMenu(QMenu):
         self._gamer_action.triggered.connect(self._toggle_gamer_mode)
         self._modes_menu.addAction(self._gamer_action)
 
+        self._music_action = QAction(t("ui.menu_music"), self)
+        self._music_action.setCheckable(True)
+        self._music_action.setChecked(self._pet_window._music_mode)
+        self._music_action.triggered.connect(self._toggle_music_mode)
+        self._modes_menu.addAction(self._music_action)
+
         self.addMenu(self._modes_menu)
 
         self.addSeparator()
@@ -186,8 +192,16 @@ class PetContextMenu(QMenu):
     def _toggle_gamer_mode(self, checked: bool):
         """Toggle gamer mode — saves/restores settings via PetWindow."""
         self._pet_window.toggle_gamer_mode(checked)
-        # Sync the silent checkbox since gamer mode changes it
+        # Sync the silent and music checkboxes since gamer mode changes them
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
+        self._music_action.setChecked(self._pet_window._music_mode)
+
+    def _toggle_music_mode(self, checked: bool):
+        """Toggle music mode — saves/restores settings via PetWindow."""
+        self._pet_window.toggle_music_mode(checked)
+        # Sync the silent and gamer checkboxes since music mode changes them
+        self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
+        self._gamer_action.setChecked(self._pet_window._gamer_mode)
 
     def refresh_llm_state(self):
         """Update the Preguntar/Mirar actions enabled state after config reload."""
@@ -197,6 +211,7 @@ class PetContextMenu(QMenu):
         self._look_action.setVisible(self._pet_window._llm_enabled and vision_allowed)
         self._silent_action.setChecked(self._pet_window._config.get("silent_mode", False))
         self._gamer_action.setChecked(self._pet_window._gamer_mode)
+        self._music_action.setChecked(self._pet_window._music_mode)
         # Refresh all labels for current language
         self._pet_action.setText(t("ui.menu_pet", name=self._pet_name))
         self._feed_action.setText(t("ui.menu_feed"))
@@ -206,6 +221,7 @@ class PetContextMenu(QMenu):
         self._routines_menu.setTitle(t("ui.menu_routines"))
         self._silent_action.setText(t("ui.menu_silent"))
         self._gamer_action.setText(t("ui.menu_gamer"))
+        self._music_action.setText(t("ui.menu_music"))
         self._ask_action.setText(t("ui.menu_ask"))
         self._listen_action.setText(t("ui.menu_listen"))
         self._look_action.setText(t("ui.menu_look"))
@@ -696,6 +712,7 @@ _PERMISSION_KEYS = [
     ("allow_topple",   "destructive"),
     ("allow_screen_interact", "destructive"),
     ("allow_cache",    "observe"),
+    ("allow_comment_music", "observe"),
 ]
 
 

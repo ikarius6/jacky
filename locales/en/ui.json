@@ -146,7 +146,10 @@
         "timer_minute_spoken": "minute",
         "timer_seconds_spoken": "seconds",
         "timer_second_spoken": "second",
-        "menu_routines": "📋 Routines"
+        "menu_routines": "📋 Routines",
+        "menu_music": "🎵 Music mode",
+        "music_now_playing": "🎵 {title} — {artist}",
+        "music_no_session": "No music playing"
     },
     "permissions": {
         "allow_comment": {
@@ -204,6 +207,10 @@
         "allow_cache": {
             "label": "Allow voice cache",
             "desc": "Save text-to-speech audio files for future use"
+        },
+        "allow_comment_music": {
+            "label": "Comment on songs",
+            "desc": "Make comments about the currently playing song in music mode"
         }
     }
 }

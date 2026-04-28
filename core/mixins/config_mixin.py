@@ -34,6 +34,10 @@ class ConfigMixin:
         On deactivation, restores the saved values.
         """
         if enabled and not self._gamer_mode:
+            # Disable music mode if it's on (modes are exclusive)
+            if self._music_mode:
+                self.toggle_music_mode(False)
+                self._context_menu._music_action.setChecked(False)
             self._gamer_saved = {
                 "always_on_top": self._config.get("always_on_top", True),
                 "window_push_enabled": self._config.get("window_push_enabled", True),
