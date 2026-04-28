@@ -55,11 +55,9 @@ class SpeechMixin:
         log.info("SAY state=%s pos=(%d,%d) text='%s'",
                  self.pet.state.name, self.x(), self.y(), text[:80])
         old_state = self.pet.state
-        _KEEP_ANIM = (PetState.HAPPY, PetState.EATING, PetState.DRAGGED,
-                     PetState.ATTACKING, PetState.HURT,
-                     PetState.DYING, PetState.WALKING, PetState.RUNNING,
-                     PetState.DANCE, PetState.GETTING_PET)
-        if old_state not in _KEEP_ANIM:
+        _SWITCH_TO_TALK = (PetState.IDLE, PetState.TALKING, PetState.PEEKING,
+                           PetState.THINKING, PetState.TAKING_NOTES, PetState.TYPING)
+        if old_state in _SWITCH_TO_TALK:
             self.pet.set_state(PetState.TALKING)
 
         anchor_x = self.x() + self._sprite_size // 2
@@ -75,7 +73,7 @@ class SpeechMixin:
         self._reassert_topmost()
 
         # Return to IDLE after bubble hides
-        if old_state not in _KEEP_ANIM:
+        if old_state in _SWITCH_TO_TALK:
             self._talk_end_timer.start(timeout_ms)
 
     def _say_forced(self, text: str | None):
@@ -99,7 +97,7 @@ class SpeechMixin:
 
     def _show_thinking(self):
         """Show animated thinking indicator in the speech bubble."""
-        self.pet.set_state(PetState.TALKING)
+        self.pet.set_state(PetState.THINKING)
         anchor_x = self.x() + self._sprite_size // 2
         anchor_y = self.y()
         self._bubble.show_thinking(anchor_x, anchor_y, pet_height=self._sprite_size)

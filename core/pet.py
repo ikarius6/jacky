@@ -1,6 +1,7 @@
 import logging
+import random
 from enum import Enum, auto
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Union
 
 log = logging.getLogger("pet")
 
@@ -21,33 +22,75 @@ class PetState(Enum):
     DANCE = auto()
     GETTING_PET = auto()
     PEEKING = auto()
+    SLEEPING = auto()
+    TAKING_NOTES = auto()
+    ERROR = auto()
+    TAKING_PICTURE = auto()
+    ROCKING = auto()
+    CONFUSED = auto()
+    DIZZY = auto()
+    THINKING = auto()
+    LOADING = auto()
+    TYPING = auto()
+    ALERTING = auto()
 
 
-# Maps pet states to animation state names (sprite prefixes)
-STATE_ANIMATION_MAP = {
-    PetState.IDLE: "idle",
-    PetState.TALKING: "talk",
-    PetState.WALKING: "walk",
-    PetState.RUNNING: "run",
-    PetState.HURT: "hurt",
-    PetState.HAPPY: "happy",
-    PetState.FALLING: "falling",
-    PetState.JUMPING: "jump_loop",
-    PetState.ATTACKING: "shooting",
-    PetState.EATING: "happy",
-    PetState.DRAGGED: "drag",
-    PetState.DYING: "dying",
-    PetState.DANCE: "happy",
-    PetState.GETTING_PET: "happy",
-    PetState.PEEKING: "idle",
+# Maps pet states to animation state names (sprite prefixes).
+# Values can be a single string or a list of strings.  When a list is given
+# one variant is chosen at random on each state transition so that repeated
+# visits to the same state look varied (e.g. ["idle", "idle2", "idle3"]).
+STATE_ANIMATION_MAP: dict[PetState, Union[str, list[str]]] = {
+    PetState.IDLE:           ["idle"],
+    PetState.TALKING:        ["talk"],
+    PetState.WALKING:        ["walk"],
+    PetState.RUNNING:        ["run"],
+    PetState.HURT:           ["hurt"],
+    PetState.HAPPY:          ["happy"],
+    PetState.FALLING:        ["falling"],
+    PetState.JUMPING:        ["jump_loop"],
+    PetState.ATTACKING:      ["shooting"],
+    PetState.EATING:         ["eating"],
+    PetState.DRAGGED:        ["drag"],
+    PetState.DYING:          ["dying"],
+    PetState.DANCE:          ["dance"],
+    PetState.GETTING_PET:    ["getting_pet"],
+    PetState.PEEKING:        ["peeking"],
+    PetState.SLEEPING:       ["sleeping"],
+    PetState.TAKING_NOTES:   ["taking_notes"],
+    PetState.ERROR:          ["error"],
+    PetState.TAKING_PICTURE: ["taking_picture"],
+    PetState.ROCKING:        ["rocking"],
+    PetState.CONFUSED:       ["confused"],
+    PetState.DIZZY:          ["dizzy"],
+    PetState.THINKING:       ["thinking"],
+    PetState.LOADING:        ["loading"],
+    PetState.TYPING:         ["typing"],
+    PetState.ALERTING:       ["alerting"],
 }
 
 # Fallback chains for states whose primary animation may not exist in all sprite packs.
 # When the primary animation name (from STATE_ANIMATION_MAP) is not available,
-# try these alternatives in order.
+# try these alternatives in order.  "idle" is always the implicit last resort
+# (handled in Pet.get_animation_name), so it does not need to appear here for
+# every entry, but it is included where a meaningful intermediate exists.
 ANIMATION_FALLBACKS: dict[str, list[str]] = {
-    "shooting": ["slashing", "kick"],
-    "happy":    ["kick"],
+    "shooting":       ["slashing", "kick"],
+    "eating":         ["happy"],
+    "dance":          ["happy"],
+    "getting_pet":    ["happy"],
+    "peeking":        ["idle"],
+    "happy":          ["kick"],
+    "sleeping":       ["idle"],
+    "taking_notes":   ["talk", "idle"],
+    "error":          ["hurt", "idle"],
+    "taking_picture": ["idle"],
+    "rocking":        ["happy", "kick", "idle"],
+    "confused":       ["idle_blink", "idle"],
+    "dizzy":          ["hurt", "idle"],
+    "thinking":       ["idle_blink", "idle"],
+    "loading":        ["idle_blink", "idle"],
+    "typing":         ["talk", "idle"],
+    "alerting":       ["idle_blink", "idle"],
 }
 
 
@@ -60,6 +103,8 @@ class Pet:
         self._previous_state = PetState.IDLE
         self._direction = 1  # 1 = right, -1 = left
         self._on_state_change: List[Callable[[PetState, PetState], None]] = []
+        # Cached animation variant chosen on the last state transition.
+        self._resolved_anim: Optional[str] = None
 
     @property
     def state(self) -> PetState:
@@ -91,6 +136,7 @@ class Pet:
         old = self._state
         self._previous_state = old
         self._state = new_state
+        self._resolved_anim = None  # force re-roll on next get_animation_name()
         log.info("STATE %s -> %s", old.name, new_state.name)
         for cb in self._on_state_change:
             cb(old, new_state)
@@ -98,10 +144,31 @@ class Pet:
     def get_animation_name(self) -> str:
         """Return the animation state name for the current pet state.
 
+        When a state maps to multiple animation variants the choice is made
+        once per state transition and cached so the same variant plays until
+        the state changes again.
+
         Direction is handled externally via AnimationController.set_facing(),
         so only a single state name is needed for walking and running.
         """
-        return STATE_ANIMATION_MAP.get(self._state, "idle")
+        if self._resolved_anim is not None:
+            return self._resolved_anim
+
+        entry = STATE_ANIMATION_MAP.get(self._state, "idle")
+        if isinstance(entry, list):
+            self._resolved_anim = random.choice(entry)
+        else:
+            self._resolved_anim = entry
+        return self._resolved_anim
+
+    def reroll_animation(self) -> str:
+        """Force a new random variant pick for the current state.
+
+        Useful for long-lived states (like IDLE) where you want periodic
+        variety without a full state transition.
+        """
+        self._resolved_anim = None
+        return self.get_animation_name()
 
     def resume_previous(self):
         """Go back to the previous state (e.g., after dragging)."""
