@@ -35,6 +35,7 @@ https://github.com/user-attachments/assets/e34f4733-f044-4b01-8944-50e9c8e887cf
 - **Multi-instance / Peer interactions** — run multiple Jackys that discover each other and interact (greet, attack, chase, dance, fight)
 - **Multilanguage (i18n)** — ships with Spanish and English; add a new language by dropping a single JSON file in `locales/`
 - **Granular permissions** — toggle individual behaviours (comment, peek, sit, push, shake, minimize, resize, knock, drag, tidy, topple, vision, screen interaction)
+- **Operation Modes** — switch between Silent, Gamer, and Music modes to adapt to your current activity
 - **System tray** — quick access to settings and quit
 - **Easter eggs** — 10+ hidden secrets to discover
 
@@ -216,6 +217,13 @@ Jacky monitors system-level events and reacts with contextual dialogue (or LLM-g
 - **Charging / discharging** — notices when the power cable is plugged in or unplugged
 - **Battery full** — celebrates when the battery reaches 100%
 - **User returned** — welcomes you back after 5+ minutes of inactivity
+
+### Operation Modes
+
+Jacky can adapt to your current activity using different operation modes:
+- **Silent Mode** — Mutes all TTS voice output and sound effects. Speech bubbles will still appear, but Jacky will be completely quiet.
+- **Gamer Mode** — Puts Jacky in the background (behind other windows), disables window pushing, suspends background routines, and mutes him so he doesn't interfere with your gameplay.
+- **Music Mode** — Detects when you are listening to media (Spotify, Apple Music, YouTube) and reacts to the music with dance animations and track comments.
 
 ### Multi-instance & Peer Interactions
 
