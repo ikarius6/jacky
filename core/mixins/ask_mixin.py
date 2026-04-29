@@ -139,6 +139,7 @@ class AskMixin:
                 self._ask_direct_or_vision(question)
         elif result.intent == "vision":
             if self._perm("allow_vision"):
+                self.pet.set_state(PetState.TAKING_PICTURE)
                 context = self._build_llm_context(t("llm_prompts.ask_vision", question=question))
                 image_b64 = self._capture_vision()
                 self._llm.generate_with_image(context, image_b64, self._on_ask_response)
@@ -163,6 +164,7 @@ class AskMixin:
             return
         self._llm_pending = True
         self._show_thinking()
+        self.pet.set_state(PetState.TAKING_PICTURE)
         context = self._build_llm_context(t("llm_prompts.action_look"))
         image_b64 = self._capture_vision()
         self._llm.generate_with_image(context, image_b64, self._on_ask_response)

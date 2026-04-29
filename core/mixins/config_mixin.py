@@ -143,6 +143,7 @@ class ConfigMixin:
                 fps=self._char_cfg.get("fps", 6),
                 layout=self._char_cfg.get("type", "flat"),
                 state_map=self._char_cfg.get("state_map"),
+                sprite_facing=self._char_cfg.get("sprite_facing", "right"),
             )
             self._anim_timer.setInterval(self.animation.frame_interval_ms)
             self._update_tray_icon()

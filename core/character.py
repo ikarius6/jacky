@@ -6,8 +6,13 @@ Each sprite pack needs a small ``character.json`` next to its frames::
     {
         "name": "Forest Ranger 1",
         "sprite_size": 128,
-        "fps": 10
+        "fps": 10,
+        "sprite_facing": "right"
     }
+
+Optional ``sprite_facing`` (``"right"`` or ``"left"``, default ``"right"``) tells
+the engine which direction the raw sprite frames face.  When the pet needs to
+face the opposite direction the frames are horizontally flipped.
 
 For ``sequence_dirs`` packs the state_map is **auto-detected** from the
 subdirectory names using DIR_TO_STATES.  You can still supply an explicit
@@ -31,17 +36,42 @@ WRITABLE_SPRITES_ROOT = get_writable_sprites_dir()
 # ── standard directory-name → internal-state(s) mapping ────────────────
 # Each entry maps a sprite subdirectory name to one or more internal states.
 DIR_TO_STATES: dict[str, list[str]] = {
+    # ── existing sprite directories ──
     "Idle":                 ["idle"],
-    "Idle Blinking":        ["idle_blink", "talk"],
+    "Idle2":                ["idle2"],
+    "Idle Blinking":        ["idle_blink"],
+    "Talk":                 ["talk"],
     "Walking":              ["walk"],
     "Running":              ["run"],
-    "Hurt":                 ["hurt", "drag"],
-    "Kicking":              ["kick", "happy"],
+    "Hurt":                 ["hurt"],
+    "Drag":                 ["drag"],
+    "Kicking":              ["kick"],
+    "Happy":                ["happy"],
+    "Happy2":               ["happy2"],
     "Dying":                ["dying"],
     "Falling Down":         ["falling"],
     "Jump Loop":            ["jump_loop"],
     "Shooting":             ["shooting"],
     "Slashing":             ["slashing"],
+    # ── new animation directories (ready for future sprite packs) ──
+    "Eating":               ["eating"],
+    "Dance":                ["dance"],
+    "Getting Pet":          ["getting_pet"],
+    "Getting Pet2":         ["getting_pet2"],
+    "Getting Pet3":         ["getting_pet3"],
+    "Peeking":              ["peeking"],
+    "Sleeping":             ["sleeping"],
+    "Taking Notes":         ["taking_notes"],
+    "Error":                ["error"],
+    "Taking Picture":       ["taking_picture"],
+    "Rocking":              ["rocking"],
+    "Confused":             ["confused"],
+    "Dizzy":                ["dizzy"],
+    "Thinking":             ["thinking"],
+    "Loading":              ["loading"],
+    "Typing":               ["typing"],
+    "Typing2":              ["typing2"],
+    "Alerting":             ["alerting"],
 }
 
 # ── auto-detection helpers ──────────────────────────────────────────────
@@ -94,12 +124,18 @@ def _scan_sprites_dir(root: str, source: str) -> dict[str, dict]:
         else:
             state_map = data.get("state_map", {})
 
+        sprite_facing = data.get("sprite_facing", "right").lower()
+        if sprite_facing not in ("right", "left"):
+            log.warning("%s: invalid sprite_facing %r, defaulting to 'right'", json_path, sprite_facing)
+            sprite_facing = "right"
+
         characters[name] = {
             "type": char_type,
             "path": abs_sprite_dir,
             "sprite_size": data.get("sprite_size", 128),
             "fps": data.get("fps", 8),
             "state_map": state_map,
+            "sprite_facing": sprite_facing,
             "version": data.get("version"),
             "source": source,
             "folder_id": folder,
@@ -142,7 +178,7 @@ def get_character(name: str) -> dict:
     if fallback:
         return CHARACTERS[fallback]
     return {"type": "flat", "path": os.path.join(SPRITES_ROOT, "Forest_Ranger_3"),
-            "sprite_size": 128, "fps": 6, "state_map": {}}
+            "sprite_size": 128, "fps": 6, "state_map": {}, "sprite_facing": "right"}
 
 
 def get_sprites_dir(name: str) -> str:

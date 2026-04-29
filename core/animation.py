@@ -14,7 +14,8 @@ class AnimationController:
     """
 
     def __init__(self, sprites_dir: str, sprite_size: int = 128, fps: int = 6,
-                 layout: str = "flat", state_map: Dict[str, str] | None = None):
+                 layout: str = "flat", state_map: Dict[str, str] | None = None,
+                 sprite_facing: str = "right"):
         self._sprites_dir = sprites_dir
         self._sprite_size = sprite_size
         self._fps = fps
@@ -23,6 +24,8 @@ class AnimationController:
         self._frames: Dict[str, List[QPixmap]] = {}
         self._current_state: str = "idle"
         self._frame_index: int = 0
+        # Which direction the raw sprite frames face ("right" or "left").
+        self._sprite_facing_left: bool = (sprite_facing == "left")
         # Runtime facing direction — True means the pet is looking left.
         self._facing_left: bool = False
         self._load_all_sprites()
@@ -117,8 +120,9 @@ class AnimationController:
         self._facing_left = facing_left
 
     def _maybe_flip(self, pixmap: QPixmap) -> QPixmap:
-        """Return a horizontally flipped copy of *pixmap* if the pet faces left."""
-        if self._facing_left:
+        """Return a horizontally flipped copy when the runtime facing differs
+        from the native sprite facing direction."""
+        if self._facing_left != self._sprite_facing_left:
             return pixmap.transformed(QTransform().scale(-1, 1))
         return pixmap
 

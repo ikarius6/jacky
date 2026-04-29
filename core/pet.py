@@ -40,12 +40,12 @@ class PetState(Enum):
 # one variant is chosen at random on each state transition so that repeated
 # visits to the same state look varied (e.g. ["idle", "idle2", "idle3"]).
 STATE_ANIMATION_MAP: dict[PetState, Union[str, list[str]]] = {
-    PetState.IDLE:           ["idle"],
+    PetState.IDLE:           ["idle", "idle2"],
     PetState.TALKING:        ["talk"],
     PetState.WALKING:        ["walk"],
     PetState.RUNNING:        ["run"],
     PetState.HURT:           ["hurt"],
-    PetState.HAPPY:          ["happy"],
+    PetState.HAPPY:          ["happy", "happy2"],
     PetState.FALLING:        ["falling"],
     PetState.JUMPING:        ["jump_loop"],
     PetState.ATTACKING:      ["shooting"],
@@ -53,7 +53,7 @@ STATE_ANIMATION_MAP: dict[PetState, Union[str, list[str]]] = {
     PetState.DRAGGED:        ["drag"],
     PetState.DYING:          ["dying"],
     PetState.DANCE:          ["dance"],
-    PetState.GETTING_PET:    ["getting_pet"],
+    PetState.GETTING_PET:    ["getting_pet", "getting_pet2", "getting_pet3"],
     PetState.PEEKING:        ["peeking"],
     PetState.SLEEPING:       ["sleeping"],
     PetState.TAKING_NOTES:   ["taking_notes"],
@@ -64,7 +64,7 @@ STATE_ANIMATION_MAP: dict[PetState, Union[str, list[str]]] = {
     PetState.DIZZY:          ["dizzy"],
     PetState.THINKING:       ["thinking"],
     PetState.LOADING:        ["loading"],
-    PetState.TYPING:         ["typing"],
+    PetState.TYPING:         ["typing", "typing2"],
     PetState.ALERTING:       ["alerting"],
 }
 
@@ -74,13 +74,18 @@ STATE_ANIMATION_MAP: dict[PetState, Union[str, list[str]]] = {
 # (handled in Pet.get_animation_name), so it does not need to appear here for
 # every entry, but it is included where a meaningful intermediate exists.
 ANIMATION_FALLBACKS: dict[str, list[str]] = {
+    "idle2":          ["idle"],
+    "walk":           ["idle"],
+    "run":            ["walk", "idle"],
+    "kick":           ["idle"],
     "shooting":       ["slashing", "kick"],
+    "happy":          ["kick"],
     "eating":         ["happy"],
     "dance":          ["happy"],
     "getting_pet":    ["happy"],
     "peeking":        ["idle"],
-    "happy":          ["kick"],
     "sleeping":       ["idle"],
+    "talk":           ["idle_blink"],
     "taking_notes":   ["talk", "idle"],
     "error":          ["hurt", "idle"],
     "taking_picture": ["idle"],
@@ -90,7 +95,13 @@ ANIMATION_FALLBACKS: dict[str, list[str]] = {
     "thinking":       ["idle_blink", "idle"],
     "loading":        ["idle_blink", "idle"],
     "typing":         ["talk", "idle"],
-    "alerting":       ["idle_blink", "idle"],
+    "alerting":       ["talk", "idle"],
+    "getting_pet2":   ["getting_pet"],
+    "getting_pet3":   ["getting_pet"],
+    "happy2":         ["happy"],
+    "typing2":        ["typing"],
+    "drag":           ["hurt", "idle"],
+    "falling":        ["hurt", "idle"],
 }
 
 

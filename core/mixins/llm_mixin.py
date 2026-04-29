@@ -4,6 +4,7 @@ import random
 import datetime
 import logging
 
+from core.pet import PetState
 from utils.i18n import t
 from utils.screen_capture import capture_vision_area
 from speech.dialogue import get_line
@@ -65,6 +66,7 @@ class LlmMixin:
     def _ask_direct_or_vision(self, question: str):
         """Send the question to the LLM using vision or text based on keywords/permissions."""
         if self._needs_vision(question) and self._perm("allow_vision"):
+            self.pet.set_state(PetState.TAKING_PICTURE)
             context = self._build_llm_context(t("llm_prompts.ask_vision", question=question))
             image_b64 = self._capture_vision()
             self._llm.generate_with_image(context, image_b64, self._on_ask_response)

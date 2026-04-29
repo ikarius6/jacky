@@ -39,10 +39,10 @@ class EasterEggMixin:
 
     def on_dizzy(self):
         """Easter egg: rapid clicks or long drag made Jacky dizzy."""
-        if self.pet.state == PetState.HURT:
+        if self.pet.state == PetState.DIZZY:
             return
         log.info("EASTER_EGG dizzy meltdown pos=(%d,%d)", self.x(), self.y())
-        self.pet.set_state(PetState.HURT)
+        self.pet.set_state(PetState.DIZZY)
         self._say(get_line("dizzy", self.pet.name))
         self._temp_state_timer.start(5000)
         QTimer.singleShot(5000, self._dizzy_recover)

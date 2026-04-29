@@ -64,6 +64,7 @@ class PetWindow(
     _organize_ready = pyqtSignal(str)    # LLM categorization JSON response
     _voice_transcript_ready = pyqtSignal(str)
     _voice_error_ready = pyqtSignal(str)
+    _voice_session_ended = pyqtSignal()
     _collectible_card_ready = pyqtSignal(str, str)  # (sprite_key, raw_json)
     _music_info_ready = pyqtSignal(object)  # MediaInfo or None
 
@@ -96,6 +97,7 @@ class PetWindow(
             fps=self._char_cfg.get("fps", 6),
             layout=self._char_cfg.get("type", "flat"),
             state_map=self._char_cfg.get("state_map"),
+            sprite_facing=self._char_cfg.get("sprite_facing", "right"),
         )
         self.movement = MovementEngine(
             sprite_size=self._sprite_size,
@@ -175,6 +177,8 @@ class PetWindow(
         )
         self._stt_client.on_transcript_callback = self._voice_transcript_ready.emit
         self._stt_client.on_error_callback = self._voice_error_ready.emit
+        self._stt_client.on_finished_callback = self._voice_session_ended.emit
+        self._voice_session_ended.connect(self._on_voice_session_ended)
         self._listen_timeout = QTimer(self)
         self._listen_timeout.setSingleShot(True)
         self._listen_timeout.timeout.connect(self._on_listen_timeout)
@@ -219,6 +223,7 @@ class PetWindow(
         self._last_user_interaction: float = time.monotonic()
         self._boredom_level: int = 0
         self._boredom_asleep: bool = False
+        self._just_woke_up: bool = False
         self._last_selftalk: float = 0.0
         self._boredom_timer = QTimer(self)
         self._boredom_timer.setInterval(60_000)
@@ -369,6 +374,9 @@ class PetWindow(
 
     def on_pet_clicked(self):
         self._touch_user_interaction()
+        if self._just_woke_up:
+            self._just_woke_up = False
+            return
         if self._screen_interaction.is_active:
             self._screen_interaction.cancel()
             return
@@ -463,10 +471,19 @@ class PetWindow(
     def _on_anim_tick(self):
         anim_name = self.pet.get_animation_name()
         if anim_name not in self.animation.available_states:
-            for alt in ANIMATION_FALLBACKS.get(anim_name, []):
-                if alt in self.animation.available_states:
-                    anim_name = alt
+            resolved = None
+            visited = {anim_name}
+            queue = list(ANIMATION_FALLBACKS.get(anim_name, []))
+            while queue:
+                candidate = queue.pop(0)
+                if candidate in self.animation.available_states:
+                    resolved = candidate
                     break
+                if candidate not in visited:
+                    visited.add(candidate)
+                    queue.extend(ANIMATION_FALLBACKS.get(candidate, []))
+            if resolved:
+                anim_name = resolved
             else:
                 log.warning("ANIM_MISS state='%s' not in available=%s pos=(%d,%d)",
                             anim_name, self.animation.available_states, self.x(), self.y())
@@ -570,7 +587,8 @@ class PetWindow(
         if self.pet.state in (PetState.HAPPY, PetState.EATING, PetState.ATTACKING,
                               PetState.PEEKING, PetState.JUMPING, PetState.HURT,
                               PetState.TALKING, PetState.DYING,
-                              PetState.DANCE, PetState.GETTING_PET):
+                              PetState.DANCE, PetState.GETTING_PET,
+                              PetState.DIZZY):
             log.debug("END_TEMP %s -> IDLE pos=(%d,%d)", self.pet.state.name, self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
 

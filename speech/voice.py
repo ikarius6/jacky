@@ -301,6 +301,7 @@ class AssemblyAISTTClient:
         self._model = model
         self.on_transcript_callback: Optional[Callable[[str], None]] = None
         self.on_error_callback: Optional[Callable[[str], None]] = None
+        self.on_finished_callback: Optional[Callable[[], None]] = None
         
         self._is_recording = False
         self._should_record_audio = False
@@ -511,6 +512,11 @@ class AssemblyAISTTClient:
                     pass
                 p.terminate()
                 self._is_recording = False
+                if self.on_finished_callback:
+                    try:
+                        self.on_finished_callback()
+                    except Exception:
+                        pass
         
         threading.Thread(target=_worker, daemon=True).start()
 

@@ -55,8 +55,9 @@ class SpeechMixin:
         log.info("SAY state=%s pos=(%d,%d) text='%s'",
                  self.pet.state.name, self.x(), self.y(), text[:80])
         old_state = self.pet.state
-        _SWITCH_TO_TALK = (PetState.IDLE, PetState.TALKING, PetState.PEEKING,
-                           PetState.THINKING, PetState.TAKING_NOTES, PetState.TYPING)
+        _SWITCH_TO_TALK = (PetState.IDLE, PetState.TALKING,
+                           PetState.THINKING, PetState.TYPING, PetState.TAKING_PICTURE)
+        _REVERT_TO_IDLE = _SWITCH_TO_TALK + (PetState.ALERTING,)
         if old_state in _SWITCH_TO_TALK:
             self.pet.set_state(PetState.TALKING)
 
@@ -73,18 +74,19 @@ class SpeechMixin:
         self._reassert_topmost()
 
         # Return to IDLE after bubble hides
-        if old_state in _SWITCH_TO_TALK:
+        if old_state in _REVERT_TO_IDLE:
             self._talk_end_timer.start(timeout_ms)
 
     def _say_forced(self, text: str | None):
         """Show speech bubble ignoring silent mode (for direct user questions)."""
+        self.pet.set_state(PetState.ALERTING)
         self._say(text, force=True)
 
     # ── TTS callbacks ─────────────────────────────────────────────────────────
 
     def _end_talk_to_idle(self):
         self._is_speaking = False
-        if self.pet.state == PetState.TALKING:
+        if self.pet.state in (PetState.TALKING, PetState.ALERTING):
             log.debug("END_TALK -> IDLE pos=(%d,%d)", self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
 
@@ -129,9 +131,18 @@ class SpeechMixin:
             self._stt_client.stop_listening()
         else:
             max_sec = self._config.get("listen_timeout_seconds", 60)
+            self.pet.set_state(PetState.TAKING_NOTES)
             self._say(t("ui.listening"), force=True, timeout_ms=max_sec * 1000, skip_voice=True)
             self._stt_client.start_listening()
             self._listen_timeout.start(max_sec * 1000)
+
+    def _on_voice_session_ended(self):
+        """Called when any STT session finishes (empty transcript, error, normal, etc.)."""
+        self._listen_timeout.stop()
+        if self.pet.state == PetState.TAKING_NOTES:
+            log.debug("Voice session ended while TAKING_NOTES, resetting to IDLE")
+            self._bubble.hide()
+            self.pet.set_state(PetState.IDLE)
 
     def _on_listen_timeout(self):
         """Auto-stop listening when the max recording duration expires."""

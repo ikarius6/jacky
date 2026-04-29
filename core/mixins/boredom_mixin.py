@@ -100,7 +100,7 @@ class BoredomMixin:
         log.info("BOREDOM asleep")
         self._boredom_asleep = True
         self._say(get_line("bored_asleep", self.pet.name))
-        self.pet.set_state(PetState.DYING)
+        self.pet.set_state(PetState.SLEEPING)
         self.scheduler.pause_all()
 
     def _wake_up(self):
@@ -108,6 +108,7 @@ class BoredomMixin:
         log.info("BOREDOM wakeup")
         self._boredom_asleep = False
         self._boredom_level = 0
+        self._just_woke_up = True
         self.scheduler.resume_all()
         self.pet.set_state(PetState.HAPPY)
         self._temp_state_timer.start(3000)
