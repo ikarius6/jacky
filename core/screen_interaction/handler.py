@@ -745,7 +745,7 @@ class ScreenInteractionHandler(QObject):
                 self._pet._say(line, force=True)
                 self._current_task.state = "failed"
                 from core.pet import PetState
-                self._pet.pet.set_state(PetState.IDLE)
+                self._pet.pet.set_state(PetState.ERROR)
 
         elif task.action_type == "close":
             # Click to bring window to foreground, then Alt+F4
@@ -772,7 +772,7 @@ class ScreenInteractionHandler(QObject):
                 self._pet._say(line, force=True)
                 self._current_task.state = "failed"
                 from core.pet import PetState
-                self._pet.pet.set_state(PetState.IDLE)
+                self._pet.pet.set_state(PetState.ERROR)
 
     def _do_close(self):
         """Send Alt+F4 after clicking on the target."""
@@ -813,7 +813,10 @@ class ScreenInteractionHandler(QObject):
         self._pet._llm_pending = False
         self._clean_qimage = None
         from core.pet import PetState
-        self._pet.pet.set_state(PetState.IDLE)
+        if dialogue_key == "interact_not_found":
+            self._pet.pet.set_state(PetState.CONFUSED)
+        else:
+            self._pet.pet.set_state(PetState.ERROR)
         line = get_line(dialogue_key, self._pet.pet.name)
         self._pet._say(line, force=True)
 
@@ -825,7 +828,7 @@ class ScreenInteractionHandler(QObject):
             self._pet._llm_pending = False
             self._clean_qimage = None
             from core.pet import PetState
-            self._pet.pet.set_state(PetState.IDLE)
+            self._pet.pet.set_state(PetState.ERROR)
             line = get_line("interact_timeout", self._pet.pet.name)
             self._pet._say(line, force=True)
 

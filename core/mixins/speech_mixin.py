@@ -57,7 +57,7 @@ class SpeechMixin:
         old_state = self.pet.state
         _SWITCH_TO_TALK = (PetState.IDLE, PetState.TALKING,
                            PetState.THINKING, PetState.TYPING, PetState.TAKING_PICTURE)
-        _REVERT_TO_IDLE = _SWITCH_TO_TALK + (PetState.ALERTING,)
+        _REVERT_TO_IDLE = _SWITCH_TO_TALK + (PetState.ALERTING, PetState.CONFUSED, PetState.ERROR)
         if old_state in _SWITCH_TO_TALK:
             self.pet.set_state(PetState.TALKING)
 
@@ -86,7 +86,7 @@ class SpeechMixin:
 
     def _end_talk_to_idle(self):
         self._is_speaking = False
-        if self.pet.state in (PetState.TALKING, PetState.ALERTING):
+        if self.pet.state in (PetState.TALKING, PetState.ALERTING, PetState.CONFUSED, PetState.ERROR):
             log.debug("END_TALK -> IDLE pos=(%d,%d)", self.x(), self.y())
             self.pet.set_state(PetState.IDLE)
 

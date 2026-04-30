@@ -183,5 +183,7 @@ class OrganizeMixin:
         else:
             # Unrecognized — ask again
             self._pending_organize = None
+            from core.pet import PetState
+            self.pet.set_state(PetState.CONFUSED)
             self._say(get_line("organize_confirm_retry", self.pet.name), force=True)
             self._pending_organize = plan
