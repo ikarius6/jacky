@@ -45,6 +45,7 @@ class ScreenInteractionHandler(QObject):
     _grid_ready = pyqtSignal(str)
     _locate_ready = pyqtSignal(str)
     _refine_ready = pyqtSignal(str)
+    _type_ready = pyqtSignal()
 
     def __init__(self, pet_window):
         super().__init__(pet_window)
@@ -59,6 +60,7 @@ class ScreenInteractionHandler(QObject):
         self._grid_ready.connect(self._on_grid_response)
         self._locate_ready.connect(self._on_locate_response)
         self._refine_ready.connect(self._on_refine_response)
+        self._type_ready.connect(self._on_type_ready)
 
         # State for two-phase locate (grid → crop)
         self._clean_qimage = None
@@ -499,21 +501,34 @@ class ScreenInteractionHandler(QObject):
         locate_template = get_interact_locate_prompt()
         if not locate_template:
             locate_template = (
-                'This zoomed-in image has a green numbered grid overlay '
-                '({cols} columns x {rows} rows). Cells numbered 1 to {total}, '
-                'left to right, top to bottom. '
+                'CONTEXT: This image is a zoomed-in crop from a full-screen capture. '
+                'In a previous step, "{target}" was identified in this region of the '
+                'screen. The target IS present in this image — you may be seeing its '
+                'interior, content area, or surroundings at higher zoom. '
+                '{action_hint}'
+                'The image has a green numbered grid overlay: {cols} columns x {rows} '
+                'rows = {total} cells total. Each cell has a dark circle badge with a '
+                'white number centered in it. Cells numbered 1 to {total}, left to right, '
+                'top to bottom. '
                 'First, describe in one sentence what you see in the image. '
-                'Which cell contains the CENTER of: "{target}"? '
+                'Then identify which cell number badge is nearest to the best clickable '
+                'point for "{target}". '
                 'Respond ONLY with JSON: {{"cell": <number>, "confidence": <0_to_100>}}. '
-                'If not found: {{"error": "not found"}}'
+                'If truly not visible: {{"error": "not found"}}'
             )
+
+        action_hint = self._get_action_hint(
+            self._current_task.action_type, self._current_task.target_desc)
+
         user_prompt = (locate_template
                        .replace("{target}", self._current_task.target_desc)
                        .replace("{cols}", str(sub_cols))
                        .replace("{rows}", str(sub_rows))
                        .replace("{total}", str(total))
                        .replace("{width}", str(crop_w))
-                       .replace("{height}", str(crop_h)))
+                       .replace("{height}", str(crop_h))
+                       .replace("{action}", self._current_task.action_type)
+                       .replace("{action_hint}", action_hint))
 
         def _callback(text):
             self._locate_ready.emit(text if text else "")
@@ -795,15 +810,56 @@ class ScreenInteractionHandler(QObject):
             self._pet.pet.set_state(PetState.TYPING)
             
             import threading
-            from PyQt6.QtCore import QTimer
             
             def _type_bg():
                 type_text(text)
-                QTimer.singleShot(0, lambda: self._complete("interact_done_type"))
+                self._type_ready.emit()
                 
             threading.Thread(target=_type_bg, daemon=True).start()
         else:
             self._complete("interact_done_type")
+
+    def _on_type_ready(self):
+        """Called on main thread when background typing finishes."""
+        self._complete("interact_done_type")
+
+    # ── Action hint for Phase 2 ────────────────────────────────
+
+    @staticmethod
+    def _get_action_hint(action_type: str, target_desc: str) -> str:
+        """Return an action-specific hint sentence for the Phase 2 locate prompt.
+
+        Helps the LLM understand *what kind* of clickable point to look for
+        when viewing a zoomed-in crop (e.g. text input area vs title bar).
+        """
+        hints = {
+            "type": (
+                'The intended action is TYPING text into "{target}". '
+                'Select the cell containing the text input area, text field, '
+                'or editable content area where text can be entered. '
+            ),
+            "click": (
+                'The intended action is CLICKING on "{target}". '
+                'Select the cell containing the main interactive/clickable area '
+                'of the element (button, link, icon, etc). '
+            ),
+            "close": (
+                'The intended action is CLOSING "{target}". '
+                'Select the cell containing the window\'s close button (✕) '
+                'in the title bar, usually at the top-right corner. '
+            ),
+            "minimize": (
+                'The intended action is MINIMIZING "{target}". '
+                'Select the cell containing the window\'s minimize button (—) '
+                'in the title bar, usually near the top-right corner. '
+            ),
+            "navigate": (
+                'The intended action is NAVIGATING to "{target}". '
+                'Select the cell closest to the center of the element. '
+            ),
+        }
+        hint = hints.get(action_type, "")
+        return hint.replace("{target}", target_desc)
 
     # ── Helpers ───────────────────────────────────────────────────
 
