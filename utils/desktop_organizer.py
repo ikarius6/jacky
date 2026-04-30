@@ -86,6 +86,25 @@ def _resolve_desktop() -> pathlib.Path:
     return pathlib.Path.home() / "Desktop"
 
 
+def list_folder_files(folder: pathlib.Path) -> List[Dict[str, str]]:
+    """Return a JSON-serializable list of loose files in *folder*.
+
+    Each entry: ``{"name": "photo.jpg", "ext": ".jpg"}``.
+    Existing sub-folders and hidden/system files are skipped.
+    """
+    entries: List[Dict[str, str]] = []
+    if not folder.is_dir():
+        log.warning("Folder path does not exist: %s", folder)
+        return entries
+    for p in sorted(folder.iterdir()):
+        if not p.is_file():
+            continue
+        if p.name in _SKIP_NAMES or p.name.startswith("."):
+            continue
+        entries.append({"name": p.name, "ext": p.suffix.lower()})
+    return entries
+
+
 def list_desktop_files(desktop: Optional[pathlib.Path] = None) -> List[Dict[str, str]]:
     """Return a JSON-serializable list of loose files on the Desktop.
 
@@ -94,17 +113,7 @@ def list_desktop_files(desktop: Optional[pathlib.Path] = None) -> List[Dict[str,
     """
     if desktop is None:
         desktop = _resolve_desktop()
-    entries: List[Dict[str, str]] = []
-    if not desktop.is_dir():
-        log.warning("Desktop path does not exist: %s", desktop)
-        return entries
-    for p in sorted(desktop.iterdir()):
-        if not p.is_file():
-            continue
-        if p.name in _SKIP_NAMES or p.name.startswith("."):
-            continue
-        entries.append({"name": p.name, "ext": p.suffix.lower()})
-    return entries
+    return list_folder_files(desktop)
 
 
 # ── Rule-based categorization (fallback when LLM is off) ─────────────

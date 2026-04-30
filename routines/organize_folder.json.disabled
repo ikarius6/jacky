@@ -1,0 +1,54 @@
+{
+  "id": "organize_folder",
+  "title": "Organizar Carpeta",
+  "description": "Escanea una carpeta específica y organiza los archivos en subcarpetas",
+  "schedule": {},
+  "triggers": [
+    "organiza la carpeta",
+    "organize folder",
+    "ordena la carpeta",
+    "organiza mis archivos",
+    "limpia la carpeta",
+    "clean the folder",
+    "organize the folder",
+    "ordena mis archivos"
+  ],
+  "enabled": true,
+  "steps": [
+    {
+      "id": "scan_folder",
+      "type": "filesystem",
+      "query": "list_folder",
+      "params": {
+        "folder": "{{folder_path}}"
+      },
+      "output_var": "file_list"
+    }
+  ],
+  "logic": [
+    {
+      "if": { "var": "file_list", "op": "!=", "val": "[]" },
+      "then": "propose",
+      "else": "empty"
+    }
+  ],
+  "actions": {
+    "propose": {
+      "type": "organize",
+      "confirm_msg": {
+        "es": "Dame un momento para revisar la carpeta... 🔍",
+        "en": "Give me a moment to scan the folder... 🔍"
+      }
+    },
+    "empty": {
+      "type": "say",
+      "nollm": {
+        "es": "🗂️ La carpeta ya está limpia, no hay archivos sueltos.",
+        "en": "🗂️ The folder is already clean, no loose files found."
+      }
+    }
+  },
+  "variables": {
+    "folder_path": ""
+  }
+}

@@ -18,7 +18,7 @@ class OrganizeMixin:
 
     # ── Routine organize trigger ──────────────────────────────────────────────
 
-    def _on_organize_proposal(self, routine_id: str, files_json: str, confirm_msg: str):
+    def _on_organize_proposal(self, routine_id: str, files_json: str, confirm_msg: str, target_folder: str = ""):
         """Handle the organize action from the routine engine.
 
         1. Say the confirm_msg while processing.
@@ -37,6 +37,7 @@ class OrganizeMixin:
             return
 
         self._organize_real_files = files
+        self._organize_target_folder = target_folder or ""
 
         if confirm_msg:
             self._say(confirm_msg, force=True)
@@ -157,8 +158,11 @@ class OrganizeMixin:
             self._say(get_line("organize_executing", self.pet.name), force=True)
 
             def _do_move():
+                import pathlib
                 from utils.desktop_organizer import execute_organize_plan
-                result = execute_organize_plan(plan)
+                target = getattr(self, "_organize_target_folder", "")
+                folder = pathlib.Path(target) if target else None
+                result = execute_organize_plan(plan, desktop=folder)
                 moved_count = len(result.get("moved", []))
                 error_count = len(result.get("errors", []))
                 if error_count:

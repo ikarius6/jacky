@@ -119,6 +119,7 @@ class PetWindow(
         self._pending_question = ""
         self._pending_organize: dict | None = None
         self._organize_real_files: list = []
+        self._organize_target_folder: str = ""
 
         # Easter egg state
         self._appearance_mode: str | None = None

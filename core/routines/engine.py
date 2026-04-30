@@ -94,13 +94,36 @@ def _execute_filesystem(step: RoutineStep, context: Dict[str, Any]) -> str:
         from utils.desktop_organizer import list_desktop_files
         entries = list_desktop_files()
         return json.dumps(entries, ensure_ascii=False)
+    elif query == "list_folder":
+        import pathlib
+        from utils.desktop_organizer import list_folder_files
+        raw_path = interpolate(step.params.get("folder", ""), context)
+        folder = pathlib.Path(raw_path)
+        if not folder.is_absolute():
+            log.warning("list_folder requires an absolute path, got '%s'", raw_path)
+            return "[]"
+        context["_target_folder"] = str(folder)
+        entries = list_folder_files(folder)
+        return json.dumps(entries, ensure_ascii=False)
     else:
         log.warning("Unknown filesystem query '%s'", query)
         return "[]"
 
 
-def run_routine(routine: RoutineDefinition) -> RoutineResult:
+def run_routine(
+    routine: RoutineDefinition,
+    extra_vars: Optional[Dict[str, Any]] = None,
+) -> RoutineResult:
     """Execute a routine synchronously.  Call from a worker thread.
+
+    Parameters
+    ----------
+    routine : RoutineDefinition
+        The routine to execute.
+    extra_vars : dict, optional
+        Additional variables merged into the context, overriding the
+        routine's own ``variables`` defaults.  Useful for passing a
+        ``folder_path`` at runtime.
 
     Returns a ``RoutineResult`` with the resolved action and context.
     """
@@ -109,6 +132,8 @@ def run_routine(routine: RoutineDefinition) -> RoutineResult:
 
     # Initialize context with predefined variables
     context: Dict[str, Any] = dict(routine.variables)
+    if extra_vars:
+        context.update(extra_vars)
     context["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     context["routine_id"] = rid
     context["routine_title"] = routine.title
