@@ -789,9 +789,21 @@ class ScreenInteractionHandler(QObject):
         if not self.is_active or self._current_task.state != "executing":
             return
         text = self._current_task.type_text
+        
         if text:
-            type_text(text)
-        self._complete("interact_done_type")
+            from core.pet import PetState
+            self._pet.pet.set_state(PetState.TYPING)
+            
+            import threading
+            from PyQt6.QtCore import QTimer
+            
+            def _type_bg():
+                type_text(text)
+                QTimer.singleShot(0, lambda: self._complete("interact_done_type"))
+                
+            threading.Thread(target=_type_bg, daemon=True).start()
+        else:
+            self._complete("interact_done_type")
 
     # ── Helpers ───────────────────────────────────────────────────
 
