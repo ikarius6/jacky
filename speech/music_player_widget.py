@@ -10,7 +10,6 @@ Falls back to text symbols (⏮ ▶ ⏭) when the spritesheet is missing.
 """
 
 import os
-import sys
 import logging
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton
@@ -197,8 +196,7 @@ class MusicPlayerWidget(QWidget):
         self.show()
         wid = int(self.winId())
         remove_dwm_border(wid)
-        if sys.platform == "darwin":
-            set_topmost(wid)
+        set_topmost(wid)
 
     def update_position(self, anchor_x: int, anchor_y: int):
         """Update the anchor position (call when the pet moves)."""
