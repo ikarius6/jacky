@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (QMenu, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QGroupBox, QFormLayout, QComboBox, QPlainTextEdit,
                              QTabWidget, QWidget, QGridLayout, QScrollArea,
                              QFrame, QSizePolicy, QListWidget, QInputDialog,
-                             QProgressBar, QMessageBox)
+                             QProgressBar, QMessageBox, QAbstractSpinBox)
 from PyQt6.QtCore import Qt, QPoint, QSize, pyqtSignal, QThread
 from PyQt6.QtGui import QAction, QFont, QPixmap
 
@@ -777,6 +777,33 @@ class SettingsDialog(QDialog):
                 border-radius: 4px;
                 padding: 2px 4px;
             }
+            QSpinBox::up-button {
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                width: 16px;
+                border-left: 1px solid #DDB892;
+                border-bottom: 1px solid #DDB892;
+                background-color: #FFF8F0;
+                border-top-right-radius: 3px;
+            }
+            QSpinBox::up-button:hover { background-color: #FFDDB5; }
+            QSpinBox::down-button {
+                subcontrol-origin: border;
+                subcontrol-position: bottom right;
+                width: 16px;
+                border-left: 1px solid #DDB892;
+                background-color: #FFF8F0;
+                border-bottom-right-radius: 3px;
+            }
+            QSpinBox::down-button:hover { background-color: #FFDDB5; }
+            QSpinBox::up-arrow {
+                image: url(assets/arrow_up.svg);
+                width: 7px; height: 5px;
+            }
+            QSpinBox::down-arrow {
+                image: url(assets/arrow_down.svg);
+                width: 7px; height: 5px;
+            }
             QPushButton {
                 background-color: #FFDDB5;
                 border: 1px solid #DDB892;
@@ -950,8 +977,10 @@ class SettingsDialog(QDialog):
 
         self._idle_min = QSpinBox()
         self._idle_min.setRange(1, 300)
+        self._idle_min.setMaximumWidth(80)
         self._idle_max = QSpinBox()
         self._idle_max.setRange(1, 300)
+        self._idle_max.setMaximumWidth(80)
         idle_iv = self._config.get("idle_interval", [5, 15])
         self._idle_min.setValue(idle_iv[0])
         self._idle_max.setValue(idle_iv[1])
@@ -959,12 +988,15 @@ class SettingsDialog(QDialog):
         idle_layout.addWidget(self._idle_min)
         idle_layout.addWidget(QLabel("–"))
         idle_layout.addWidget(self._idle_max)
+        idle_layout.addStretch()
         interval_form.addRow(t("ui.label_idle"), idle_layout)
 
         self._chat_min = QSpinBox()
         self._chat_min.setRange(1, 600)
+        self._chat_min.setMaximumWidth(80)
         self._chat_max = QSpinBox()
         self._chat_max.setRange(1, 600)
+        self._chat_max.setMaximumWidth(80)
         chat_iv = self._config.get("chat_interval", [20, 60])
         self._chat_min.setValue(chat_iv[0])
         self._chat_max.setValue(chat_iv[1])
@@ -972,12 +1004,15 @@ class SettingsDialog(QDialog):
         chat_layout.addWidget(self._chat_min)
         chat_layout.addWidget(QLabel("–"))
         chat_layout.addWidget(self._chat_max)
+        chat_layout.addStretch()
         interval_form.addRow(t("ui.label_chat"), chat_layout)
 
         self._winchk_min = QSpinBox()
         self._winchk_min.setRange(1, 300)
+        self._winchk_min.setMaximumWidth(80)
         self._winchk_max = QSpinBox()
         self._winchk_max.setRange(1, 300)
+        self._winchk_max.setMaximumWidth(80)
         winchk_iv = self._config.get("window_check_interval", [10, 30])
         self._winchk_min.setValue(winchk_iv[0])
         self._winchk_max.setValue(winchk_iv[1])
@@ -985,6 +1020,7 @@ class SettingsDialog(QDialog):
         winchk_layout.addWidget(self._winchk_min)
         winchk_layout.addWidget(QLabel("–"))
         winchk_layout.addWidget(self._winchk_max)
+        winchk_layout.addStretch()
         interval_form.addRow(t("ui.label_wincheck"), winchk_layout)
 
         interval_group.setLayout(interval_form)
@@ -1147,7 +1183,6 @@ class SettingsDialog(QDialog):
         self._memory_max_turns = QSpinBox()
         self._memory_max_turns.setRange(1, 50)
         self._memory_max_turns.setValue(self._config.get("memory_max_turns", 5))
-        self._memory_max_turns.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         self._memory_max_turns.setToolTip(t("ui.tooltip_memory_turns"))
         memory_form.addRow(t("ui.label_memory_turns"), self._memory_max_turns)
 

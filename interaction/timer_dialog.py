@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QStackedWidget, QWidget, QFormLayout, QDateEdit,
                              QScrollArea, QFrame, QSizePolicy)
 from PyQt6.QtCore import Qt, QTime, QDate
+from PyQt6.QtWidgets import QAbstractSpinBox
 from PyQt6.QtGui import QFont
 
 from utils.i18n import t
@@ -53,14 +54,32 @@ _STYLE = f"""
     QSpinBox:focus, QTimeEdit:focus, QDateEdit:focus, QLineEdit:focus {{
         border-color: {_ACCENT};
     }}
-    QSpinBox::up-button, QSpinBox::down-button {{
-        width: 0; height: 0; border: none;
+    QTimeEdit::up-button {{
+        subcontrol-origin: border;
+        subcontrol-position: top right;
+        width: 18px;
+        border-left: 1.5px solid {_BORDER};
+        border-bottom: 1px solid {_BORDER};
+        background: {_CARD_BG};
+        border-top-right-radius: 7px;
     }}
-    QTimeEdit::up-button, QTimeEdit::down-button {{
-        width: 0; height: 0; border: none;
+    QTimeEdit::up-button:hover {{ background: {_ACCENT_LIGHT}; }}
+    QTimeEdit::down-button {{
+        subcontrol-origin: border;
+        subcontrol-position: bottom right;
+        width: 18px;
+        border-left: 1.5px solid {_BORDER};
+        background: {_CARD_BG};
+        border-bottom-right-radius: 7px;
     }}
-    QDateEdit::up-button, QDateEdit::down-button {{
-        width: 0; height: 0; border: none;
+    QTimeEdit::down-button:hover {{ background: {_ACCENT_LIGHT}; }}
+    QTimeEdit::up-arrow {{
+        image: url(assets/arrow_up.svg);
+        width: 7px; height: 5px;
+    }}
+    QTimeEdit::down-arrow {{
+        image: url(assets/arrow_down.svg);
+        width: 7px; height: 5px;
     }}
     QDateEdit::drop-down {{
         subcontrol-origin: padding;
@@ -439,6 +458,7 @@ class TimerDialog(QDialog):
         self._reminder_date.setDate(QDate.currentDate())
         self._reminder_date.setMinimumDate(QDate.currentDate())
         self._reminder_date.setFixedHeight(36)
+        self._reminder_date.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         form.addRow(self._form_label(t("ui.timer_label_date")),
                     self._reminder_date)
 
@@ -498,8 +518,32 @@ class TimerDialog(QDialog):
             QSpinBox:focus {{
                 border-color: {_ACCENT};
             }}
-            QSpinBox::up-button, QSpinBox::down-button {{
-                width: 0; height: 0; border: none;
+            QSpinBox::up-button {{
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                width: 22px;
+                border-left: 1.5px solid {_BORDER};
+                border-bottom: 1px solid {_BORDER};
+                background: {_CARD_BG};
+                border-top-right-radius: 9px;
+            }}
+            QSpinBox::up-button:hover {{ background: {_ACCENT_LIGHT}; }}
+            QSpinBox::down-button {{
+                subcontrol-origin: border;
+                subcontrol-position: bottom right;
+                width: 22px;
+                border-left: 1.5px solid {_BORDER};
+                background: {_CARD_BG};
+                border-bottom-right-radius: 9px;
+            }}
+            QSpinBox::down-button:hover {{ background: {_ACCENT_LIGHT}; }}
+            QSpinBox::up-arrow {{
+                image: url(assets/arrow_up.svg);
+                width: 8px; height: 6px;
+            }}
+            QSpinBox::down-arrow {{
+                image: url(assets/arrow_down.svg);
+                width: 8px; height: 6px;
             }}
         """)
         return spin
