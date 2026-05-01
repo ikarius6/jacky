@@ -149,7 +149,12 @@
         "menu_routines": "📋 Rutinas",
         "menu_music": "🎵 Modo música",
         "music_now_playing": "🎵 {title} — {artist}",
-        "music_no_session": "No hay música reproduciéndose"
+        "music_no_session": "No hay música reproduciéndose",
+        "group_memory": "Memoria de conversación",
+        "label_memory_turns": "Turnos en memoria:",
+        "check_memory_persist": "Guardar memoria en disco (sobrevive reinicios)",
+        "tooltip_memory_turns": "Cuántos intercambios usuario↔mascota guardar en contexto (1–50)",
+        "tooltip_memory_persist": "Guarda el historial en un archivo para que persista entre sesiones"
     },
     "permissions": {
         "allow_comment": {

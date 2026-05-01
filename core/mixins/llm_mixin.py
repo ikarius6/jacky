@@ -43,6 +43,7 @@ class LlmMixin:
         """Callback from LLM for user questions — shows error on failure."""
         self._llm_pending = False
         if text:
+            self._memory_add("assistant", text)
             self._llm_ask_ready.emit(text)
         else:
             self._llm_ask_ready.emit(t("ui.llm_error"))
@@ -65,11 +66,18 @@ class LlmMixin:
 
     def _ask_direct_or_vision(self, question: str):
         """Send the question to the LLM using vision or text based on keywords/permissions."""
+        self._memory_add("user", question)
+        history = self._memory_get_messages()
+        # The user turn we just added is now the last entry; pass everything
+        # *before* it as history so the provider builds [system, *history[:-1], user_current].
+        # We pass the full slice excluding the last entry (current user msg).
+        prior_history = history[:-1]
         if self._needs_vision(question) and self._perm("allow_vision"):
             self.pet.set_state(PetState.TAKING_PICTURE)
             context = self._build_llm_context(t("llm_prompts.ask_vision", question=question))
             image_b64 = self._capture_vision()
-            self._llm.generate_with_image(context, image_b64, self._on_ask_response)
+            self._llm.generate_with_image(context, image_b64, self._on_ask_response,
+                                          history=prior_history)
         else:
             context = self._build_llm_context(t("llm_prompts.ask_direct", question=question))
-            self._llm.generate(context, self._on_ask_response)
+            self._llm.generate(context, self._on_ask_response, history=prior_history)

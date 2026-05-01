@@ -1140,6 +1140,25 @@ class SettingsDialog(QDialog):
         # Show/hide the right fields for current provider
         self._on_provider_changed(current_provider)
 
+        # --- Memory ---
+        memory_group = QGroupBox(t("ui.group_memory"))
+        memory_form = QFormLayout()
+
+        self._memory_max_turns = QSpinBox()
+        self._memory_max_turns.setRange(1, 50)
+        self._memory_max_turns.setValue(self._config.get("memory_max_turns", 5))
+        self._memory_max_turns.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+        self._memory_max_turns.setToolTip(t("ui.tooltip_memory_turns"))
+        memory_form.addRow(t("ui.label_memory_turns"), self._memory_max_turns)
+
+        self._memory_persist = QCheckBox(t("ui.check_memory_persist"))
+        self._memory_persist.setChecked(self._config.get("memory_persist", False))
+        self._memory_persist.setToolTip(t("ui.tooltip_memory_persist"))
+        memory_form.addRow(self._memory_persist)
+
+        memory_group.setLayout(memory_form)
+        layout.addWidget(memory_group)
+
         layout.addStretch()
         return tab
 
@@ -1515,6 +1534,8 @@ class SettingsDialog(QDialog):
         self._config["openrouter_model"] = self._or_model.text().strip()
         self._config["groq_api_keys"] = list(self._groq_api_keys)
         self._config["groq_model"] = self._groq_model.text().strip()
+        self._config["memory_max_turns"] = self._memory_max_turns.value()
+        self._config["memory_persist"] = self._memory_persist.isChecked()
         self._config["shop_url"] = self._shop_url.text().strip()
         self._config["debug_logging"] = self._debug_logging.isChecked()
         self._config["response_mode"] = self._response_mode.currentData()

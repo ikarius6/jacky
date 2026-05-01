@@ -9,6 +9,7 @@ debug_screens/
 downloads/
 settings.json
 settings.json.orig
+memory.json
 timers.json
 routines/*.json
 collectibles/collection.json

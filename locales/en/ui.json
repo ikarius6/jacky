@@ -149,7 +149,12 @@
         "menu_routines": "📋 Routines",
         "menu_music": "🎵 Music mode",
         "music_now_playing": "🎵 {title} — {artist}",
-        "music_no_session": "No music playing"
+        "music_no_session": "No music playing",
+        "group_memory": "Conversation Memory",
+        "label_memory_turns": "Turns in memory:",
+        "check_memory_persist": "Save memory to disk (survives restarts)",
+        "tooltip_memory_turns": "How many user↔pet exchanges to keep in context (1–50)",
+        "tooltip_memory_persist": "Saves the history to a file so it persists across sessions"
     },
     "permissions": {
         "allow_comment": {

@@ -31,6 +31,8 @@ DEFAULT_CONFIG = {
     "gravity": False,
     "listen_timeout_seconds": 60,
     "shop_url": "https://hackers.army/jacky/shop.json",
+    "memory_max_turns": 5,
+    "memory_persist": False,
 }
 
 # Schema: key -> (type, min, max, choices)
@@ -61,6 +63,8 @@ _SCHEMA = {
     "gravity":                    (bool,  None, None, None),
     "listen_timeout_seconds":     (int,   10,   300,  None),
     "shop_url":                   (str,   None, None, None),
+    "memory_max_turns":           (int,   1,    50,   None),
+    "memory_persist":             (bool,  None, None, None),
 }
 
 # Interval keys: list of exactly 2 positive ints where [0] <= [1]

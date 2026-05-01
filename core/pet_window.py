@@ -46,12 +46,13 @@ from core.mixins.timer_intent_mixin import TimerIntentMixin
 from core.mixins.config_mixin import ConfigMixin
 from core.mixins.collectible_mixin import CollectibleMixin
 from core.mixins.music_mixin import MusicMixin
+from core.mixins.memory_mixin import MemoryMixin
 
 log = logging.getLogger("pet_window")
 
 
 class PetWindow(
-    ConfigMixin, WindowMixin, TrayMixin, SpeechMixin, LlmMixin,
+    MemoryMixin, ConfigMixin, WindowMixin, TrayMixin, SpeechMixin, LlmMixin,
     BoredomMixin, EasterEggMixin, AskMixin, OrganizeMixin,
     RoutineMixin, TimerIntentMixin, CollectibleMixin, MusicMixin,
     QWidget,
@@ -265,6 +266,7 @@ class PetWindow(
         self._setup_tray()
         self._init_collectibles()
         self._init_music()
+        self._init_memory()
         self._init_position()
 
     # --- Setup helpers ---

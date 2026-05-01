@@ -62,5 +62,7 @@
     "elevenlabs_model": "eleven_flash_v2_5",
     "debug_logging": false,
     "language": "es",
-    "shop_url": "https://hackers.army/jacky/shop.json"
+    "shop_url": "https://hackers.army/jacky/shop.json",
+    "memory_max_turns": 5,
+    "memory_persist": false
 }

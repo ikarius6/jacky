@@ -55,14 +55,17 @@ class OllamaProvider:
             self._available = False
         return self._available
 
-    def _build_payload(self, context: str, system_prompt: Optional[str] = None) -> dict:
+    def _build_payload(self, context: str, system_prompt: Optional[str] = None,
+                        history: Optional[list] = None) -> dict:
         """Build the Ollama chat payload for the given context."""
+        messages = [
+            {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
+            *(history or []),
+            {"role": "user", "content": context},
+        ]
         return {
             "model": self._model,
-            "messages": [
-                {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
-                {"role": "user", "content": context},
-            ],
+            "messages": messages,
             "stream": False,
             "think": False,
             "options": {
@@ -72,15 +75,16 @@ class OllamaProvider:
         }
 
     def generate(self, context: str, callback: Callable[[Optional[str]], None],
-                 system_prompt: Optional[str] = None):
+                 system_prompt: Optional[str] = None, history: Optional[list] = None):
         """
         Generate a response in a background thread.
         context: description of what's happening (e.g., "User clicked on me. Open windows: Chrome, VS Code").
         callback(text): called on the main thread with the response or None on failure.
+        history: optional list of prior {role, content} messages for multi-turn context.
         """
         def _worker():
             try:
-                payload = self._build_payload(context, system_prompt=system_prompt)
+                payload = self._build_payload(context, system_prompt=system_prompt, history=history)
                 resp = requests.post(self.chat_url, json=payload, timeout=30)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -104,10 +108,10 @@ class OllamaProvider:
         thread = threading.Thread(target=_worker, daemon=True)
         thread.start()
 
-    def generate_sync(self, context: str) -> Optional[str]:
+    def generate_sync(self, context: str, history: Optional[list] = None) -> Optional[str]:
         """Synchronous generation (blocking). Use generate() for non-blocking."""
         try:
-            payload = self._build_payload(context)
+            payload = self._build_payload(context, history=history)
             resp = requests.post(self.chat_url, json=payload, timeout=30)
             if resp.status_code == 200:
                 data = resp.json()
@@ -125,7 +129,8 @@ class OllamaProvider:
 
     def generate_with_image(self, context: str, image_b64: str,
                             callback: Callable[[Optional[str]], None],
-                            system_prompt: Optional[str] = None):
+                            system_prompt: Optional[str] = None,
+                            history: Optional[list] = None):
         """Generate a response with an image in a background thread.
 
         If the model doesn't support vision the request will fail; in that case
@@ -133,7 +138,7 @@ class OllamaProvider:
         """
         def _worker():
             try:
-                payload = self._build_payload(context, system_prompt=system_prompt)
+                payload = self._build_payload(context, system_prompt=system_prompt, history=history)
                 # Inject base64 image into the user message (Ollama multimodal format)
                 payload["messages"][-1]["images"] = [image_b64]
                 resp = requests.post(self.chat_url, json=payload, timeout=60)
@@ -150,10 +155,10 @@ class OllamaProvider:
                     # Vision likely unsupported — fallback to text-only
                     log.warning("Ollama vision failed (HTTP %d), retrying text-only",
                                 resp.status_code)
-                    self.generate(context, callback)
+                    self.generate(context, callback, history=history)
             except Exception as e:
                 log.warning("Ollama vision error: %s — retrying text-only", e)
-                self.generate(context, callback)
+                self.generate(context, callback, history=history)
 
         thread = threading.Thread(target=_worker, daemon=True)
         thread.start()
@@ -181,14 +186,17 @@ class OpenRouterProvider:
             "Content-Type": "application/json",
         }
 
-    def _build_payload(self, context: str, system_prompt: Optional[str] = None) -> dict:
+    def _build_payload(self, context: str, system_prompt: Optional[str] = None,
+                        history: Optional[list] = None) -> dict:
         """Build the OpenRouter chat completion payload for the given context."""
+        messages = [
+            {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
+            *(history or []),
+            {"role": "user", "content": context},
+        ]
         return {
             "model": self._model,
-            "messages": [
-                {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
-                {"role": "user", "content": context},
-            ],
+            "messages": messages,
             "temperature": 0.8,
             "max_tokens": 120,
         }
@@ -204,13 +212,13 @@ class OpenRouterProvider:
             return None
 
     def generate(self, context: str, callback: Callable[[Optional[str]], None],
-                 system_prompt: Optional[str] = None):
+                 system_prompt: Optional[str] = None, history: Optional[list] = None):
         """Generate a response in a background thread (same interface as OllamaProvider)."""
         def _worker():
             import time
             t0 = time.monotonic()
             try:
-                payload = self._build_payload(context, system_prompt=system_prompt)
+                payload = self._build_payload(context, system_prompt=system_prompt, history=history)
                 resp = requests.post(
                     self.API_URL,
                     headers=self._headers(),
@@ -234,10 +242,10 @@ class OpenRouterProvider:
         thread = threading.Thread(target=_worker, daemon=True)
         thread.start()
 
-    def generate_sync(self, context: str) -> Optional[str]:
+    def generate_sync(self, context: str, history: Optional[list] = None) -> Optional[str]:
         """Synchronous generation (blocking)."""
         try:
-            payload = self._build_payload(context)
+            payload = self._build_payload(context, history=history)
             resp = requests.post(
                 self.API_URL,
                 headers=self._headers(),
@@ -252,7 +260,8 @@ class OpenRouterProvider:
 
     def generate_with_image(self, context: str, image_b64: str,
                             callback: Callable[[Optional[str]], None],
-                            system_prompt: Optional[str] = None):
+                            system_prompt: Optional[str] = None,
+                            history: Optional[list] = None):
         """Generate a response with an image (OpenAI vision format).
 
         If the model doesn't support vision the request will fail; in that case
@@ -262,7 +271,7 @@ class OpenRouterProvider:
             import time
             t0 = time.monotonic()
             try:
-                payload = self._build_payload(context, system_prompt=system_prompt)
+                payload = self._build_payload(context, system_prompt=system_prompt, history=history)
                 # Replace plain text content with multimodal content array
                 payload["messages"][-1]["content"] = [
                     {"type": "text", "text": context},
@@ -286,12 +295,12 @@ class OpenRouterProvider:
                     # Vision likely unsupported — fallback to text-only
                     log.warning("OpenRouter vision failed (HTTP %d after %.1fs): %s — retrying text-only",
                                 resp.status_code, elapsed, resp.text[:200])
-                    self.generate(context, callback)
+                    self.generate(context, callback, history=history)
             except Exception as e:
                 elapsed = time.monotonic() - t0
                 log.warning("OpenRouter vision error after %.1fs: %s — retrying text-only",
                             elapsed, e)
-                self.generate(context, callback)
+                self.generate(context, callback, history=history)
 
         thread = threading.Thread(target=_worker, daemon=True)
         thread.start()
@@ -384,13 +393,16 @@ class GroqProvider:
             "Content-Type": "application/json",
         }
 
-    def _build_payload(self, context: str, system_prompt: Optional[str] = None) -> dict:
+    def _build_payload(self, context: str, system_prompt: Optional[str] = None,
+                        history: Optional[list] = None) -> dict:
+        messages = [
+            {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
+            *(history or []),
+            {"role": "user", "content": context},
+        ]
         return {
             "model": self._model,
-            "messages": [
-                {"role": "system", "content": system_prompt or build_system_prompt(self._pet_name)},
-                {"role": "user", "content": context},
-            ],
+            "messages": messages,
             "temperature": 0.8,
             "max_tokens": 120,
         }
@@ -433,10 +445,10 @@ class GroqProvider:
             return None
 
     def generate(self, context: str, callback: Callable[[Optional[str]], None],
-                 system_prompt: Optional[str] = None):
+                 system_prompt: Optional[str] = None, history: Optional[list] = None):
         def _worker():
             t0 = time.monotonic()
-            payload = self._build_payload(context, system_prompt=system_prompt)
+            payload = self._build_payload(context, system_prompt=system_prompt, history=history)
             text = self._do_request(payload)
             elapsed = time.monotonic() - t0
             log.debug("Groq OK %.1fs text=%r", elapsed, text[:80] if text else None)
@@ -445,16 +457,17 @@ class GroqProvider:
         thread = threading.Thread(target=_worker, daemon=True)
         thread.start()
 
-    def generate_sync(self, context: str) -> Optional[str]:
-        payload = self._build_payload(context)
+    def generate_sync(self, context: str, history: Optional[list] = None) -> Optional[str]:
+        payload = self._build_payload(context, history=history)
         return self._do_request(payload)
 
     def generate_with_image(self, context: str, image_b64: str,
                             callback: Callable[[Optional[str]], None],
-                            system_prompt: Optional[str] = None):
+                            system_prompt: Optional[str] = None,
+                            history: Optional[list] = None):
         def _worker():
             t0 = time.monotonic()
-            payload = self._build_payload(context, system_prompt=system_prompt)
+            payload = self._build_payload(context, system_prompt=system_prompt, history=history)
             payload["messages"][-1]["content"] = [
                 {"type": "text", "text": context},
                 {"type": "image_url", "image_url": {
@@ -468,7 +481,7 @@ class GroqProvider:
                 callback(text)
             else:
                 log.warning("Groq vision failed after %.1fs — retrying text-only", elapsed)
-                self.generate(context, callback)
+                self.generate(context, callback, history=history)
 
         thread = threading.Thread(target=_worker, daemon=True)
         thread.start()
