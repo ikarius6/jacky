@@ -1594,6 +1594,16 @@ class SettingsDialog(QDialog):
             key: self._perm_checks[key].isChecked()
             for key in self._perm_checks
         }
+        # If a mode (music/gamer) is currently overriding silent_mode or other keys,
+        # restore the original user values before persisting so the on-disk config
+        # reflects the real preferences, not the temporary mode overrides.
+        pw = self._pet_window
+        if pw._music_mode and pw._music_saved:
+            for key, val in pw._music_saved.items():
+                self._config[key] = val
+        elif pw._gamer_mode and pw._gamer_saved:
+            for key, val in pw._gamer_saved.items():
+                self._config[key] = val
         save_config(self._config)
         self._pet_window._config = self._config
         self._pet_window.reload_config()

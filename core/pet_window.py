@@ -29,7 +29,7 @@ from speech.dialogue import get_line
 from speech.llm_provider import create_llm_provider
 from speech.voice import ElevenLabsTTSClient, AssemblyAISTTClient
 from interaction.hotkey import GlobalHotkey
-from utils.config_manager import load_config
+from utils.config_manager import load_config, save_config
 from pal import remove_dwm_border, set_topmost
 from utils.i18n import load_language, t
 
@@ -456,6 +456,11 @@ class PetWindow(
     def _do_quit(self):
         if self._music_mode:
             self.toggle_music_mode(False)
+        if self._gamer_mode:
+            self.toggle_gamer_mode(False)
+        # Persist config so any mode-override values (silent_mode, etc.) are
+        # written with their real user values before we exit.
+        save_config(self._config)
         self.scheduler.stop_all()
         self._boredom_timer.stop()
         self._system_events.stop()
